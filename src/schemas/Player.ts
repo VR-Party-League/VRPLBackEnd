@@ -12,7 +12,7 @@ export default class Player {
   discordTag!: string;
 
   @Field({ description: "The player's discord avatar" })
-  discordAvatar!: string;
+  discordAvatar: string;
 
   @Field((type) => Int, {
     description: "The players permissions",

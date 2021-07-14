@@ -4,24 +4,44 @@
 # -----------------------------------------------
 
 type Mutation {
-  markAsCompleted(taskId: Float!): Task!
+  createTeam(captainId: String!, teamName: String!, tournamentId: String!): Team!
 }
 
-type Project {
-  id: Int!
-  name: String!
-  tasks: [Task!]!
+type Player {
+  """The player's discord avatar"""
+  discordAvatar: String!
+
+  """The player's discord ID"""
+  discordID: String!
+
+  """The player's discord Tag"""
+  discordTag: String!
+
+  """The players' id"""
+  id: String!
+
+  """The players permissions"""
+  permissions: Int
 }
 
 type Query {
-  fetchTasks: [Task!]!
-  getTask(id: Float!): Task
-  projectByName(name: String!): Project
+  teamFromId(id: String!, tournamentId: String!): Team
+  teamFromName(name: String!, tournamentId: String!): Team
 }
 
-type Task {
-  completed: Boolean!
-  id: Int!
-  project: Project!
-  title: String!
+type Team {
+  """The team captain"""
+  captain: Player!
+
+  """The unique team id"""
+  id: String!
+
+  """The unique team name"""
+  name: String!
+
+  """Players that have not accepted the invite"""
+  pendingPlayers: [Player!]!
+
+  """An array of players"""
+  players: [Player!]!
 }

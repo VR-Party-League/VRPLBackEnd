@@ -9,9 +9,9 @@ function storeTeam(rawTeam: VrplTeam) {
   const team: VrplTeam = {
     id: rawTeam.id,
     name: rawTeam.name,
-    captainID: rawTeam.captainID,
-    playerIDs: rawTeam.playerIDs || [],
-    pendingPlayerIDs: rawTeam.pendingPlayerIDs || [],
+    captainId: rawTeam.captainId,
+    playerIds: rawTeam.playerIds || [],
+    pendingPlayerIds: rawTeam.pendingPlayerIds || [],
     tournamentId: rawTeam.tournamentId,
   };
   teamCache.set(team.id, team);
@@ -44,19 +44,20 @@ export async function getTeamsOfTournament(
   return Teams;
 }
 
-export async function getTeamFromID(
+export async function getTeamFromId(
   tournamentId: string,
   TeamID: string
-): Promise<VrplTeam | undefined> {
+): Promise<VrplTeam | null> {
   try {
     await refreshTeams();
     const team = teamCache.get(TeamID);
-    if (team && team?.tournamentId == tournamentId) return team;
+    if (team && team?.tournamentId == tournamentId) return team || null;
   } catch (err) {
     console.trace();
     console.error(err);
-    return undefined;
+    return null;
   }
+  return null;
 }
 type findFunc = (Team: VrplTeam) => boolean | undefined | null;
 export async function findTeam(tournamentId: string, findFunc: findFunc) {
@@ -97,7 +98,7 @@ export async function destroyTeam(
   TeamID: string
 ): Promise<VrplTeam | undefined> {
   try {
-    const team = await getTeamFromID(tournamentId, TeamID);
+    const team = await getTeamFromId(tournamentId, TeamID);
     if (team && team?.tournamentId == tournamentId) {
       teamCache.delete(team.id);
       await VrplTeamDB.deleteOne({ id: team.id });
@@ -225,21 +226,35 @@ export async function destroyTeam(
 // }
 export async function createTeam(
   tournamentId: string,
-  TeamData: VrplTeam
-): Promise<VrplTeam | undefined> {
+  teamName: string,
+  captainId: string
+): Promise<
+  { success: true; doc: VrplTeam } | { success: false; error: string }
+> {
   try {
-    if (await getTeamFromID(tournamentId, TeamData.id)) {
-      TeamData.id = uuidv4();
-      return createTeam(tournamentId, TeamData);
+    const validatedTeamName = await validateTeamName(tournamentId, teamName);
+    if (typeof validatedTeamName !== "string")
+      return { success: false, error: validatedTeamName[0] };
+    const teamData: VrplTeam = {
+      captainId: captainId,
+      id: uuidv4(),
+      name: teamName,
+      pendingPlayerIds: [],
+      playerIds: [],
+      tournamentId: tournamentId,
+    };
+
+    if (await getTeamFromId(tournamentId, teamData.id)) {
+      return createTeam(tournamentId, teamName, captainId);
     }
-    const goodTeam = storeTeam(TeamData);
+    const goodTeam = storeTeam(teamData);
     const TeamModel = new VrplTeamDB(goodTeam);
     await TeamModel.save();
-    return goodTeam;
+    return { success: true, doc: goodTeam };
   } catch (err) {
     console.trace();
     console.error(err);
-    return undefined;
+    return { success: false, error: "Internal server error" };
   }
 }
 // type findFunc = (Team: VrplTeam) => boolean | undefined | null;
@@ -263,32 +278,32 @@ export async function createTeam(
 //   return response;
 // }
 
-// export async function validateTeamName(
-//   Tournament: string,
-//   raw: any
-// ): Promise<string | [string, (string | undefined)?]> {
-//   if (typeof raw !== "string") return ["TeamName is not a string"];
+export async function validateTeamName(
+  Tournament: string,
+  raw: any
+): Promise<string | [string, (string | undefined)?]> {
+  if (typeof raw !== "string") return ["TeamName is not a string"];
 
-//   let TeamName = raw
-//     .replace(/\s+/g, " ")
-//     .replace(/^\s+|\s+$/, "")
-//     .replace(/-+/, "-")
-//     .replace(/_+/, "_")
-//     .trim();
-//   if (!/^[\w-_\s]+$/.test(TeamName)) return ["Invalid name", TeamName];
-//   else if (TeamName.length < 5)
-//     return ["TeamName must at least be 5 characters long", TeamName];
-//   else if (TeamName.length > 25)
-//     return [
-//       "TeamName cannot be longer then 25 characters",
-//       // The name can actually be "longer then 25 characters" because it is 25 characters long! :D
-//       TeamName,
-//     ];
+  let TeamName = raw
+    .replace(/\s+/g, " ")
+    .replace(/^\s+|\s+$/, "")
+    .replace(/-+/, "-")
+    .replace(/_+/, "_")
+    .trim();
+  if (!/^[\w-_\s]+$/.test(TeamName)) return ["Invalid name", TeamName];
+  else if (TeamName.length < 5)
+    return ["TeamName must at least be 5 characters long", TeamName];
+  else if (TeamName.length > 25)
+    return [
+      "TeamName cannot be longer then 25 characters",
+      // The name can actually be "longer then 25 characters" because it is 25 characters long! :D
+      TeamName,
+    ];
 
-//   // Check for other teams
-//   const existingTeamName = await getTeamFromName(Tournament, TeamName);
+  // Check for other teams
+  const existingTeamName = await getTeamFromName(Tournament, TeamName);
 
-//   if (existingTeamName) return ["Team name has been taken", TeamName];
+  if (existingTeamName) return ["Team name has been taken", TeamName];
 
-//   return TeamName;
-// }
+  return TeamName;
+}

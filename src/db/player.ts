@@ -35,16 +35,16 @@ export async function refreshPlayers(force?: boolean): Promise<void> {
   }
 }
 
-export async function getPlayerFromID(
-  PlayerID: string
-): Promise<VrplPlayer | undefined> {
+export async function getPlayerFromId(
+  PlayerId: string
+): Promise<VrplPlayer | null> {
   try {
     await refreshPlayers();
-    return playerCache.get(PlayerID);
+    return playerCache.get(PlayerId) || null;
   } catch (err) {
     console.trace();
     console.error(err);
-    return undefined;
+    return null;
   }
 }
 

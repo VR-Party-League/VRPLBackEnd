@@ -2,21 +2,21 @@ import { Schema, model, Document } from "mongoose";
 import { VrplPlayer } from "./vrplPlayer";
 
 export interface VrplTeam {
-  captainID: string;
+  captainId: string;
   id: string;
   name: string;
-  playerIDs: string[];
-  pendingPlayerIDs: string[];
+  playerIds: string[];
+  pendingPlayerIds: string[];
   tournamentId: string;
 }
 
 const TeamSchema = new Schema<VrplTeam & Document>(
   {
-    captainID: String,
+    captainId: String,
     id: { type: String, required: true, unique: true },
     name: String,
-    playerIDs: [String],
-    pendingPlayerIDs: [String],
+    playerIds: [String],
+    pendingPlayerIds: [String],
     tournamentId: String,
   },
   { collection: "teams" }
