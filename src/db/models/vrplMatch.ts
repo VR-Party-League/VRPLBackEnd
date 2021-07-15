@@ -1,29 +1,35 @@
 import { Schema, model, Document } from "mongoose";
 
 export interface VrplMatch {
-  Tournament: string;
-  Team1: string;
-  Team2?: string;
+  id: string;
+  tournamentId: string;
+  teamIds: string[];
+  scores?: number[][];
 
-  Scores?: string[];
+  teamIdsConfirmed: string[];
 
-  Timestamp: Date;
-  End: Date;
+  timeStart: Date;
+  timeDeadline: Date;
+  timeSubmitted?: Date;
+  timeConfirmed?: Date;
 }
 
 const MatchSchema = new Schema<VrplMatch & Document>(
   {
-    Tournament: String,
-    Team1: String,
-    Team2: { type: String, required: false },
+    id: { type: String, required: true, unique: true },
+    tournamentId: String,
+    teamIds: [String],
+    scores: { type: [[Number]], required: false },
 
-    Scores: { type: [String], required: false },
+    teamIdsConfirmed: [String],
 
-    Timestamp: Date,
-    End: Date,
+    timeStart: Date,
+    timeDeadline: Date,
+    timeSubmitted: { type: Date, required: false },
+    timeConfirmed: { type: Date, required: false },
   },
-  { collection: "players" }
+  { collection: "matches" }
 );
 
-const MatchModel = model<VrplMatch & Document>("players", MatchSchema);
+const MatchModel = model<VrplMatch & Document>("matches", MatchSchema);
 export { MatchModel as default };

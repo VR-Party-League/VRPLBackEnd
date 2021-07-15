@@ -3,6 +3,35 @@
 # !!!   DO NOT MODIFY THIS FILE BY YOURSELF   !!!
 # -----------------------------------------------
 
+type Match {
+  """The unique match id"""
+  id: String!
+
+  """The submitted scores"""
+  scores: [[Int!]!]
+
+  """The teams playing the match"""
+  teams: [Team!]!
+
+  """The teams that have confirmed the scores"""
+  teamsConfirmed: [Team!]
+
+  """The time the score was fully confirmed"""
+  timeConfirmed: Timestamp!
+
+  """The submission deadline"""
+  timeDeadline: Timestamp!
+
+  """The time people can start submitting"""
+  timeStart: Timestamp!
+
+  """The time the score was submitted"""
+  timeSubmitted: Timestamp!
+
+  """The tournament"""
+  tournament: Tournament!
+}
+
 type Mutation {
   createTeam(captainId: String!, teamName: String!, tournamentId: String!): Team!
 }
@@ -25,8 +54,17 @@ type Player {
 }
 
 type Query {
+  allTournaments: [Tournament!]!
   teamFromId(id: String!, tournamentId: String!): Team
-  teamFromName(name: String!, tournamentId: String!): Team
+  teamFromName(name: String!, tournamentId: String!): Match
+  tournamentFromId(id: String!): Tournament
+  tournamentFromName(name: String!): Tournament
+}
+
+type Rule {
+  body: String!
+  description: String!
+  title: String!
 }
 
 type Team {
@@ -44,4 +82,62 @@ type Team {
 
   """An array of players"""
   players: [Player!]!
+}
+
+"""
+The javascript `Date` as integer. Type represents date and time as number of milliseconds from start of UNIX epoch.
+"""
+scalar Timestamp
+
+type Tournament {
+  """The tournament banner"""
+  banner: String!
+
+  """The currently active matches"""
+  currentMatches: [Match!]!
+
+  """The tournament description"""
+  description: String!
+
+  """The eligibility check that has to be run"""
+  eligibilityCheck: String
+
+  """The end date"""
+  end: Timestamp!
+
+  """The tournament gameId"""
+  gameId: String!
+
+  """The unique tournament id"""
+  id: String!
+
+  """All the matches that the tournament had"""
+  matches: [Match!]!
+
+  """The unique tournament name"""
+  name: String!
+
+  """The allowed region"""
+  region: String
+
+  """The registration end date"""
+  registrationEnd: Timestamp!
+
+  """The registration start date"""
+  registrationStart: Timestamp!
+
+  """The amount of rounds in the tournament"""
+  rounds: String!
+
+  """The tournament rules"""
+  rules: [Rule!]!
+
+  """The start date"""
+  start: Timestamp!
+
+  """Teams in the tournament"""
+  teams: [Team!]!
+
+  """The tournament type"""
+  type: String!
 }

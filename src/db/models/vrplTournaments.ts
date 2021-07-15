@@ -27,7 +27,7 @@ export interface VrplTournament {
   rounds: number;
 
   matchIds: string[];
-  currentMatchIds?: string[];
+  currentMatchIds: string[];
 
   eligibilityCheck?: string;
   region?: VrplRegion;

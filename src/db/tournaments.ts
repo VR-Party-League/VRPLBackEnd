@@ -71,6 +71,23 @@ export async function getAllTournaments(): Promise<VrplTournament[]> {
   for (const tournament of tournamentCache.values()) response.push(tournament);
   return response;
 }
+
+export async function getTournamentFromName(tournamentName: string) {
+  const tournaments = await getAllTournaments();
+  return (
+    tournaments.find((tournament) => tournament.name === tournamentName) ||
+    tournaments.find(
+      (tournament) =>
+        tournament.name.toLowerCase() === tournamentName.toLowerCase()
+    ) ||
+    null
+  );
+}
+
+export async function getTournamentFromId(tournamentId: string) {
+  await refreshTournaments();
+  return tournamentCache.get(tournamentId) || null;
+}
 // export async function getAllTournamentNames(): Promise<string[]> {
 //   return (await getAllTournaments()).map((tournament) => tournament.Name);
 // }

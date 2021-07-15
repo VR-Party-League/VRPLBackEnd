@@ -25,6 +25,9 @@ import { getPlayerFromId } from "./db/player";
 import connectMongodbSession from "connect-mongodb-session";
 import path from "path";
 import { getUserFromKey, newApiToken } from "./db/apiKeys";
+import MatchResolver from "./resolvers/MatchResolver";
+import TournamentResolver from "./resolvers/TournamentResolver";
+import PlayerResolver from "./resolvers/PlayerResolver";
 
 declare global {
   namespace Express {
@@ -40,8 +43,14 @@ async function bootstrap() {
   });
 
   const schema = await buildSchema({
-    resolvers: [TeamResolver],
+    resolvers: [
+      TournamentResolver,
+      TeamResolver,
+      MatchResolver,
+      PlayerResolver,
+    ],
     emitSchemaFile: true,
+    dateScalarMode: "timestamp",
     authChecker: (opts: { context: { user: VrplPlayer } }, roles) => {
       if (!opts.context.user?.id) return false;
 

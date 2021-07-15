@@ -33,8 +33,8 @@ export default class {
   }
 
   @FieldResolver()
-  captain(@Root() vrplTeam: VrplTeam): Promise<VrplPlayer | null> {
-    return getPlayerFromId(vrplTeam.captainId);
+  async captain(@Root() vrplTeam: VrplTeam): Promise<VrplPlayer> {
+    return (await getPlayerFromId(vrplTeam.captainId))!;
   }
 
   @FieldResolver()

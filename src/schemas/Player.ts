@@ -3,7 +3,7 @@ import { Field, Int, ObjectType } from "type-graphql";
 @ObjectType()
 export default class Player {
   @Field({ description: "The players' id", nullable: false })
-  id!: String;
+  id!: string;
 
   @Field({ description: "The player's discord ID" })
   discordID!: string;

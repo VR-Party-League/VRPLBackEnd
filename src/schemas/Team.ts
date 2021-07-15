@@ -1,7 +1,7 @@
 import { Field, InputType, Int, ObjectType } from "type-graphql";
 import Player from "./Player";
-type Tournament = {};
-@ObjectType()
+
+@ObjectType("Team")
 export default class Team {
   @Field({ description: "The unique team id", nullable: false })
   id: string;
@@ -9,7 +9,7 @@ export default class Team {
   @Field({ description: "The unique team name" })
   name: string;
 
-  @Field({ description: "The team captain" })
+  @Field((type) => Player, { description: "The team captain" })
   captain: Player;
 
   @Field((type) => [Player], { description: "An array of players" })

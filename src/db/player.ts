@@ -38,6 +38,7 @@ export async function refreshPlayers(force?: boolean): Promise<void> {
 export async function getPlayerFromId(
   PlayerId: string
 ): Promise<VrplPlayer | null> {
+  console.log(PlayerId, "AJHDFJKDHSFJKDSHFLK", playerCache);
   try {
     await refreshPlayers();
     return playerCache.get(PlayerId) || null;
