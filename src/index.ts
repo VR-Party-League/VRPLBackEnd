@@ -30,6 +30,8 @@ import TournamentResolver from "./resolvers/TournamentResolver";
 import PlayerResolver from "./resolvers/PlayerResolver";
 
 import { authChecker } from "./permissions";
+import TeamPlayerResolver from "./resolvers/TeamPlayerResolver";
+import RuleResolver from "./resolvers/RuleResolver";
 
 declare global {
   namespace Express {
@@ -50,6 +52,8 @@ async function bootstrap() {
       TeamResolver,
       MatchResolver,
       PlayerResolver,
+      TeamPlayerResolver,
+      RuleResolver,
     ],
     emitSchemaFile: true,
     dateScalarMode: "timestamp",

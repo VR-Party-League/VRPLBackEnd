@@ -68,20 +68,22 @@ type Rule {
 }
 
 type Team {
-  """The team captain"""
-  captain: Player!
-
   """The unique team id"""
   id: String!
 
   """The unique team name"""
   name: String!
 
-  """Players that have not accepted the invite"""
-  pendingPlayers: [Player!]!
+  """The owner of the team, this player holds the permissions"""
+  owner: Player!
 
-  """An array of players"""
-  players: [Player!]!
+  """An array of team players"""
+  teamPlayers: [TeamPlayer!]!
+}
+
+type TeamPlayer {
+  player: Player!
+  role: String!
 }
 
 """

@@ -9,9 +9,8 @@ function storeTeam(rawTeam: VrplTeam) {
   const team: VrplTeam = {
     id: rawTeam.id,
     name: rawTeam.name,
-    captainId: rawTeam.captainId,
-    playerIds: rawTeam.playerIds || [],
-    pendingPlayerIds: rawTeam.pendingPlayerIds || [],
+    ownerId: rawTeam.ownerId,
+    teamPlayers: rawTeam.teamPlayers || [],
     tournamentId: rawTeam.tournamentId,
   };
   teamCache.set(team.id, team);
@@ -227,7 +226,7 @@ export async function destroyTeam(
 export async function createTeam(
   tournamentId: string,
   teamName: string,
-  captainId: string
+  ownerId: string
 ): Promise<
   { success: true; doc: VrplTeam } | { success: false; error: string }
 > {
@@ -236,16 +235,15 @@ export async function createTeam(
     if (typeof validatedTeamName !== "string")
       return { success: false, error: validatedTeamName[0] };
     const teamData: VrplTeam = {
-      captainId: captainId,
+      ownerId: ownerId,
       id: uuidv4(),
       name: teamName,
-      pendingPlayerIds: [],
-      playerIds: [],
+      teamPlayers: [],
       tournamentId: tournamentId,
     };
 
     if (await getTeamFromId(tournamentId, teamData.id)) {
-      return createTeam(tournamentId, teamName, captainId);
+      return createTeam(tournamentId, teamName, ownerId);
     }
     const goodTeam = storeTeam(teamData);
     const TeamModel = new VrplTeamDB(goodTeam);

@@ -1,22 +1,33 @@
 import { Schema, model, Document } from "mongoose";
 import { VrplPlayer } from "./vrplPlayer";
 
+export enum VrplTeamPlayerRole {
+  "Captain",
+  "Co-Captain",
+  "Player",
+  "Sub",
+  "Pending",
+}
+
+export interface VrplTeamPlayer {
+  playerId: string;
+  role: VrplTeamPlayerRole;
+}
+
 export interface VrplTeam {
-  captainId: string;
+  ownerId: string;
   id: string;
   name: string;
-  playerIds: string[];
-  pendingPlayerIds: string[];
+  teamPlayers: VrplTeamPlayer[];
   tournamentId: string;
 }
 
 const TeamSchema = new Schema<VrplTeam & Document>(
   {
-    captainId: String,
+    ownerId: String,
     id: { type: String, required: true, unique: true },
     name: String,
-    playerIds: [String],
-    pendingPlayerIds: [String],
+    teamPlayers: { type: [Object], required: true },
     tournamentId: String,
   },
   { collection: "teams" }

@@ -33,21 +33,15 @@ export default class {
   }
 
   @FieldResolver()
-  async captain(@Root() vrplTeam: VrplTeam): Promise<VrplPlayer> {
-    return (await getPlayerFromId(vrplTeam.captainId))!;
+  async owner(@Root() vrplTeam: VrplTeam): Promise<VrplPlayer> {
+    console.log(vrplTeam.ownerId);
+    return (await getPlayerFromId(vrplTeam.ownerId))!;
   }
+  // @FieldResolver()
+  // teamPlayers(@Root() vrplTeam: VrplTeam): Promise<(VrplPlayer | null)[]> {
+  //   return Promise.all(vrplTeam.teamPlayers.map((id) => getPlayerFromId(id)));
+  // }
 
-  @FieldResolver()
-  players(@Root() vrplTeam: VrplTeam): Promise<(VrplPlayer | null)[]> {
-    return Promise.all(vrplTeam.playerIds.map((id) => getPlayerFromId(id)));
-  }
-
-  @FieldResolver()
-  pendingPlayers(@Root() vrplTeam: VrplTeam): Promise<(VrplPlayer | null)[]> {
-    return Promise.all(
-      vrplTeam.pendingPlayerIds.map((id) => getPlayerFromId(id))
-    );
-  }
   @Authorized()
   @Mutation((returns) => Team)
   async createTeam(

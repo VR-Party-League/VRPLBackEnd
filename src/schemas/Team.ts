@@ -1,5 +1,6 @@
 import { Field, InputType, Int, ObjectType } from "type-graphql";
 import Player from "./Player";
+import { TeamPlayer } from "./TeamPlayer";
 
 @ObjectType("Team")
 export default class Team {
@@ -9,16 +10,13 @@ export default class Team {
   @Field({ description: "The unique team name" })
   name: string;
 
-  @Field((type) => Player, { description: "The team captain" })
-  captain: Player;
-
-  @Field((type) => [Player], { description: "An array of players" })
-  players: Player[];
-
-  @Field((type) => [Player], {
-    description: "Players that have not accepted the invite",
+  @Field((type) => Player, {
+    description: "The owner of the team, this player holds the permissions",
   })
-  pendingPlayers: Player[];
+  owner: Player;
+
+  @Field((type) => [TeamPlayer], { description: "An array of team players" })
+  teamPlayers: TeamPlayer[];
 
   //@Field((type) => [Tournament], { description: "An array of players" })
   //tournament!: Tournament[];
