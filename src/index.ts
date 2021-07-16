@@ -29,6 +29,8 @@ import MatchResolver from "./resolvers/MatchResolver";
 import TournamentResolver from "./resolvers/TournamentResolver";
 import PlayerResolver from "./resolvers/PlayerResolver";
 
+import { authChecker } from "./permissions";
+
 declare global {
   namespace Express {
     interface User extends VrplPlayer {}
@@ -51,15 +53,7 @@ async function bootstrap() {
     ],
     emitSchemaFile: true,
     dateScalarMode: "timestamp",
-    authChecker: (opts: { context: { user: VrplPlayer } }, roles) => {
-      if (!opts.context.user?.id) return false;
-
-      if (!roles) {
-      } else if (roles) {
-        // TODO: Make this
-      }
-      return true;
-    },
+    authChecker: authChecker,
   });
 
   const server = new ApolloServer({
