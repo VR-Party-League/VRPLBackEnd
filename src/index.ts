@@ -63,9 +63,10 @@ async function bootstrap() {
   const server = new ApolloServer({
     schema: schema,
     plugins: [
-      process.env.NODE_ENV === "production"
-        ? ApolloServerPluginLandingPageDisabled()
-        : ApolloServerPluginLandingPageGraphQLPlayground(),
+      ApolloServerPluginLandingPageGraphQLPlayground(),
+      // process.env.NODE_ENV === "production"
+      //   ? ApolloServerPluginLandingPageDisabled()
+      //   : ApolloServerPluginLandingPageGraphQLPlayground(),
     ],
     formatError(err) {
       if (err.originalError) {
