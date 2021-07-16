@@ -62,6 +62,7 @@ async function bootstrap() {
 
   const server = new ApolloServer({
     schema: schema,
+    introspection: true,
     plugins: [
       ApolloServerPluginLandingPageGraphQLPlayground(),
       // process.env.NODE_ENV === "production"
