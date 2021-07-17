@@ -38,7 +38,9 @@ declare global {
     interface User extends VrplPlayer {}
   }
 }
-
+export interface Context {
+  user?: VrplPlayer;
+}
 async function bootstrap() {
   const MongoDBStore = connectMongodbSession(session);
   const store = new MongoDBStore({
@@ -70,9 +72,8 @@ async function bootstrap() {
       //   : ApolloServerPluginLandingPageGraphQLPlayground(),
     ],
     formatError(err) {
-      if (err.originalError) {
-        const anyError: any = err.originalError;
-        const error: CustomError = anyError;
+      if (err.originalError instanceof CustomError) {
+        const error: CustomError = err.originalError;
         return {
           message: error.message,
           code: error.code || 501, // <--
@@ -89,9 +90,10 @@ async function bootstrap() {
     },
     context: ({ req, res }) => {
       console.log(req.sessionID);
-      const context = {
+      const context: Context = {
         user: req.user,
       };
+
       console.log(context);
       return context;
     },

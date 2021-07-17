@@ -1,5 +1,9 @@
 import ms from "ms";
-import VrplTeamDB, { VrplTeam } from "../db/models/vrplTeam";
+import VrplTeamDB, {
+  VrplTeam,
+  VrplTeamPlayer,
+  VrplTeamPlayerRole,
+} from "../db/models/vrplTeam";
 import { v4 as uuidv4 } from "uuid";
 
 let teamCacheTimeStamp: number = 0;
@@ -109,120 +113,136 @@ export async function destroyTeam(
     return undefined;
   }
 }
-// export async function patchTeam(
-//   Tournament: string,
-//   TeamID: string,
-//   newDoc: any,
-//   opts?: { Invited: boolean }
-// ): Promise<{
-//   success: boolean;
-//   error?: string | undefined;
-//   doc?: VrplTeam | undefined;
-// }> {
-//   const OriginalTeam = await getTeamFromID(Tournament, TeamID);
-//   if (!OriginalTeam) return { success: false, error: "Team doesn't exist" };
-//   let update: UpdateWithAggregationPipeline | UpdateQuery<VrplTeam> = {};
-//   let ToSet: any = {};
 
-//   if (newDoc.TeamName) {
-//     const validName = await validateTeamName(Tournament, newDoc.TeamName);
-//     if (typeof validName !== "string")
-//       return { success: false, error: "Invalid name: " + validName[0] };
-//     ToSet.TeamName = validName;
-//   }
-//   if (newDoc.CaptainID) {
-//     if (typeof newDoc.CaptainID !== "string")
-//       return { success: false, error: "New captain isn't a string" };
-//     const captain = await discordClient.users.fetch(newDoc.CaptainID);
-//     if (!captain?.id)
-//       return { success: false, error: "New captain not found in discord" };
-//   }
-//   let MemberIDs: string[] = [];
-//   let PendingMemberIDs: string[] = [];
-//   if (newDoc.MemberIDs) {
-//     if (
-//       typeof newDoc.MemberIDs !== "string" &&
-//       newDoc.MemberIDs.length !== undefined
-//     ) {
-//       for (const member of newDoc.MemberIDs) {
-//         if (
-//           !member ||
-//           typeof member !== "string" ||
-//           !/^[0-9]{18}$/.test(member)
-//         )
-//           return { success: false, error: "Invalid member: " + member };
+export async function findTeamsOfPlayer(
+  tournamentId: string,
+  playerId: string,
+  role?: VrplTeamPlayerRole
+): Promise<VrplTeam[]> {
+  return await filterTeams(
+    tournamentId,
+    (team) =>
+      !!team.teamPlayers.find((teamPlayer) =>
+        teamPlayer.playerId === playerId && role
+          ? teamPlayer.role === role
+          : true
+      )
+  );
+}
+export async function addPlayerToTeam(
+  tournamentId: string,
+  teamId: string,
+  playerId: string,
+  role: VrplTeamPlayerRole
+): Promise<VrplTeam | undefined> {
+  const team = await getTeamFromId(tournamentId, teamId);
+  if (!team) return;
 
-//         const isOriginalTeamMember = OriginalTeam.MemberIDs.includes(member);
-//         const isTeamCaptain = OriginalTeam.CaptainID === member;
-//         if (isTeamCaptain) {
-//           return {
-//             success: false,
-//             error: "Captain cant be invited to the team",
-//           };
-//         } else if (isOriginalTeamMember || opts?.Invited) {
-//           MemberIDs.push(member);
-//         } else if (!PendingMemberIDs.includes(member)) {
-//           PendingMemberIDs.push(member);
-//           // TODO: send team join invite
-//         }
-//       }
-//     } else {
-//       return { success: false, error: "Invalid members array" };
-//     }
-//   }
-//   if (newDoc.PendingMemberIDs) {
-//     if (
-//       typeof newDoc.PendingMemberIDs !== "string" &&
-//       newDoc.PendingMemberIDs.length !== undefined
-//     ) {
-//       for (const pendingMember of newDoc.PendingMemberIDs) {
-//         if (
-//           !pendingMember ||
-//           typeof pendingMember !== "string" ||
-//           !/^[0-9]{18}$/.test(pendingMember)
-//         )
-//           return {
-//             success: false,
-//             error: "Invalid pending member: " + pendingMember,
-//           };
+  const teamPlayer: VrplTeamPlayer = {
+    playerId: playerId,
+    role: role,
+  };
+  team.teamPlayers = team.teamPlayers.filter(
+    (teamPlayer) => teamPlayer.playerId !== playerId
+  );
+  team.teamPlayers.push(teamPlayer);
+  await VrplTeamDB.updateOne(
+    { id: team.id },
+    { $set: { teamPlayers: team.teamPlayers } }
+  );
+  return team;
+}
 
-//         const originalTeamMember =
-//           OriginalTeam.MemberIDs.includes(pendingMember);
-//         const isTeamCaptain = OriginalTeam.CaptainID === pendingMember;
-//         if (isTeamCaptain) {
-//           return {
-//             success: false,
-//             error: "Captain cant be invited to the team",
-//           };
-//         } else if (originalTeamMember || opts?.Invited) {
-//           MemberIDs.push(pendingMember);
-//         } else if (!PendingMemberIDs.includes(pendingMember)) {
-//           PendingMemberIDs.push(pendingMember);
-//           // TODO: send team join invite
-//         }
-//       }
-//     } else {
-//       return { success: false, error: "Invalid members array" };
-//     }
-//   }
+// This function makes a new player the owner of a team.
+export async function transferTeam(
+  tournamentId: string,
+  teamId: string,
+  playerId: string,
+  oldOwnerRole?: VrplTeamPlayerRole
+): Promise<VrplTeam | undefined> {
+  const team = await getTeamFromId(tournamentId, teamId);
+  if (!team) return;
+  if (oldOwnerRole) {
+    const teamPlayer: VrplTeamPlayer = {
+      playerId: playerId,
+      role: oldOwnerRole,
+    };
+    team.teamPlayers = team.teamPlayers.filter(
+      (teamPlayer) => teamPlayer.playerId !== playerId
+    );
+    team.teamPlayers.push(teamPlayer);
+  }
+  team.ownerId = playerId;
+  await VrplTeamDB.updateOne(
+    { id: team.id },
+    { $set: { ownerId: team.ownerId, teamPlayers: team.teamPlayers } }
+  );
+  return team;
+}
 
-//   update.$set = Object.assign(ToSet, { MemberIDs, PendingMemberIDs });
-//   const NewTeam = await VrplTeamDB.findOneAndUpdate(
-//     { TeamID: TeamID },
-//     update,
-//     {
-//       new: true,
-//     }
-//   );
-//   if (!NewTeam) {
-//     teamCache.delete(TeamID);
-//     console.trace();
-//     console.error(newDoc);
-//     return { success: false, error: "No team exists?" };
-//   }
-//   const team = storeTeam(NewTeam);
-//   return { success: true, doc: team };
-// }
+// Change the role of a player on a team.
+export async function changeTeamPlayerRole(
+  tournamentId: string,
+  teamId: string,
+  playerId: string,
+  newRole: VrplTeamPlayerRole
+) {
+  const team = await getTeamFromId(tournamentId, teamId);
+  if (!team) return;
+  const teamPlayer: VrplTeamPlayer = {
+    playerId: playerId,
+    role: newRole,
+  };
+  team.teamPlayers = team.teamPlayers.filter(
+    (teamPlayer) => teamPlayer.playerId !== playerId
+  );
+  team.teamPlayers.push(teamPlayer);
+  await VrplTeamDB.updateOne(
+    { id: team.id },
+    { $set: { teamPlayers: team.teamPlayers } }
+  );
+  return team;
+}
+
+export async function removePlayerFromTeam(
+  tournamentId: string,
+  teamId: string,
+  playerId: string
+): Promise<VrplTeam | undefined> {
+  const team = await getTeamFromId(tournamentId, teamId);
+  if (!team) return;
+
+  team.teamPlayers = team.teamPlayers.filter(
+    (teamPlayer) => teamPlayer.playerId !== playerId
+  );
+  await VrplTeamDB.updateOne(
+    { id: team.id },
+    { $set: { teamPlayers: team.teamPlayers } }
+  );
+  return team;
+}
+
+export async function getTeamPlayers(
+  tournamentId: string,
+  teamId: string
+): Promise<VrplTeamPlayer[]> {
+  const team = await getTeamFromId(tournamentId, teamId);
+  if (!team) return [];
+  return team.teamPlayers;
+}
+
+export async function getTeamPlayer(
+  tournamentId: string,
+  teamId: string,
+  playerId: string
+): Promise<VrplTeamPlayer | undefined> {
+  const team = await getTeamFromId(tournamentId, teamId);
+  if (!team) return;
+  return team.teamPlayers.find(
+    (teamPlayer) => teamPlayer.playerId === playerId
+  );
+}
+
 export async function createTeam(
   tournamentId: string,
   teamName: string,
@@ -255,26 +275,6 @@ export async function createTeam(
     return { success: false, error: "Internal server error" };
   }
 }
-// type findFunc = (Team: VrplTeam) => boolean | undefined | null;
-
-// export async function findTeam(Tournament: string, findFunc: findFunc) {
-//   await refreshTeams();
-//   const teamIterable = teamCache.values();
-//   for (const team of teamIterable) {
-//     if (team.Tournament !== Tournament) continue;
-//     else if (findFunc(team)) return team;
-//   }
-// }
-// export async function filterTeams(Tournament: string, filterFunc: findFunc) {
-//   await refreshTeams();
-//   const teamIterable = teamCache.values();
-//   const response = [];
-//   for (const team of teamIterable) {
-//     if (team.Tournament !== Tournament) continue;
-//     else if (filterFunc(team)) response.push(team);
-//   }
-//   return response;
-// }
 
 export async function validateTeamName(
   Tournament: string,

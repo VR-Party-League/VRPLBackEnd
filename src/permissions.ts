@@ -14,6 +14,14 @@ function bitFieldHas(bitField: number, permission: Permissions): boolean {
   return false;
 }
 
+export const userHasPermission = (
+  user: VrplPlayer,
+  permission: Permissions
+): boolean => {
+  if (bitFieldHas(user.permissions, Permissions.Admin)) return true;
+  else if (bitFieldHas(user.permissions, permission)) return true;
+  return false;
+};
 export const authChecker: AuthChecker<any, any> = (
   opts: { context: { user: VrplPlayer } },
   roles
