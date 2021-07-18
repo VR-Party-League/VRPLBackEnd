@@ -88,22 +88,3 @@ export async function getTournamentFromId(tournamentId: string) {
   await refreshTournaments();
   return tournamentCache.get(tournamentId) || null;
 }
-// export async function getAllTournamentNames(): Promise<string[]> {
-//   return (await getAllTournaments()).map((tournament) => tournament.Name);
-// }
-// export async function makeNewTournament(rawTournament: VrplTournament) {
-//   const tournament = storeTournament(rawTournament);
-//   if (!tournament) throw new Error("Tournament has already ended");
-//   tournament.CurrentMatches = (await getTeamsOfTournament(tournament.Name)).map(
-//     (team) => team.TeamID
-//   );
-//   await TournamentModel.updateOne({ Name: tournament.Name }, tournament, {
-//     upsert: true,
-//   });
-//   return storeTournament(tournament);
-// }
-// export async function generateMatches(Tournament: VrplTournament) {
-//   const teams = getTeamsOfTournament(Tournament.Name);
-
-//   return;
-// }

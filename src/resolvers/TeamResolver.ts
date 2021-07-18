@@ -63,7 +63,7 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamName") teamName: string,
     @Arg("ownerId") ownerId: string,
-    @Arg("makeCaptain", { nullable: true }) makeCaptain: boolean | undefined,
+    @Arg("makeCaptain", { nullable: true }) makeCaptain: boolean,
     @Ctx() ctx: Context
   ): Promise<Team> {
     if (!ctx.user) throw new BadRequestError("Not logged in");
@@ -141,7 +141,7 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("playerId") playerId: string,
-    @Arg("role") role: VrplTeamPlayerRole,
+    @Arg("role", (type) => String) role: VrplTeamPlayerRole,
     @Ctx() ctx: Context
   ) {
     if (!ctx.user) throw new BadRequestError("Not logged in");
@@ -176,7 +176,7 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("playerId") playerId: string,
-    @Arg("addAsPlayer", { nullable: true }) addAsPlayer: boolean | undefined,
+    @Arg("addAsPlayer", { nullable: true }) addAsPlayer: boolean,
     @Ctx() ctx: Context
   ) {
     if (!ctx.user) throw new BadRequestError("Not logged in");

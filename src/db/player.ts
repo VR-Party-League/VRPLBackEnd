@@ -59,7 +59,7 @@ async function findPlayer(findFunc: findFunc) {
   }
 }
 
-export async function getPlayersFromDiscordTag(discordTag: string) {
+export async function getPlayerFromDiscordTag(discordTag: string) {
   return (
     (await findPlayer((player) => player.discordTag == discordTag)) ||
     (await findPlayer(
@@ -68,35 +68,6 @@ export async function getPlayersFromDiscordTag(discordTag: string) {
   );
 }
 
-// export async function filterPlayers(filterFunc: findFunc) {
-//   await refreshPlayers();
-//   const teamIterable = playerCache.values();
-//   const response = [];
-//   for (const player of teamIterable) {
-//     if (filterFunc(player)) response.push(player);
-//   }
-//   return response;
-// }
-// export async function discordTagToID(
-//   DiscordTag: string
-// ): Promise<string | null> {
-//   if (!DiscordTag || typeof DiscordTag !== "string") return null;
-//   let Player = await findPlayer((player) => player.DiscordTag === DiscordTag);
-//   if (!Player)
-//     Player = await findPlayer(
-//       (player) => player.discordTag.toLowerCase() === DiscordTag.toLowerCase()
-//     );
-//   return Player?.DiscordID || null;
-// }
-
-// export async function discordTagToPlayer(
-//   DiscordTag: string
-// ): Promise<VrplPlayer | null> {
-//   if (!DiscordTag || typeof DiscordTag !== "string") return null;
-//   let Player = await findPlayer((player) => player.DiscordTag === DiscordTag);
-//   if (!Player)
-//     Player = await findPlayer(
-//       (player) => player.DiscordTag.toLowerCase() === DiscordTag.toLowerCase()
-//     );
-//   return Player || null;
-// }
+export async function getPlayerFromDiscordId(discordId: string) {
+  return (await findPlayer((player) => player.discordId == discordId)) || null;
+}

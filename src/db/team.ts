@@ -46,7 +46,6 @@ export async function getTeamsOfTournament(
   const Teams = await filterTeams(tournamentId, () => true);
   return Teams;
 }
-
 export async function getTeamFromId(
   tournamentId: string,
   TeamID: string
@@ -82,7 +81,6 @@ export async function filterTeams(tournamentId: string, filterFunc: findFunc) {
   }
   return response;
 }
-
 export async function getTeamFromName(
   tournamentId: string,
   TeamName: string
@@ -129,6 +127,7 @@ export async function findTeamsOfPlayer(
       )
   );
 }
+
 export async function addPlayerToTeam(
   tournamentId: string,
   teamId: string,
@@ -304,4 +303,19 @@ export async function validateTeamName(
   if (existingTeamName) return ["Team name has been taken", TeamName];
 
   return TeamName;
+}
+
+// A function that returns all the teams of a player.
+export async function getAllTeamsOfPlayer(
+  playerId: string
+): Promise<VrplTeam[]> {
+  const response: VrplTeam[] = [];
+  for (const team of teamCache.values()) {
+    if (
+      team.teamPlayers.find((teamPlayer) => teamPlayer.playerId === playerId)
+    ) {
+      response.push(team);
+    }
+  }
+  return response;
 }

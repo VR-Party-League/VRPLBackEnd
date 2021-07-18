@@ -33,7 +33,11 @@ type Match {
 }
 
 type Mutation {
-  createTeam(captainId: String!, teamName: String!, tournamentId: String!): Team!
+  addPlayerToTeamAsPlayer(playerId: String!, teamId: String!, tournamentId: String!): Team!
+  addPlayerToTeamAsSub(playerId: String!, teamId: String!, tournamentId: String!): Team!
+  changePlayerRole(playerId: String!, role: String!, teamId: String!, tournamentId: String!): Team!
+  createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
+  transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
 }
 
 type Player {
@@ -51,10 +55,15 @@ type Player {
 
   """The players permissions"""
   permissions: Int
+
+  """The teams this player is part of"""
+  teams: [Team!]!
 }
 
 type Query {
   allTournaments: [Tournament!]!
+  playerFromDiscordId(discordId: String!): Player
+  playerFromId(playerId: String!): Player
   teamFromId(id: String!, tournamentId: String!): Team
   teamFromName(name: String!, tournamentId: String!): Match
   tournamentFromId(id: String!): Tournament

@@ -1,4 +1,5 @@
 import { Field, Int, ObjectType } from "type-graphql";
+import Team from "./Team";
 
 @ObjectType()
 export default class Player {
@@ -19,4 +20,7 @@ export default class Player {
     defaultValue: 0,
   })
   permissions!: number;
+
+  @Field((type) => [Team], { description: "The teams this player is part of" })
+  teams!: Array<Team>;
 }
