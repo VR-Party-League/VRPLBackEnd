@@ -36,8 +36,8 @@ const strategy = new DiscordStrategy(
     clientSecret: process.env.CLIENT_SECRET!,
     callbackURL:
       process.env.NODE_ENV === "production"
-        ? "https://vrplback.fishman.live/api/auth/discord"
-        : "http://localhost:3001/api/auth/discord",
+        ? "http://vrplfront.fishman.live/api/auth/discord"
+        : "http://localhost:3000/api/auth/discord",
     scope: ["identify"],
   },
   function (

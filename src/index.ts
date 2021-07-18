@@ -196,3 +196,5 @@ mongoose.connect(process.env.DB_URI!, {
 });
 
 bootstrap();
+
+// TODO: figure out how to do player names
