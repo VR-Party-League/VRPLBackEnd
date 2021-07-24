@@ -131,6 +131,7 @@ export default class {
       playerId,
       VrplTeamPlayerRole.Sub
     );
+
     if (!newTeam) throw new InternalServerError(`Failed to add sub to team`);
     return Object.assign(new Team(), newTeam);
   }

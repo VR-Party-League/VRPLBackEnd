@@ -5,6 +5,14 @@ import VrplTeamDB, {
   VrplTeamPlayerRole,
 } from "../db/models/vrplTeam";
 import { v4 as uuidv4 } from "uuid";
+import { storeRecord } from "./logs";
+import {
+  teamCreateRecord,
+  teamPlayerCreateRecord,
+  teamPlayerUpdateRecord,
+  teamUpdateRecord,
+} from "./models/records/teamRecordTypes";
+import { recordType } from "./models/records";
 
 let teamCacheTimeStamp: number = 0;
 const teamCache = new Map<string, VrplTeam>();
@@ -132,23 +140,63 @@ export async function addPlayerToTeam(
   tournamentId: string,
   teamId: string,
   playerId: string,
-  role: VrplTeamPlayerRole
+  role: VrplTeamPlayerRole,
+  performedBy: string
 ): Promise<VrplTeam | undefined> {
   const team = await getTeamFromId(tournamentId, teamId);
   if (!team) return;
 
   const teamPlayer: VrplTeamPlayer = {
     playerId: playerId,
+    since: new Date(),
     role: role,
   };
-  team.teamPlayers = team.teamPlayers.filter(
+  const filteredTeamPlayers = team.teamPlayers.filter(
     (teamPlayer) => teamPlayer.playerId !== playerId
   );
+  let record: teamPlayerCreateRecord | teamPlayerUpdateRecord;
+  if (filteredTeamPlayers.length !== team.teamPlayers.length) {
+    const oldPlayer = team.teamPlayers.find(
+      (teamPlayer) => teamPlayer.playerId === playerId
+    );
+    if (!oldPlayer)
+      throw new Error("Could not find old version of updating team player!");
+    record = {
+      v: 1,
+      id: uuidv4(),
+      type: recordType.teamPlayerUpdate,
+      userId: performedBy,
+      teamId: team.id,
+      playerId: teamPlayer.playerId,
+      timestamp: new Date(),
+
+      valueChanged: "role",
+      old: oldPlayer.role,
+      new: teamPlayer.role,
+    };
+  } else {
+    record = {
+      v: 1,
+      id: uuidv4(),
+      type: recordType.teamPlayerCreate,
+      userId: performedBy,
+      teamId: team.id,
+      playerId: teamPlayer.playerId,
+      timestamp: new Date(),
+
+      role: teamPlayer.role,
+    };
+  }
+  team.teamPlayers = filteredTeamPlayers;
   team.teamPlayers.push(teamPlayer);
-  await VrplTeamDB.updateOne(
-    { id: team.id },
-    { $set: { teamPlayers: team.teamPlayers } }
-  );
+
+  await Promise.all([
+    VrplTeamDB.updateOne(
+      { id: team.id },
+      { $set: { teamPlayers: team.teamPlayers } }
+    ),
+    storeRecord(record),
+  ]);
   return team;
 }
 
@@ -157,25 +205,82 @@ export async function transferTeam(
   tournamentId: string,
   teamId: string,
   playerId: string,
+  performedBy: string,
   oldOwnerRole?: VrplTeamPlayerRole
 ): Promise<VrplTeam | undefined> {
   const team = await getTeamFromId(tournamentId, teamId);
   if (!team) return;
+  let changePlayersRecordPromise:
+    | teamPlayerUpdateRecord
+    | teamPlayerCreateRecord
+    | undefined = undefined;
   if (oldOwnerRole) {
     const teamPlayer: VrplTeamPlayer = {
       playerId: playerId,
       role: oldOwnerRole,
+      since: new Date(),
     };
-    team.teamPlayers = team.teamPlayers.filter(
+    const filteredTeamPlayers = team.teamPlayers.filter(
       (teamPlayer) => teamPlayer.playerId !== playerId
     );
+    if (filteredTeamPlayers.length !== team.teamPlayers.length) {
+      const oldPlayer = team.teamPlayers.find(
+        (teamPlayer) => teamPlayer.playerId === playerId
+      );
+      if (!oldPlayer)
+        throw new Error(
+          "Could not find old version of updating team player for transferring teams!"
+        );
+      changePlayersRecordPromise = {
+        v: 1,
+        id: uuidv4(),
+        type: recordType.teamPlayerUpdate,
+        userId: performedBy,
+        teamId: team.id,
+        playerId: teamPlayer.playerId,
+        timestamp: new Date(),
+
+        valueChanged: "role",
+        old: oldPlayer.role,
+        new: teamPlayer.role,
+      };
+    } else {
+      changePlayersRecordPromise = {
+        v: 1,
+        id: uuidv4(),
+        type: recordType.teamPlayerCreate,
+        userId: performedBy,
+        teamId: team.id,
+        playerId: teamPlayer.playerId,
+        timestamp: new Date(),
+
+        role: teamPlayer.role,
+      };
+    }
+    team.teamPlayers = filteredTeamPlayers;
     team.teamPlayers.push(teamPlayer);
   }
+  const TeamUpdateRecord: teamUpdateRecord = {
+    v: 1,
+    id: uuidv4(),
+    type: recordType.teamUpdate,
+    userId: performedBy,
+    teamId: team.id,
+    timestamp: new Date(),
+    valueChanged: "ownerId",
+    new: playerId,
+    old: `${team.ownerId}`,
+  };
   team.ownerId = playerId;
-  await VrplTeamDB.updateOne(
-    { id: team.id },
-    { $set: { ownerId: team.ownerId, teamPlayers: team.teamPlayers } }
-  );
+
+  await Promise.all([
+    VrplTeamDB.updateOne(
+      { id: team.id },
+      { $set: { ownerId: team.ownerId, teamPlayers: team.teamPlayers } }
+    ),
+    storeRecord(TeamUpdateRecord),
+    changePlayersRecordPromise ? storeRecord(changePlayersRecordPromise) : null,
+  ]);
   return team;
 }
 
@@ -184,40 +289,119 @@ export async function changeTeamPlayerRole(
   tournamentId: string,
   teamId: string,
   playerId: string,
-  newRole: VrplTeamPlayerRole
+  newRole: VrplTeamPlayerRole,
+  performedBy: string
 ) {
   const team = await getTeamFromId(tournamentId, teamId);
   if (!team) return;
   const teamPlayer: VrplTeamPlayer = {
     playerId: playerId,
+    since: new Date(),
     role: newRole,
   };
-  team.teamPlayers = team.teamPlayers.filter(
+  const filteredTeamPlayers = team.teamPlayers.filter(
     (teamPlayer) => teamPlayer.playerId !== playerId
   );
+  let record: teamPlayerCreateRecord | teamPlayerUpdateRecord;
+  if (filteredTeamPlayers.length !== team.teamPlayers.length) {
+    const oldPlayer = team.teamPlayers.find(
+      (teamPlayer) => teamPlayer.playerId === playerId
+    );
+    if (!oldPlayer)
+      throw new Error(
+        "Could not find old version of updating team player for changing teamplayer role!"
+      );
+    record = {
+      v: 1,
+      id: uuidv4(),
+      type: recordType.teamPlayerUpdate,
+      userId: performedBy,
+      teamId: team.id,
+      playerId: teamPlayer.playerId,
+      timestamp: new Date(),
+
+      valueChanged: "role",
+      old: oldPlayer.role,
+      new: teamPlayer.role,
+    };
+  } else {
+    record = {
+      v: 1,
+      id: uuidv4(),
+      type: recordType.teamPlayerCreate,
+      userId: performedBy,
+      teamId: team.id,
+      playerId: teamPlayer.playerId,
+      timestamp: new Date(),
+
+      role: teamPlayer.role,
+    };
+  }
+  team.teamPlayers = filteredTeamPlayers;
   team.teamPlayers.push(teamPlayer);
-  await VrplTeamDB.updateOne(
-    { id: team.id },
-    { $set: { teamPlayers: team.teamPlayers } }
-  );
+
+  await Promise.all([
+    VrplTeamDB.updateOne(
+      { id: team.id },
+      { $set: { teamPlayers: team.teamPlayers } }
+    ),
+    storeRecord(record),
+  ]);
   return team;
 }
 
 export async function removePlayerFromTeam(
   tournamentId: string,
   teamId: string,
-  playerId: string
+  playerId: string,
+  performedBy: string
 ): Promise<VrplTeam | undefined> {
   const team = await getTeamFromId(tournamentId, teamId);
   if (!team) return;
 
-  team.teamPlayers = team.teamPlayers.filter(
+  const filteredTeamPlayers = team.teamPlayers.filter(
     (teamPlayer) => teamPlayer.playerId !== playerId
   );
-  await VrplTeamDB.updateOne(
-    { id: team.id },
-    { $set: { teamPlayers: team.teamPlayers } }
+  const removedTeamPlayer = team.teamPlayers.find(
+    (player) => player.playerId === playerId
   );
+  if (filteredTeamPlayers.length === team.teamPlayers.length)
+    throw new Error(
+      "Team player doesn't exist, and can therefore not be removed!"
+    );
+  else if (!removedTeamPlayer)
+    throw new Error(
+      "Blahblah error yippie, removePlayerFromTeamerrrrrrrrrrr couldnt find player to remove, but does exist? idk anymore"
+    );
+  const teamPlayer: VrplTeamPlayer = {
+    playerId: playerId,
+    role: VrplTeamPlayerRole.None,
+    since: new Date(),
+  };
+  const TeamPlayerUpdate: teamPlayerUpdateRecord = {
+    v: 1,
+    id: uuidv4(),
+    type: recordType.teamPlayerUpdate,
+    userId: performedBy,
+    teamId: team.id,
+    playerId: teamPlayer.playerId,
+    timestamp: new Date(),
+
+    valueChanged: "role",
+    old: removedTeamPlayer.role,
+    new: teamPlayer.role,
+  };
+
+  team.teamPlayers = filteredTeamPlayers;
+  team.teamPlayers.push(teamPlayer);
+
+  await Promise.all([
+    VrplTeamDB.updateOne(
+      { id: team.id },
+      { $set: { teamPlayers: team.teamPlayers } }
+    ),
+    storeRecord(TeamPlayerUpdate),
+  ]);
   return team;
 }
 
@@ -245,7 +429,8 @@ export async function getTeamPlayer(
 export async function createTeam(
   tournamentId: string,
   teamName: string,
-  ownerId: string
+  ownerId: string,
+  performedBy: string
 ): Promise<
   { success: true; doc: VrplTeam } | { success: false; error: string }
 > {
@@ -262,11 +447,21 @@ export async function createTeam(
     };
 
     if (await getTeamFromId(tournamentId, teamData.id)) {
-      return createTeam(tournamentId, teamName, ownerId);
+      return createTeam(tournamentId, teamName, ownerId, performedBy);
     }
     const goodTeam = storeTeam(teamData);
     const TeamModel = new VrplTeamDB(goodTeam);
-    await TeamModel.save();
+    const TeamCreateRecord: teamCreateRecord = {
+      id: uuidv4(),
+      team: goodTeam,
+      teamId: goodTeam.id,
+      timestamp: new Date(),
+      type: recordType.teamCreate,
+      userId: performedBy,
+      v: 1,
+    };
+    await Promise.all([storeRecord(TeamCreateRecord), TeamModel.save()]);
+
     return { success: true, doc: goodTeam };
   } catch (err) {
     console.trace();

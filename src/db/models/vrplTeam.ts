@@ -7,11 +7,14 @@ export enum VrplTeamPlayerRole {
   "Player",
   "Sub",
   "Pending",
+
+  "None",
 }
 
 export interface VrplTeamPlayer {
   playerId: string;
   role: VrplTeamPlayerRole;
+  since: Date;
 }
 
 export interface VrplTeam {

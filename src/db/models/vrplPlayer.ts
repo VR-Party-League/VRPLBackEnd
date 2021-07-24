@@ -15,6 +15,10 @@ const PlayerSchema = new Schema<VrplPlayer & Document>(
     discordTag: { type: String, required: true },
     discordAvatar: { type: String, require: true },
     permissions: { type: Number, required: true, default: 0 },
+    about: { type: String, require: false },
+
+    timeCreated: { type: Date, require: true },
+    country: { type: String, require: true },
   },
   { collection: "players" }
 );
