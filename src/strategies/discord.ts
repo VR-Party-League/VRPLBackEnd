@@ -13,8 +13,6 @@ import { storeRecord } from "../db/logs";
 
 const DiscordStrategy = passportDiscord.Strategy;
 
-// TODO: Create a function that updates/creates new users and also makes records for it
-
 passport.serializeUser(async (user: any, done) => {
   console.log("serializing User: ", user);
   try {
