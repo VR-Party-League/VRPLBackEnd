@@ -11,8 +11,6 @@ import { storeRecord } from "./logs";
 let playerCacheTimeStamp: number = 0;
 const playerCache = new Map<string, VrplPlayer>();
 
-import { keys } from "ts-transformer-keys";
-
 export function storePlayer(RawPlayer: VrplPlayer) {
   const player: VrplPlayer = {
     id: RawPlayer.id,
