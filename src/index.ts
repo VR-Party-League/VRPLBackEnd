@@ -89,12 +89,12 @@ async function bootstrap() {
       };
     },
     context: ({ req, res }) => {
-      console.log(req.sessionID);
+      console.log("Session ID from context: ", req.sessionID);
       const context: Context = {
         user: req.user,
       };
 
-      console.log(context);
+      console.log("Context:", context);
       return context;
     },
   });
@@ -128,7 +128,7 @@ async function bootstrap() {
   app.use(async function (req, res, next) {
     console.log("REQUEST!");
     //console.log(req.body);
-    console.log(1, req.sessionID);
+    console.log("Session ID: ", req.sessionID);
 
     try {
       res.header("Access-Control-Allow-Origin", "*");
@@ -141,11 +141,11 @@ async function bootstrap() {
       if (req.headers["authorization"]) {
         if (req.headers["authorization"].length > 7) {
           const token = req.headers["authorization"].substr("Token".length);
-          console.log(token);
+          console.log("Api Token:", token);
           const ApiToken = await getUserFromKey(token.trim());
-          console.log(ApiToken);
+          console.log("Api token data: ", ApiToken);
           if (ApiToken?.playerId) {
-            req.user = (await getPlayerFromId(ApiToken?.playerId)) || undefined;
+            req.user = (await getPlayerFromId(ApiToken.playerId)) || undefined;
           }
         }
       }

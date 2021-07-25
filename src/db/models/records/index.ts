@@ -4,14 +4,14 @@ import { playerRecords } from "./playerRecords";
 import { teamRecords } from "./teamRecordTypes";
 
 export enum recordType {
-  teamCreate = 0,
-  teamUpdate = 1,
+  teamCreate = 0, // WORKS
+  teamUpdate = 1, // WORKS
   teamDelete = 2,
-  teamPlayerCreate = 3,
+  teamPlayerCreate = 3, // WORKS
   teamPlayerUpdate = 4,
 
-  playerCreate = 10,
-  playerUpdate = 11,
+  playerCreate = 10, // WORKS
+  playerUpdate = 11, // WORKS
   playerDelete = 12,
 }
 
@@ -30,7 +30,7 @@ const logSchema = new Schema<record & Document>(
     v: { type: Number, required: true },
     id: { type: String, required: true, unique: true },
     type: { type: Number, required: true },
-    userId: { type: String, required: true, unique: true },
+    userId: { type: String, required: true },
     timestamp: { type: Date, required: true },
   },
   { collection: "logs", strict: false }

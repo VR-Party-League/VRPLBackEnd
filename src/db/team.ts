@@ -309,7 +309,7 @@ export async function changeTeamPlayerRole(
     );
     if (!oldPlayer)
       throw new Error(
-        "Could not find old version of updating team player for changing teamplayer role!"
+        "Could not find old version of updating team player for changing teamPlayer role!"
       );
     record = {
       v: 1,
@@ -371,7 +371,7 @@ export async function removePlayerFromTeam(
     );
   else if (!removedTeamPlayer)
     throw new Error(
-      "Blahblah error yippie, removePlayerFromTeamerrrrrrrrrrr couldnt find player to remove, but does exist? idk anymore"
+      "Blah blah error yippie, removePlayerFromTea me rr rrrr rrrrr cou ld nt find player to remove, but does exist? idk anymore"
     );
   const teamPlayer: VrplTeamPlayer = {
     playerId: playerId,

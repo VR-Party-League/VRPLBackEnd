@@ -1,4 +1,5 @@
 import { AuthChecker } from "type-graphql";
+import { Context } from ".";
 import { VrplPlayer } from "./db/models/vrplPlayer";
 export enum Permissions {
   None = 0,
@@ -23,13 +24,16 @@ export const userHasPermission = (
   return false;
 };
 export const authChecker: AuthChecker<any, any> = (
-  opts: { context: { user: VrplPlayer } },
+  opts: { context: Context },
   roles
 ) => {
+  console.log("Checking auth");
   if (!opts.context.user?.id) return false;
+  console.log("User had id");
+
   const userPerms = opts.context.user.permissions;
   if (bitFieldHas(userPerms, Permissions.Admin)) return true;
-  else if (!roles) return true;
+  else if (!roles?.[0]) return true;
   else if (userPerms === Permissions.None) return false;
 
   for (const role of roles) {

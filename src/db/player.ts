@@ -1,8 +1,17 @@
 import ms from "ms";
 import VrplPlayerDB, { VrplPlayer } from "../db/models/vrplPlayer";
+import {
+  playerCreateRecord,
+  playerUpdateRecord,
+} from "./models/records/playerRecords";
+import { v4 as uuidv4 } from "uuid";
+import { recordType } from "./models/records";
+import { storeRecord } from "./logs";
 
 let playerCacheTimeStamp: number = 0;
 const playerCache = new Map<string, VrplPlayer>();
+
+import { keys } from "ts-transformer-keys";
 
 export function storePlayer(RawPlayer: VrplPlayer) {
   const player: VrplPlayer = {
@@ -70,4 +79,89 @@ export async function getPlayerFromDiscordTag(discordTag: string) {
 
 export async function getPlayerFromDiscordId(discordId: string) {
   return (await findPlayer((player) => player.discordId == discordId)) || null;
+}
+
+export async function createOrUpdatePlayer(Player: VrplPlayer) {
+  const oldPlayer = await getPlayerFromDiscordId(Player.discordId);
+  console.log("Old player: ", oldPlayer);
+
+  console.log("Player1 ", Player);
+  Player = storePlayer(Player);
+  console.log("Player2 ", Player);
+  if (oldPlayer) {
+    console.log("opt1 ", Player);
+    if (checkPlayerSimilarity(oldPlayer, Player)) return;
+    console.log("not similar ", Player);
+    Player.id = oldPlayer.id;
+    await Promise.all([
+      VrplPlayerDB.updateOne({ id: oldPlayer.id }, Player),
+      recordPlayerUpdate(oldPlayer, Player),
+    ]);
+  } else {
+    console.log("opt2 ", Player);
+    await Promise.all([
+      VrplPlayerDB.create(Player),
+      recordPlayerCreate(Player),
+    ]);
+    storePlayer(Player);
+  }
+}
+
+function checkPlayerSimilarity(player1: VrplPlayer, player2: VrplPlayer) {
+  return !(
+    player1.discordAvatar !== player2.discordAvatar ||
+    player1.discordTag !== player2.discordTag ||
+    player1.discordId !== player2.discordId ||
+    player1.permissions !== player2.permissions
+  );
+}
+
+function recordPlayerCreate(player: VrplPlayer) {
+  const record: playerCreateRecord = {
+    v: 1,
+    id: uuidv4(),
+    type: recordType.playerCreate,
+    userId: player.id,
+    player: player,
+    playerId: player.id,
+    timestamp: new Date(),
+  };
+  return storeRecord(record);
+}
+
+function recordPlayerUpdate(oldPlayer: VrplPlayer, newPlayer: VrplPlayer) {
+  const promises: Promise<void>[] = [];
+  const toCheck: [any, any, keyof VrplPlayer][] = [
+    [newPlayer.discordAvatar, oldPlayer.discordAvatar, "discordAvatar"],
+    [newPlayer.discordTag, oldPlayer.discordTag, "discordTag"],
+    [newPlayer.discordId, oldPlayer.discordId, "discordId"],
+  ];
+  toCheck.forEach(([newValue, oldValue, key]) => {
+    if (newValue !== oldValue) {
+      promises.push(
+        recordPlayerKeyUpdate(oldPlayer.id, key, oldValue, newValue)
+      );
+    }
+  });
+  return Promise.all(promises);
+}
+
+function recordPlayerKeyUpdate(
+  playerId: string,
+  key: keyof VrplPlayer,
+  old: any,
+  newValue: any
+) {
+  const record: playerUpdateRecord = {
+    v: 1,
+    id: uuidv4(),
+    type: recordType.playerUpdate,
+    userId: playerId,
+    playerId: playerId,
+    timestamp: new Date(),
+    valueChanged: key,
+    old: old,
+    new: newValue,
+  };
+  return storeRecord(record);
 }

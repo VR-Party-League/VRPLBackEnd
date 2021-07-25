@@ -67,7 +67,12 @@ export default class {
     @Ctx() ctx: Context
   ): Promise<Team> {
     if (!ctx.user) throw new BadRequestError("Not logged in");
-    const createdTeamRes = await createTeam(tournamentId, teamName, ownerId);
+    const createdTeamRes = await createTeam(
+      tournamentId,
+      teamName,
+      ownerId,
+      ctx.user.id
+    );
     console.log(createdTeamRes);
     if (!createdTeamRes.success)
       throw new BadRequestError(`${createdTeamRes.error}`);
@@ -77,7 +82,8 @@ export default class {
         tournamentId,
         createdTeamRes.doc.id,
         ownerId,
-        VrplTeamPlayerRole.Captain
+        VrplTeamPlayerRole.Captain,
+        ctx.user.id
       );
     }
 
@@ -104,7 +110,8 @@ export default class {
       tournamentId,
       teamId,
       playerId,
-      VrplTeamPlayerRole.Player
+      VrplTeamPlayerRole.Player,
+      ctx.user.id
     );
     if (!newTeam) throw new InternalServerError(`Failed to add player to team`);
     return Object.assign(new Team(), newTeam);
@@ -129,7 +136,8 @@ export default class {
       tournamentId,
       teamId,
       playerId,
-      VrplTeamPlayerRole.Sub
+      VrplTeamPlayerRole.Sub,
+      ctx.user.id
     );
 
     if (!newTeam) throw new InternalServerError(`Failed to add sub to team`);
@@ -142,7 +150,7 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("playerId") playerId: string,
-    @Arg("role", (type) => String) role: VrplTeamPlayerRole,
+    @Arg("role", (type) => Number) role: VrplTeamPlayerRole,
     @Ctx() ctx: Context
   ) {
     if (!ctx.user) throw new BadRequestError("Not logged in");
@@ -165,7 +173,8 @@ export default class {
       tournamentId,
       teamId,
       playerId,
-      role
+      role,
+      ctx.user.id
     );
     if (!newTeam) throw new InternalServerError(`Failed to add sub to team`);
     return Object.assign(new Team(), newTeam);
@@ -193,6 +202,7 @@ export default class {
       tournamentId,
       teamId,
       playerId,
+      ctx.user.id,
       addAsPlayer ? VrplTeamPlayerRole.Player : undefined
     );
     if (!res) throw new InternalServerError("Failed to transfer teams");

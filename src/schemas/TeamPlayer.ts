@@ -6,5 +6,7 @@ export class TeamPlayer {
   @Field()
   player: Player;
   @Field()
-  role: string;
+  roleId: number;
+  @Field()
+  roleName: string;
 }

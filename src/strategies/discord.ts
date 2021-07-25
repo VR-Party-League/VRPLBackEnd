@@ -1,18 +1,27 @@
 import User, { VrplPlayer } from "../db/models/vrplPlayer";
 import passport from "passport";
 import passportDiscord from "passport-discord";
-import { getPlayerFromId, storePlayer } from "../db/player";
+import {
+  createOrUpdatePlayer,
+  getPlayerFromId,
+  storePlayer,
+} from "../db/player";
 import { v4 as uuidv4 } from "uuid";
+import { playerCreateRecord } from "../db/models/records/playerRecords";
+import { recordType } from "../db/models/records";
+import { storeRecord } from "../db/logs";
 
 const DiscordStrategy = passportDiscord.Strategy;
 
-passport.serializeUser((user: any, done) => {
-  console.log(user);
+// TODO: Create a function that updates/creates new users and also makes records for it
+
+passport.serializeUser(async (user: any, done) => {
+  console.log("serializing User: ", user);
   try {
-    User.updateOne({ id: user.id }, user, { upsert: true }).then(() => {
-      console.log("Serialized: " + user.id);
-      done(undefined, user.id!);
-    });
+    await createOrUpdatePlayer(user);
+
+    console.log("Serialized: " + user.id);
+    done(undefined, user.id!);
   } catch (err) {
     console.log(err);
     done(err, null);
@@ -55,12 +64,9 @@ const strategy = new DiscordStrategy(
     };
     console.log("HEY");
 
-    User.updateOne({ discordId: data.discordId }, data, {
-      upsert: true,
-    }).then(() => {
+    createOrUpdatePlayer(data).then(() => {
       try {
         console.log("Used strategy");
-
         storePlayer(data);
         done(undefined, data);
       } catch (err) {
