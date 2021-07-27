@@ -6,6 +6,7 @@ import { VrplTournament } from "./models/vrplTournaments";
 import { getTournamentFromId } from "./tournaments";
 import {
   matchConfirmRecord,
+  matchForfeitRecord,
   matchSubmitRecord,
 } from "./models/records/matchRecords";
 import { recordType } from "./models/records";
@@ -110,15 +111,18 @@ export async function submitMatch(
   matchId: string,
   teamId: string,
   scores: number[][],
-  performedBy: string
+  performedBy: string,
+  force?: boolean
 ): Promise<VrplMatch | null> {
   const [match, tournament] = await Promise.all([
     getMatchFromId(tournamentId, matchId),
     getTournamentFromId(tournamentId),
   ]);
   if (!match || !tournament) return null;
-  else if (isMatchSubmitted(match, tournament)) return null;
+  else if (!force && isMatchSubmitted(match, tournament)) return null;
   else if (!areScoresInValid(scores, match, tournament)) return null;
+  else if (!force && match.timeStart.getTime() > Date.now()) return null;
+  else if (!force && match.timeDeadline.getTime() < Date.now()) return null;
 
   if (match.teamIdsForfeited?.[0]) {
     for (const forfeitedTeamId of match.teamIdsForfeited) {
@@ -176,7 +180,7 @@ export async function confirmMatch(
   else if (match.timeConfirmed) return null;
 
   match.teamIdsConfirmed.push(teamId);
-  if (match.teamIdsConfirmed === match.teamIds) {
+  if (match.teamIdsConfirmed.length + 1 === match.teamIds.length) {
     match.timeConfirmed = new Date();
   }
 
@@ -248,3 +252,62 @@ export function areScoresInValid(
     return false;
   }
 }
+
+// Function that forfeits a team from a match
+export async function forfeitMatch(
+  tournamentId: string,
+  matchId: string,
+  teamId: string,
+  performedBy: string,
+  giveWin?: boolean
+): Promise<VrplMatch | null> {
+  const [match, tournament] = await Promise.all([
+    getMatchFromId(tournamentId, matchId),
+    getTournamentFromId(tournamentId),
+  ]);
+  if (!match || !tournament) return null;
+  else if (match.teamIdsForfeited.includes(teamId)) return null;
+  else if (!match.teamIds.includes(teamId)) return null;
+  else if (match.scores || match.timeSubmitted) return null;
+
+  const record: matchForfeitRecord = {
+    v: 1,
+    id: uuidv4(),
+    timestamp: new Date(),
+    type: recordType.matchForfeit,
+    tournamentId: tournamentId,
+    matchId: matchId,
+    teamId: teamId,
+    userId: performedBy,
+  };
+  const resultPromise = VrplMatchDB.updateOne(
+    { id: matchId },
+    {
+      $set: {
+        teamIdsForfeited: match.teamIdsForfeited,
+      },
+    }
+  );
+  match.teamIdsForfeited.push(teamId);
+  const [result] = await Promise.all([resultPromise, storeRecord(record)]);
+  if (result.nModified === 0) return null;
+
+  if (match.teamIdsForfeited.length + 1 === match.teamIds.length && giveWin) {
+    const scores: number[][] = [];
+    for (let round = 0; round < tournament.rounds; round++) {
+      scores.push(match.teamIds.map(() => 0));
+    }
+    console.log(
+      "Submitting scores for match as enough teams have forfeited " + matchId
+    );
+    Promise.resolve().then(
+      async () =>
+        await submitMatch(tournamentId, matchId, teamId, scores, performedBy)
+    );
+  }
+  return match;
+}
+
+// DONE: Handle player forfeiting
+// TODO: generate matches
+// TODO: calculate mmr

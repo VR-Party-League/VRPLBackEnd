@@ -12,4 +12,4 @@ export interface apiTokenDeleteRecord extends baseRecord {
   token: ApiToken;
 }
 
-export type authenticationRecords = apiTokenCreateRecord;
+export type authenticationRecords = apiTokenCreateRecord | apiTokenDeleteRecord;

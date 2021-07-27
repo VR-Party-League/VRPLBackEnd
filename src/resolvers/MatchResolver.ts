@@ -132,6 +132,8 @@ export default class {
       throw new ForbiddenError();
     else if (match.timeDeadline.getTime() < Date.now())
       throw new BadRequestError("Match expired");
+    else if (match.timeStart.getTime() > Date.now())
+      throw new BadRequestError("Match not yet started");
     else if (match.teamIdsConfirmed.includes(team.id))
       throw new BadRequestError("Match already confirmed by this team");
     else if (!isMatchSubmitted(match, tournament))

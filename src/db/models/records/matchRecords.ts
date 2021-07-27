@@ -18,4 +18,15 @@ export interface matchConfirmRecord extends baseRecord {
   scores: number[][];
 }
 
-export type matchRecords = matchConfirmRecord | matchSubmitRecord;
+export interface matchForfeitRecord extends baseRecord {
+  v: 1;
+  type: recordType.matchForfeit;
+  tournamentId: string;
+  teamId: string;
+  matchId: string;
+}
+
+export type matchRecords =
+  | matchConfirmRecord
+  | matchSubmitRecord
+  | matchForfeitRecord;
