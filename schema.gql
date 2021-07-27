@@ -35,7 +35,7 @@ type Match {
 type Mutation {
   addPlayerToTeamAsPlayer(playerId: String!, teamId: String!, tournamentId: String!): Team!
   addPlayerToTeamAsSub(playerId: String!, teamId: String!, tournamentId: String!): Team!
-  changePlayerRole(playerId: String!, role: String!, teamId: String!, tournamentId: String!): Team!
+  changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
   createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
   transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
 }
@@ -92,7 +92,8 @@ type Team {
 
 type TeamPlayer {
   player: Player!
-  role: String!
+  roleId: Float!
+  roleName: String!
 }
 
 """

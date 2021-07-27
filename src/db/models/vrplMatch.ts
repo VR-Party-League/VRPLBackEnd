@@ -7,6 +7,7 @@ export interface VrplMatch {
   scores?: number[][];
 
   teamIdsConfirmed: string[];
+  teamIdsForfeited: string[];
 
   timeStart: Date;
   timeDeadline: Date;
@@ -22,6 +23,7 @@ const MatchSchema = new Schema<VrplMatch & Document>(
     scores: { type: [[Number]], required: false },
 
     teamIdsConfirmed: [String],
+    teamIdsForfeited: [String],
 
     timeStart: Date,
     timeDeadline: Date,

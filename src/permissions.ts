@@ -6,6 +6,7 @@ export enum Permissions {
   Admin = 1 << 0, // 0001 -- the bitshift is unnecessary, but done for consistency
   ManageTeams = 1 << 1, // 0010
   ManageTournaments = 1 << 2, // 0100
+  ManageMatches = 1 << 3, // 1000
 
   //All = ~(~0 << 2), // 0111
 }

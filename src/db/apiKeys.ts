@@ -2,6 +2,9 @@ import ms from "ms";
 import { ApiToken, ApiTokenModel } from "./models/ApiTokens";
 import { VrplPlayer } from "./models/vrplPlayer";
 import { v4 as uuidv4 } from "uuid";
+import { apiTokenCreateRecord } from "./models/records/authentication";
+import { recordType } from "./models/records";
+import { storeRecord } from "./logs";
 
 const apiKeyCache = new Map<string, ApiToken>();
 let cacheTimeStamp = 0;
@@ -54,21 +57,31 @@ export async function getUserFromKey(
 export async function newApiToken(user: VrplPlayer) {
   if (!user) throw Error("No user");
   await refreshApiTokens();
-  const newDoc = await ApiTokenModel.findOneAndUpdate(
+  const token: ApiToken = {
+    playerId: user.id,
+    apiToken: uuidv4(),
+    timestamp: new Date(),
+  };
+  const newDocPromise = ApiTokenModel.findOneAndUpdate(
     { playerId: user.id },
-    { playerId: user.id, apiToken: uuidv4(), timestamp: new Date() },
+    token,
     { upsert: true, new: true }
   );
+  const record: apiTokenCreateRecord = {
+    v: 1,
+    type: recordType.apiTokenCreate,
+    id: uuidv4(),
+    timestamp: token.timestamp,
+    token: token,
+    userId: token.playerId,
+  };
+  const [newDoc] = await Promise.all([newDocPromise, storeRecord(record)]);
   // Remove old keys from cache
-  for (const key of apiKeyCache) {
-    if (key[1].playerId === user.id) {
-      apiKeyCache.delete(key[0]);
+  for (const [token, data] of apiKeyCache) {
+    if (data.playerId === user.id) {
+      apiKeyCache.delete(token);
     }
   }
-  apiKeyCache.set(newDoc.apiToken, {
-    playerId: newDoc.playerId,
-    apiToken: newDoc.apiToken,
-    timestamp: newDoc.timestamp,
-  });
-  return apiKeyCache.get(newDoc.apiToken);
+  apiKeyCache.set(token.apiToken, token);
+  return apiKeyCache.get(token.apiToken);
 }

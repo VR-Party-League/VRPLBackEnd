@@ -196,3 +196,5 @@ mongoose.connect(process.env.DB_URI!, {
 });
 
 bootstrap();
+
+// TODO: use class-validator

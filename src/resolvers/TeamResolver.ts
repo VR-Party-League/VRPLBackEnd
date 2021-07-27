@@ -9,7 +9,6 @@ import {
   Root,
 } from "type-graphql";
 import { Context } from "..";
-import { projects, tasks, ProjectData } from "../data";
 import { VrplPlayer } from "../db/models/vrplPlayer";
 import { VrplTeam, VrplTeamPlayerRole } from "../db/models/vrplTeam";
 import { getPlayerFromId } from "../db/player";
@@ -17,7 +16,6 @@ import {
   addPlayerToTeam,
   changeTeamPlayerRole,
   createTeam,
-  findTeamsOfPlayer,
   getTeamFromId,
   getTeamFromName,
   transferTeam,
@@ -30,16 +28,16 @@ import {
 import { Permissions, userHasPermission } from "../permissions";
 import Team from "../schemas/Team";
 
-@Resolver((of) => Team)
+@Resolver((_of) => Team)
 export default class {
-  @Query((returns) => Team, { nullable: true })
+  @Query((_returns) => Team, { nullable: true })
   teamFromName(
     @Arg("tournamentId") tournamentId: string,
     @Arg("name") name: string
   ): Promise<VrplTeam | null> {
     return getTeamFromName(tournamentId, name);
   }
-  @Query((returns) => Team, { nullable: true })
+  @Query((_returns) => Team, { nullable: true })
   teamFromId(
     @Arg("tournamentId") tournamentId: string,
     @Arg("id") id: string
@@ -58,7 +56,7 @@ export default class {
   // }
 
   @Authorized()
-  @Mutation((returns) => Team)
+  @Mutation((_returns) => Team)
   async createTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamName") teamName: string,
@@ -91,7 +89,7 @@ export default class {
   }
 
   @Authorized()
-  @Mutation((returns) => Team)
+  @Mutation((_returns) => Team)
   async addPlayerToTeamAsPlayer(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -117,7 +115,7 @@ export default class {
     return Object.assign(new Team(), newTeam);
   }
   @Authorized()
-  @Mutation((returns) => Team)
+  @Mutation((_returns) => Team)
   async addPlayerToTeamAsSub(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -145,7 +143,7 @@ export default class {
   }
 
   @Authorized()
-  @Mutation((returns) => Team)
+  @Mutation((_returns) => Team)
   async changePlayerRole(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -181,7 +179,7 @@ export default class {
   }
 
   @Authorized()
-  @Mutation((returns) => Team)
+  @Mutation((_returns) => Team)
   async transferTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,

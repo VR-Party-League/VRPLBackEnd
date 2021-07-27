@@ -1,47 +1,25 @@
-import {
-  Arg,
-  Authorized,
-  FieldResolver,
-  Mutation,
-  Query,
-  Resolver,
-  Root,
-} from "type-graphql";
-import { projects, tasks, ProjectData } from "../data";
+import { Arg, FieldResolver, Query, Resolver, Root } from "type-graphql";
 import { getMatchFromId } from "../db/match";
 import { VrplMatch } from "../db/models/vrplMatch";
-import { VrplPlayer } from "../db/models/vrplPlayer";
 import { VrplTeam } from "../db/models/vrplTeam";
-import {
-  VrplTournament,
-  VrplTournamentType,
-} from "../db/models/vrplTournaments";
-import { getPlayerFromId } from "../db/player";
-import {
-  createTeam,
-  getTeamFromId,
-  getTeamFromName,
-  getTeamsOfTournament,
-} from "../db/team";
+import { VrplTournament } from "../db/models/vrplTournaments";
+import { getTeamsOfTournament } from "../db/team";
 import {
   getAllTournaments,
   getTournamentFromId,
   getTournamentFromName,
 } from "../db/tournaments";
-import { BadRequestError } from "../errors";
-import Player from "../schemas/Player";
-import Team from "../schemas/Team";
 import Tournament from "../schemas/Tournament";
 
-@Resolver((of) => Tournament)
+@Resolver((_of) => Tournament)
 export default class {
-  @Query((returns) => Tournament, { nullable: true })
+  @Query((_returns) => Tournament, { nullable: true })
   async tournamentFromId(@Arg("id") id: string): Promise<Tournament | null> {
     const rawTournament = await getTournamentFromId(id);
     if (rawTournament) return Object.assign(new Tournament(), rawTournament);
     return null;
   }
-  @Query((returns) => Tournament, { nullable: true })
+  @Query((_returns) => Tournament, { nullable: true })
   async tournamentFromName(
     @Arg("name") name: string
   ): Promise<Tournament | null> {
@@ -49,7 +27,7 @@ export default class {
     if (rawTournament) return Object.assign(new Tournament(), rawTournament);
     return null;
   }
-  @Query((returns) => [Tournament], { nullable: false })
+  @Query((_returns) => [Tournament], { nullable: false })
   async allTournaments(): Promise<Tournament[]> {
     const rawTournaments = await getAllTournaments();
     return rawTournaments.map((rawTournament) =>

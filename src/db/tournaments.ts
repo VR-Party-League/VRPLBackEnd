@@ -19,6 +19,7 @@ function storeTournament(tournament: VrplTournament) {
       : [],
 
     rounds: tournament.rounds,
+    maxScore: tournament.maxScore,
     rules: tournament.rules.map((rule) => Object.assign({}, rule)),
 
     eligibilityCheck: tournament.eligibilityCheck,

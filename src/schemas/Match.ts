@@ -11,16 +11,16 @@ export default class Match {
   @Field({ description: "The tournament" })
   tournament: Tournament;
 
-  @Field((type) => [Team], { description: "The teams playing the match" })
+  @Field((_type) => [Team], { description: "The teams playing the match" })
   teams: [Team];
 
-  @Field((type) => [[Int]], {
+  @Field((_type) => [[Int]], {
     description: "The submitted scores",
     nullable: true,
   })
   scores: [[Number]];
 
-  @Field((type) => [Team], {
+  @Field((_type) => [Team], {
     description: "The teams that have confirmed the scores",
     defaultValue: [],
   })
@@ -40,4 +40,10 @@ export default class Match {
     nullable: false,
   })
   timeConfirmed: Date;
+}
+
+@InputType()
+export class MatchScoreInput {
+  @Field((_type) => [[Number]])
+  rounds: number[][];
 }

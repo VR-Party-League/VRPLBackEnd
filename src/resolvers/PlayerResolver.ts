@@ -5,13 +5,13 @@ import { getPlayerFromDiscordId, getPlayerFromId } from "../db/player";
 import { getAllTeamsOfPlayer } from "../db/team";
 import Player from "../schemas/Player";
 
-@Resolver((of) => Player)
+@Resolver((_of) => Player)
 export default class {
-  @Query((returns) => Player, { nullable: true })
+  @Query((_returns) => Player, { nullable: true })
   playerFromId(@Arg("playerId") playerId: string): Promise<VrplPlayer | null> {
     return getPlayerFromId(playerId);
   }
-  @Query((returns) => Player, { nullable: true })
+  @Query((_returns) => Player, { nullable: true })
   playerFromDiscordId(
     @Arg("discordId") discordId: string
   ): Promise<VrplPlayer | null> {

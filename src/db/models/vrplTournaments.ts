@@ -25,6 +25,7 @@ export interface VrplTournament {
   rules: Rules;
   gameId: string;
   rounds: number;
+  maxScore: number;
 
   matchIds: string[];
   currentMatchIds: string[];
@@ -48,6 +49,7 @@ const TournamentSchema = new Schema<VrplTournament & Document>(
     rules: Object,
     gameId: String,
     rounds: Number,
+    maxScore: Number,
 
     matchIds: [String],
     currentMatchIds: [String],
