@@ -7,7 +7,7 @@ export default class Player {
   id!: string;
 
   @Field({ description: "The player's discord ID" })
-  discordID!: string;
+  discordId!: string;
 
   @Field({ description: "The player's discord Tag" })
   discordTag!: string;

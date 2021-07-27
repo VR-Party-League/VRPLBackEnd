@@ -32,11 +32,17 @@ type Match {
   tournament: Tournament!
 }
 
+input MatchScoreInput {
+  rounds: [[Float!]!]!
+}
+
 type Mutation {
   addPlayerToTeamAsPlayer(playerId: String!, teamId: String!, tournamentId: String!): Team!
   addPlayerToTeamAsSub(playerId: String!, teamId: String!, tournamentId: String!): Team!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
+  confirmMatch(matchId: String!, teamId: String!, tournamentId: String!): Match!
   createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
+  submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
   transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
 }
 
@@ -45,7 +51,7 @@ type Player {
   discordAvatar: String!
 
   """The player's discord ID"""
-  discordID: String!
+  discordId: String!
 
   """The player's discord Tag"""
   discordTag: String!
@@ -62,10 +68,12 @@ type Player {
 
 type Query {
   allTournaments: [Tournament!]!
+  getMatchFromId(matchId: String!, tournamentId: String!): Match
+  getMatchesForTeam(activeOnly: Boolean, teamId: String!, tournamentId: String!): [Match!]!
   playerFromDiscordId(discordId: String!): Player
   playerFromId(playerId: String!): Player
   teamFromId(id: String!, tournamentId: String!): Team
-  teamFromName(name: String!, tournamentId: String!): Match
+  teamFromName(name: String!, tournamentId: String!): Team
   tournamentFromId(id: String!): Tournament
   tournamentFromName(name: String!): Tournament
 }

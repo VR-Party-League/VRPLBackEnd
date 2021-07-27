@@ -2,7 +2,10 @@ import ms from "ms";
 import { ApiToken, ApiTokenModel } from "./models/ApiTokens";
 import { VrplPlayer } from "./models/vrplPlayer";
 import { v4 as uuidv4 } from "uuid";
-import { apiTokenCreateRecord } from "./models/records/authentication";
+import {
+  apiTokenCreateRecord,
+  apiTokenDeleteRecord,
+} from "./models/records/authentication";
 import { recordType } from "./models/records";
 import { storeRecord } from "./logs";
 
@@ -84,4 +87,25 @@ export async function newApiToken(user: VrplPlayer) {
   }
   apiKeyCache.set(token.apiToken, token);
   return apiKeyCache.get(token.apiToken);
+}
+
+// Function that removes a users api key from the database and cache
+export async function removeApiToken(user: VrplPlayer) {
+  if (!user) throw Error("No user");
+  // Delete from database
+  await ApiTokenModel.findOneAndRemove({ playerId: user.id });
+  for (const [token, data] of apiKeyCache) {
+    if (data.playerId === user.id) {
+      const record: apiTokenDeleteRecord = {
+        v: 1,
+        type: recordType.apiTokenDelete,
+        id: uuidv4(),
+        timestamp: new Date(),
+        token: data,
+        userId: data.playerId,
+      };
+      await storeRecord(record);
+      apiKeyCache.delete(token);
+    }
+  }
 }

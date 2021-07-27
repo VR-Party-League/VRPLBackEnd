@@ -7,6 +7,7 @@ import { teamRecords } from "./teamRecordTypes";
 
 export enum recordType {
   apiTokenCreate = 0,
+  apiTokenDelete = 1,
 
   playerCreate = 10, // WORKS
   playerUpdate = 11, // WORKS
