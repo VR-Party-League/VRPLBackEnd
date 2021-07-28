@@ -59,15 +59,4 @@ export default class {
   async teams(@Root() vrplTournament: VrplTournament): Promise<VrplTeam[]> {
     return await getTeamsOfTournament(vrplTournament.id);
   }
-  // @Mutation((returns) => Team)
-  // async create(
-  //   @Arg("tournamentId") tournamentId: string,
-  //   @Arg("teamName") teamName: string,
-  //   @Arg("captainId") captainId: string
-  // ): Promise<Team> {
-  //   const res = await createTeam(tournamentId, teamName, captainId);
-  //   console.log(res);
-  //   if (res.success) Object.assign(new Team(), res.doc);
-  //   throw new BadRequestError(`${res.error}`);
-  // }
 }

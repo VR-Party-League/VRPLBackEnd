@@ -55,6 +55,7 @@ export default class {
   //   return Promise.all(vrplTeam.teamPlayers.map((id) => getPlayerFromId(id)));
   // }
 
+  // TODO: Slightly tested
   @Authorized()
   @Mutation((_returns) => Team)
   async createTeam(
@@ -88,6 +89,7 @@ export default class {
     return Object.assign(new Team(), createdTeamRes.doc);
   }
 
+  // TODO: Untested
   @Authorized()
   @Mutation((_returns) => Team)
   async addPlayerToTeamAsPlayer(
@@ -114,6 +116,7 @@ export default class {
     if (!newTeam) throw new InternalServerError(`Failed to add player to team`);
     return Object.assign(new Team(), newTeam);
   }
+  // TODO: Untested
   @Authorized()
   @Mutation((_returns) => Team)
   async addPlayerToTeamAsSub(
@@ -142,6 +145,7 @@ export default class {
     return Object.assign(new Team(), newTeam);
   }
 
+  // TODO: Untested
   @Authorized()
   @Mutation((_returns) => Team)
   async changePlayerRole(
@@ -178,6 +182,7 @@ export default class {
     return Object.assign(new Team(), newTeam);
   }
 
+  // TODO: Untested
   @Authorized()
   @Mutation((_returns) => Team)
   async transferTeam(

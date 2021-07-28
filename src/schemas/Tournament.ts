@@ -27,8 +27,13 @@ export default class Tournament {
   @Field((type) => [Rule], { description: "The tournament rules" })
   rules: Rule[];
 
-  @Field({ description: "The amount of rounds in the tournament" })
-  rounds: string;
+  @Field({ description: "The amount of rounds a match has in this tournament" })
+  matchRounds: number;
+
+  @Field({
+    description: "The maximum score allowed to enter by players for a match",
+  })
+  matchMaxScore: number;
 
   @Field((type) => [Team], {
     description: "Teams in the tournament",

@@ -1,4 +1,5 @@
 import { baseRecord, recordType } from ".";
+import { VrplMatch } from "../vrplMatch";
 
 export interface matchSubmitRecord extends baseRecord {
   v: 1;
@@ -25,8 +26,16 @@ export interface matchForfeitRecord extends baseRecord {
   teamId: string;
   matchId: string;
 }
+export interface matchCreateRecord extends baseRecord {
+  v: 1;
+  type: recordType.matchCreate;
+  tournamentId: string;
+  matchId: string;
+  match: VrplMatch;
+}
 
 export type matchRecords =
   | matchConfirmRecord
   | matchSubmitRecord
-  | matchForfeitRecord;
+  | matchForfeitRecord
+  | matchCreateRecord;

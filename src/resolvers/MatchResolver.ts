@@ -74,6 +74,7 @@ export default class {
     );
   }
 
+  // TODO: Untested
   @Authorized()
   @Mutation((returns) => Match)
   async confirmMatch(
@@ -107,6 +108,7 @@ export default class {
     return res;
   }
 
+  // TODO: Untested
   @Authorized()
   @Mutation((returns) => Match)
   async submitMatch(

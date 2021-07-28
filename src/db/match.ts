@@ -6,11 +6,14 @@ import { VrplTournament } from "./models/vrplTournaments";
 import { getTournamentFromId } from "./tournaments";
 import {
   matchConfirmRecord,
+  matchCreateRecord,
   matchForfeitRecord,
   matchSubmitRecord,
 } from "./models/records/matchRecords";
 import { recordType } from "./models/records";
-import { storeRecord } from "./logs";
+import { storeRecord, storeRecords } from "./logs";
+import { getTeamsOfTournament } from "./team";
+import * as _ from "lodash";
 
 let matchCacheTimeStamp: number = 0;
 const matchCache = new Map<string, VrplMatch>();
@@ -106,6 +109,7 @@ export async function getMatchesForTeam(
 }
 
 // Function that submits scores for a match
+// TODO: Untested
 export async function submitMatch(
   tournamentId: string,
   matchId: string,
@@ -162,6 +166,7 @@ export async function submitMatch(
   else return match;
 }
 
+// TODO: Untested
 export async function confirmMatch(
   tournamentId: string,
   teamId: string,
@@ -224,7 +229,7 @@ export function isMatchSubmitted(
     );
   else if (!match.timeSubmitted) return false;
   else if (!match.scores) return false;
-  else if (match.scores.length !== tournament.rounds)
+  else if (match.scores.length !== tournament.matchRounds)
     throw new Error(`Wrong amount of rounds submitted for match ${match.id}`);
   else if (!match.timeSubmitted) return false;
 
@@ -236,7 +241,7 @@ export function areScoresInValid(
   tournament: VrplTournament
 ): boolean | string {
   if (!rounds) return true;
-  else if (rounds.length !== tournament.rounds)
+  else if (rounds.length !== tournament.matchRounds)
     return `Wrong amount of rounds submitted for match`;
   else if (rounds.some((round) => round.length !== match.teamIds.length))
     return `Wrong amount of teams in round`;
@@ -244,7 +249,7 @@ export function areScoresInValid(
     return `Wrong scores submitted for match 1`;
   else if (
     rounds.some((round) =>
-      round.some((score) => score < 0 || score > tournament.maxScore)
+      round.some((score) => score < 0 || score > tournament.matchMaxScore)
     )
   )
     return `Wrong scores submitted for match 2`;
@@ -254,6 +259,7 @@ export function areScoresInValid(
 }
 
 // Function that forfeits a team from a match
+// TODO: Untested
 export async function forfeitMatch(
   tournamentId: string,
   matchId: string,
@@ -294,7 +300,7 @@ export async function forfeitMatch(
 
   if (match.teamIdsForfeited.length + 1 === match.teamIds.length && giveWin) {
     const scores: number[][] = [];
-    for (let round = 0; round < tournament.rounds; round++) {
+    for (let round = 0; round < tournament.matchRounds; round++) {
       scores.push(match.teamIds.map(() => 0));
     }
     console.log(
@@ -307,6 +313,56 @@ export async function forfeitMatch(
   }
   return match;
 }
+
+// Function that generates all the matches for a tournament
+// TODO: Untested
+export async function generateMatches(
+  tournamentId: string,
+  timeStart: Date,
+  timeDeadline: Date,
+  performedBy: string
+): Promise<VrplTournament | null> {
+  const [tournament, teams] = await Promise.all([
+    getTournamentFromId(tournamentId),
+    getTeamsOfTournament(tournamentId),
+  ]);
+  let shuffledTeams = _.shuffle(teams);
+  if (!tournament) return null;
+  else if (!teams) return null;
+
+  const matches: VrplMatch[] = [];
+  const records: matchCreateRecord[] = [];
+  for (let i = 0; i < teams.length; i += 2) {
+    const match: VrplMatch = {
+      id: uuidv4(),
+      tournamentId: tournamentId,
+      teamIds: [teams[i].id, teams[i + 1].id],
+      teamIdsConfirmed: [],
+      teamIdsForfeited: [],
+      timeDeadline: timeDeadline,
+      timeStart: timeStart,
+    };
+    const record: matchCreateRecord = {
+      v: 1,
+      id: uuidv4(),
+      timestamp: new Date(),
+      type: recordType.matchCreate,
+      tournamentId: tournamentId,
+      matchId: match.id,
+      match: match,
+      userId: performedBy,
+    };
+    records.push(record);
+    matches.push(match);
+  }
+  const resultPromise = VrplMatchDB.insertMany(matches);
+  const [result] = await Promise.all([resultPromise, storeRecords(records)]);
+  if (!result?.[0]) return null;
+  await refreshMatches(true);
+  return tournament;
+}
+
+// Function that generates all the matches for a tournament
 
 // DONE: Handle player forfeiting
 // TODO: generate matches
