@@ -22,6 +22,7 @@ export interface VrplTournament {
   name: string;
   description: string;
   banner: string;
+  icon: string;
   rules: Rules;
   gameId: string;
   matchRounds: number;
@@ -46,6 +47,7 @@ const TournamentSchema = new Schema<VrplTournament & Document>(
     name: String,
     description: String,
     banner: String,
+    icon: String,
     rules: Object,
     gameId: String,
     matchRounds: Number,

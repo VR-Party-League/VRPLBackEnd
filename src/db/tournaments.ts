@@ -11,6 +11,7 @@ function storeTournament(tournament: VrplTournament) {
     name: tournament.name,
     description: tournament.description,
     banner: tournament.banner,
+    icon: tournament.icon,
     gameId: tournament.gameId,
 
     matchIds: new Array(...tournament.matchIds),
