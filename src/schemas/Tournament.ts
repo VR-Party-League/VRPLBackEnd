@@ -18,6 +18,9 @@ export default class Tournament {
   @Field({ description: "The tournament description" })
   description: string;
 
+  @Field({ description: "The tournament summary" })
+  summary: string;
+
   @Field({ description: "The tournament banner" })
   banner: string;
 
