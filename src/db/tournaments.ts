@@ -10,6 +10,7 @@ function storeTournament(tournament: VrplTournament) {
     type: tournament.type,
     name: tournament.name,
     description: tournament.description,
+    summary: tournament.summary,
     banner: tournament.banner,
     icon: tournament.icon,
     gameId: tournament.gameId,

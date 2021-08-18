@@ -21,6 +21,7 @@ export interface VrplTournament {
   type: VrplTournamentType;
   name: string;
   description: string;
+  summary: string;
   banner: string;
   icon: string;
   rules: Rules;
