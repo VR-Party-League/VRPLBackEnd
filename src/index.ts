@@ -1,54 +1,50 @@
 import dotenv from "dotenv";
 dotenv.config({});
 
-import { ApolloServer } from "apollo-server-express";
-import "reflect-metadata";
-import { buildSchema } from "type-graphql";
-import TeamResolver from "./resolvers/TeamResolver";
-import {
-  ApolloServerPluginLandingPageGraphQLPlayground,
-  ApolloServerPluginLandingPageDisabled,
-} from "apollo-server-core";
-
 const PORT = process.env.PORT || 3001;
+export const frontEndUrl = "https://vrplfrontend.herokuapp.com";
 
-import mongoose from "mongoose";
+// Graphql/Express
+import express from "express";
+import { ApolloServer } from "apollo-server-express";
+import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
+import { buildSchema } from "type-graphql";
 import { CustomError } from "./errors";
 import { VrplPlayer } from "./db/models/vrplPlayer";
-import express from "express";
-import passport from "passport";
-import { json, urlencoded } from "body-parser";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import session from "express-session";
-import { getPlayerFromId } from "./db/player";
-import connectMongodbSession from "connect-mongodb-session";
-import path from "path";
-import { getUserFromKey, newApiToken } from "./db/apiKeys";
-import MatchResolver from "./resolvers/MatchResolver";
-import TournamentResolver from "./resolvers/TournamentResolver";
-import PlayerResolver from "./resolvers/PlayerResolver";
-
-import { authChecker } from "./permissions";
-import TeamPlayerResolver from "./resolvers/TeamPlayerResolver";
-import RuleResolver from "./resolvers/RuleResolver";
-import GameResolver from "./resolvers/GameResolver";
-
 declare global {
   namespace Express {
-    interface User extends VrplPlayer {}
+    export interface Request {
+      user: VrplPlayer | undefined;
+    }
   }
 }
 export interface Context {
   user?: VrplPlayer;
 }
-async function bootstrap() {
-  const MongoDBStore = connectMongodbSession(session);
-  const store = new MongoDBStore({
-    uri: process.env.DB_URI!,
-    collection: "sessions",
-  });
 
+// Other stuff
+import mongoose from "mongoose";
+import { json, urlencoded } from "body-parser";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+
+// Resolvers
+import MatchResolver from "./resolvers/MatchResolver";
+import TournamentResolver from "./resolvers/TournamentResolver";
+import PlayerResolver from "./resolvers/PlayerResolver";
+import TeamPlayerResolver from "./resolvers/TeamPlayerResolver";
+import RuleResolver from "./resolvers/RuleResolver";
+import GameResolver from "./resolvers/GameResolver";
+import TeamResolver from "./resolvers/TeamResolver";
+
+// Authentication
+import { Authenticate } from "./authentication/jwt";
+import { authChecker } from "./permissions";
+
+// Routes
+import router from "./routes";
+
+async function bootstrap() {
   const schema = await buildSchema({
     resolvers: [
       TournamentResolver,
@@ -91,7 +87,6 @@ async function bootstrap() {
       };
     },
     context: ({ req, res }) => {
-      console.log("Session ID from context: ", req.sessionID);
       const context: Context = {
         user: req.user,
       };
@@ -102,7 +97,6 @@ async function bootstrap() {
   });
   await server.start();
 
-  require("./strategies/discord");
   const app = express();
   app.set("trust proxy", 1);
   //app.set("views", path.join(__dirname, "views"));
@@ -112,26 +106,10 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true }));
   app.use(cors());
   app.use(cookieParser());
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET!,
-      resave: false,
-      cookie: {
-        maxAge: (1000 * 60 * 60 * 24 * 365) / 4, // 3 months
-        //secure: app.get("env") === "production",
-      },
-      saveUninitialized: true,
-      store: store,
-    })
-  );
 
-  app.use(passport.initialize());
-  app.use(passport.session());
   app.use(async function (req, res, next) {
     console.log("REQUEST!");
     //console.log(req.body);
-    console.log("Session ID: ", req.sessionID);
-
     try {
       res.header("Access-Control-Allow-Origin", "*");
       req.headers["if-none-match"] = "no-match-for-this";
@@ -139,54 +117,13 @@ async function bootstrap() {
       console.trace();
       console.log(err);
     }
-    try {
-      if (req.headers["authorization"]) {
-        if (req.headers["authorization"].length > 7) {
-          const token = req.headers["authorization"].substr("Token".length);
-          console.log("Api Token:", token);
-          const ApiToken = await getUserFromKey(token.trim());
-          console.log("Api token data: ", ApiToken);
-          if (ApiToken?.playerId) {
-            req.user = (await getPlayerFromId(ApiToken.playerId)) || undefined;
-          }
-        }
-      }
-    } catch (err) {
-      console.trace();
-      console.log(err);
-    }
     next();
   });
-
-  app.use(passport.initialize());
-  app.use(passport.session());
+  app.use(Authenticate);
+  app.use(router);
 
   server.applyMiddleware({ app });
 
-  app.get("/api/auth/discord", passport.authenticate("discord"), (req, res) => {
-    res.redirect(`http://vrplfront.fishman.live`);
-  });
-
-  app.get("/api/auth/token", async (req, res) => {
-    if (!req.user) return res.status(401).send({ msg: "Unauthorized" });
-    const user = req.user;
-    const apiKey = await newApiToken(user);
-    res.status(201).send(apiKey);
-  });
-
-  app.get("/api/auth/logout", (req, res) => {
-    req.session.destroy(() => {
-      res.redirect("http://vrplfront.fishman.live");
-    });
-  });
-
-  app.get("/api/auth", (req, res) => {
-    if (req.user) {
-      res.send(req.user);
-    } else {
-      res.status(401).send({ msg: "Unauthorized" });
-    }
-  });
   app.listen(PORT);
   console.log(`Server is running on http://localhost:${PORT}`);
 }

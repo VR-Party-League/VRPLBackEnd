@@ -9,9 +9,12 @@ import { newApiToken } from "../../db/apiKeys";
 import axios from "axios";
 import { APIUser, RESTPostOAuth2AccessTokenResult } from "discord-api-types/v9";
 import {
+  createPlayerFromDiscordInfo,
   getPlayerFromDiscordId,
   updatePlayerDiscordInfo,
 } from "../../db/player";
+import { createJwtToken } from "../../authentication/jwt";
+import ms from "ms";
 
 const router = Router();
 
@@ -46,7 +49,7 @@ router.get("/discord/callback", async (req, res) => {
     const oauthData: RESTPostOAuth2AccessTokenResult = oauthResult.data;
     console.log(oauthData);
     const user = await getUserFromOAuthData(oauthData);
-    const player = await getPlayerFromDiscordId(user.id);
+    let player = await getPlayerFromDiscordId(user.id);
     if (player) {
       if (player.discordId !== user.id) {
         return res.status(400).send({
@@ -59,11 +62,21 @@ router.get("/discord/callback", async (req, res) => {
       ) {
         await updatePlayerDiscordInfo(player, user);
       }
+    } else {
+      player = await createPlayerFromDiscordInfo(user);
     }
+
+    res
+      .cookie("Authorization", createJwtToken(player), {
+        expires: new Date(Date.now() + ms("100d")),
+        httpOnly: true,
+      })
+      .redirect(frontEndUrl);
   } catch (error) {
     // NOTE: An unauthorized token will not throw an error;
     // it will return a 401 Unauthorized response in the try block above
     console.error(error);
+    res.status(500).send({ message: "Error" });
   }
 });
 
@@ -75,9 +88,8 @@ router.get("/token", async (req, res) => {
 });
 
 router.get("/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.redirect(frontEndUrl);
-  });
+  res.clearCookie("Authorization");
+  res.redirect(frontEndUrl);
 });
 
 router.get("/", (req, res) => {

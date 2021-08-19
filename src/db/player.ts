@@ -8,6 +8,8 @@ import { v4 as uuidv4 } from "uuid";
 import { recordType } from "./models/records";
 import { storeRecord } from "./logs";
 
+import { APIUser } from "discord-api-types/v9";
+
 let playerCacheTimeStamp: number = 0;
 const playerCache = new Map<string, VrplPlayer>();
 
@@ -103,6 +105,39 @@ export async function createOrUpdatePlayer(Player: VrplPlayer) {
     ]);
     storePlayer(Player);
   }
+}
+
+export async function updatePlayerDiscordInfo(
+  Player: VrplPlayer,
+  User: APIUser
+) {
+  const oldPlayer = Object.assign({}, Player);
+  Player.discordAvatar = User.avatar || undefined;
+  Player.discordTag = User.username + User.discriminator;
+  Player.discordId = User.id;
+
+  playerCache.delete(Player.id);
+  storePlayer(Player);
+  await Promise.all([
+    VrplPlayerDB.updateOne({ id: oldPlayer.id }, Player),
+    recordPlayerUpdate(oldPlayer, Player),
+  ]);
+}
+export async function createPlayerFromDiscordInfo(
+  User: APIUser
+): Promise<VrplPlayer> {
+  const player: VrplPlayer = {
+    id: uuidv4(),
+    discordId: User.id,
+    discordTag: User.username + User.discriminator,
+    discordAvatar: User.avatar || undefined,
+    permissions: 0,
+  };
+  if (await getPlayerFromId(player.id))
+    return createPlayerFromDiscordInfo(User);
+
+  await Promise.all([VrplPlayerDB.create(player), recordPlayerCreate(player)]);
+  return storePlayer(player);
 }
 
 function checkPlayerSimilarity(player1: VrplPlayer, player2: VrplPlayer) {
