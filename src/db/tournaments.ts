@@ -91,3 +91,12 @@ export async function getTournamentFromId(tournamentId: string) {
   await refreshTournaments();
   return tournamentCache.get(tournamentId) || null;
 }
+
+export async function getTournamentsOfGame(gameId: string) {
+  await refreshTournaments();
+  const res: VrplTournament[] = [];
+  for (let tournament of tournamentCache.values()) {
+    if (tournament.gameId === gameId) res.push(tournament);
+  }
+  return res;
+}

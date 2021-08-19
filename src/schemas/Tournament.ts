@@ -1,4 +1,5 @@
 import { Field, InputType, Int, ObjectType } from "type-graphql";
+import Game from "./Game";
 import Match from "./Match";
 import Player from "./Player";
 import { Rule } from "./Rule";
@@ -27,8 +28,8 @@ export default class Tournament {
   @Field({ description: "The tournament icon" })
   icon: string;
 
-  @Field({ description: "The tournament gameId" })
-  gameId: string;
+  @Field({ description: "The tournament game" })
+  game: Game;
 
   @Field((type) => [Rule], { description: "The tournament rules" })
   rules: Rule[];

@@ -32,6 +32,7 @@ import PlayerResolver from "./resolvers/PlayerResolver";
 import { authChecker } from "./permissions";
 import TeamPlayerResolver from "./resolvers/TeamPlayerResolver";
 import RuleResolver from "./resolvers/RuleResolver";
+import GameResolver from "./resolvers/GameResolver";
 
 declare global {
   namespace Express {
@@ -56,6 +57,7 @@ async function bootstrap() {
       PlayerResolver,
       TeamPlayerResolver,
       RuleResolver,
+      GameResolver,
     ],
     emitSchemaFile: true,
     dateScalarMode: "timestamp",

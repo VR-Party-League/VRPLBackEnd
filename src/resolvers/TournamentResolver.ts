@@ -1,5 +1,7 @@
 import { Arg, FieldResolver, Query, Resolver, Root } from "type-graphql";
+import { getGameById } from "../db/game";
 import { getMatchFromId } from "../db/match";
+import { VrplGame } from "../db/models/vrplGame";
 import { VrplMatch } from "../db/models/vrplMatch";
 import { VrplTeam } from "../db/models/vrplTeam";
 import { VrplTournament } from "../db/models/vrplTournaments";
@@ -58,5 +60,12 @@ export default class {
   @FieldResolver()
   async teams(@Root() vrplTournament: VrplTournament): Promise<VrplTeam[]> {
     return await getTeamsOfTournament(vrplTournament.id);
+  }
+
+  @FieldResolver()
+  async game(@Root() vrplTournament: VrplTournament): Promise<VrplGame> {
+    const game = await getGameById(vrplTournament.gameId);
+    if (!game) throw new Error("Game not found");
+    return game;
   }
 }

@@ -1,7 +1,15 @@
 import { Schema, model, Document } from "mongoose";
 
+export interface VrplGameField {
+  title: string;
+  value: string;
+}
 export interface VrplGame {
   id: string;
+  name: string;
+  description: string;
+  banner: string;
+  fields: VrplGameField[];
 }
 
 const GameSchema = new Schema<VrplGame & Document>(
@@ -10,6 +18,7 @@ const GameSchema = new Schema<VrplGame & Document>(
     name: String,
     description: String,
     banner: String,
+    fields: [Object],
   },
   { collection: "games" }
 );

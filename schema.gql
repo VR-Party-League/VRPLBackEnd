@@ -3,6 +3,34 @@
 # !!!   DO NOT MODIFY THIS FILE BY YOURSELF   !!!
 # -----------------------------------------------
 
+type Game {
+  """The banner of the game"""
+  banner: String!
+
+  """The description of the game"""
+  description: String!
+
+  """The game fields"""
+  fields: [GameField!]!
+
+  """The game id"""
+  id: String!
+
+  """The name of the game"""
+  name: String!
+
+  """The tournaments of this game"""
+  tournaments: [Tournament!]!
+}
+
+type GameField {
+  """The field title"""
+  title: String!
+
+  """The field value"""
+  value: String!
+}
+
 type Match {
   """The unique match id"""
   id: String!
@@ -67,7 +95,9 @@ type Player {
 }
 
 type Query {
+  allGames: [Game!]!
   allTournaments: [Tournament!]!
+  gameFromId(gameId: String!): Game
   getMatchFromId(matchId: String!, tournamentId: String!): Match
   getMatchesForTeam(activeOnly: Boolean, teamId: String!, tournamentId: String!): [Match!]!
   playerFromDiscordId(discordId: String!): Player
@@ -125,11 +155,20 @@ type Tournament {
   """The end date"""
   end: Timestamp!
 
-  """The tournament gameId"""
-  gameId: String!
+  """The tournament game"""
+  game: Game!
+
+  """The tournament icon"""
+  icon: String!
 
   """The unique tournament id"""
   id: String!
+
+  """The maximum score allowed to enter by players for a match"""
+  matchMaxScore: Float!
+
+  """The amount of rounds a match has in this tournament"""
+  matchRounds: Float!
 
   """All the matches that the tournament had"""
   matches: [Match!]!
@@ -146,14 +185,14 @@ type Tournament {
   """The registration start date"""
   registrationStart: Timestamp!
 
-  """The amount of rounds in the tournament"""
-  rounds: String!
-
   """The tournament rules"""
   rules: [Rule!]!
 
   """The start date"""
   start: Timestamp!
+
+  """The tournament summary"""
+  summary: String!
 
   """Teams in the tournament"""
   teams: [Team!]!
