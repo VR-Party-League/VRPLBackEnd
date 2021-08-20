@@ -46,6 +46,7 @@ const TournamentSchema = new Schema<VrplTournament & Document>(
     id: { type: String, required: true, unique: true },
     type: String,
     name: String,
+    summary: String,
     description: String,
     banner: String,
     icon: String,
