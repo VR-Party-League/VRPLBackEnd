@@ -11,7 +11,7 @@ export const Authenticate: (
 ) => Promise<any> = async (req, res, next) => {
   try {
     console.log(".try");
-    console.log(req.headers);
+    //console.log(req);
     if (
       req.headers["Authorization"] &&
       typeof req.headers["Authorization"] === "string"
@@ -52,6 +52,7 @@ export const Authenticate: (
       // }
     } else if (req.cookies.Authorization) {
       console.log(".cookie exists");
+      console.log(req.cookies);
       const decoded = jwt.verify(
         req.cookies.Authorization,
         process.env.JWT_SECRET as string

@@ -4,7 +4,14 @@ dotenv.config({});
 import "reflect-metadata";
 
 const PORT = process.env.PORT || 3001;
-export const frontEndUrl = "https://vrplfrontend.herokuapp.com";
+export const frontEndUrl =
+  process.env.NODE_ENV === "production"
+    ? "https://vrplfrontend.herokuapp.com"
+    : "http://localhost:3000";
+export const frontEndDomain =
+  process.env.NODE_ENV === "production"
+    ? "vrplfrontend.herokuapp.com"
+    : "localhost";
 
 // Graphql/Express
 import express from "express";
@@ -27,7 +34,7 @@ export interface Context {
 // Other stuff
 import mongoose from "mongoose";
 import { json, urlencoded } from "body-parser";
-import cors from "cors";
+import cors, { CorsOptions } from "cors";
 import cookieParser from "cookie-parser";
 
 // Resolvers
@@ -92,8 +99,9 @@ async function bootstrap() {
       const context: Context = {
         user: req.user,
       };
-
       console.log("Context:", context);
+      //res.setHeader("Access-Control-Allow-Credentials", "true");
+      //console.log("Headersss ", res.header);
       return context;
     },
   });
@@ -103,17 +111,21 @@ async function bootstrap() {
   app.set("trust proxy", 1);
   //app.set("views", path.join(__dirname, "views"));
   //app.set("view engine", "ejs");
-
   app.use(json());
   app.use(urlencoded({ extended: true }));
-  app.use(cors());
   app.use(cookieParser());
+  const corsOptions: CorsOptions = {
+    origin: frontEndUrl, // origin should be where the frontend code is hosted
+    credentials: true,
+    methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS", "HEAD"],
+    //allowedHeaders: ["Authorization"],
+  };
+  app.use(cors(corsOptions));
 
   app.use(async function (req, res, next) {
     console.log("REQUEST!");
     //console.log(req.body);
     try {
-      res.header("Access-Control-Allow-Origin", "*");
       req.headers["if-none-match"] = "no-match-for-this";
     } catch (err) {
       console.trace();
@@ -122,9 +134,9 @@ async function bootstrap() {
     next();
   });
   app.use(Authenticate);
-  app.use(router);
+  server.applyMiddleware({ app, cors: corsOptions });
 
-  server.applyMiddleware({ app });
+  app.use(router);
 
   app.listen(PORT);
   console.log(`Server is running on http://localhost:${PORT}`);

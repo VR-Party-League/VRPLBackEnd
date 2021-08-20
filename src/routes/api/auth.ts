@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { frontEndUrl } from "../..";
+import { frontEndDomain, frontEndUrl } from "../..";
 import {
   getOAuthUrl,
   getRedirectUri,
@@ -69,7 +69,11 @@ router.get("/discord/callback", async (req, res) => {
     res
       .cookie("Authorization", createJwtToken(player), {
         expires: new Date(Date.now() + ms("100d")),
-        httpOnly: true,
+        //httpOnly: true,
+        //domain: frontEndDomain + ":3001",
+        //sameSite: "none",
+        //secure: true,
+        //path: "/api",
       })
       .redirect(frontEndUrl);
   } catch (error) {
@@ -88,7 +92,7 @@ router.get("/token", async (req, res) => {
 });
 
 router.get("/logout", (req, res) => {
-  res.clearCookie("Authorization");
+  res.clearCookie("Authorization", { domain: frontEndDomain });
   res.redirect(frontEndUrl);
 });
 
