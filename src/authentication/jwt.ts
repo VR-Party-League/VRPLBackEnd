@@ -26,47 +26,28 @@ export const Authenticate: (
         if (ApiToken?.playerId) {
           req.user = (await getPlayerFromId(ApiToken.playerId)) || undefined;
         }
-      }
-      // else if (req.headers["Authorization"].startsWith("Bearer")) {
-      //   const token = req.headers["Authorization"].substr("Bearer".length);
-      //   console.log("Bearer Token:", token);
-      //   try {
-      //     const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
-      //     console.log("Bearer token data: ", decoded);
-      //     if (
-      //       !decoded ||
-      //       typeof decoded === "string" ||
-      //       typeof decoded.sub !== "string"
-      //     ) {
-      //       //return res.status(400).send({ message: "invalid jwt" });
-      //       console.log(
-      //         "92398fdsf9hasdf7yasd8f7yas9fd87yas97dfya897sdfya987dfy"
-      //       );
-      //     } else {
-      //       req.user = (await getPlayerFromId(decoded.sub)) || undefined;
-      //     }
-      //   } catch (err) {
-      //     console.log("Error decoding JWT: ", err);
-      //     //return res.status(403).send({ message: "Error decoding JWT" });
-      //   }
-      // }
-    } else if (req.cookies.Authorization) {
-      console.log(".cookie exists");
-      console.log(req.cookies);
-      const decoded = jwt.verify(
-        req.cookies.Authorization,
-        process.env.JWT_SECRET as string
-      );
-      console.log("Bearer token data: ", decoded);
-      if (
-        !decoded ||
-        typeof decoded === "string" ||
-        typeof decoded.sub !== "string"
-      ) {
-        //return res.status(400).send({ message: "invalid jwt" });
-        console.log("92398fdsf9hasdf7yasd8f7yas9fd87yas97dfya897sdfya987dfy");
-      } else {
-        req.user = (await getPlayerFromId(decoded.sub)) || undefined;
+      } else if (req.headers["Authorization"].startsWith("Bearer")) {
+        const token = req.headers["Authorization"].substr("Bearer".length);
+        console.log("Bearer Token:", token);
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+          console.log("Bearer token data: ", decoded);
+          if (
+            !decoded ||
+            typeof decoded === "string" ||
+            typeof decoded.sub !== "string"
+          ) {
+            //return res.status(400).send({ message: "invalid jwt" });
+            console.log(
+              "92398fdsf9hasdf7yasd8f7yas9fd87yas97dfya897sdfya987dfy"
+            );
+          } else {
+            req.user = (await getPlayerFromId(decoded.sub)) || undefined;
+          }
+        } catch (err) {
+          console.log("Error decoding JWT: ", err);
+          //return res.status(403).send({ message: "Error decoding JWT" });
+        }
       }
     }
   } catch (err) {
@@ -79,8 +60,23 @@ export const Authenticate: (
   }
 };
 
-export function createJwtToken(player: VrplPlayer) {
-  return jwt.sign({ sub: player.id }, process.env.JWT_SECRET as string, {
-    expiresIn: "100d",
-  });
+export const refreshTokenExpireIn: string = "60d";
+export function createRefreshToken(player: VrplPlayer) {
+  return jwt.sign(
+    { sub: player.id },
+    process.env.REFRESH_TOKEN_SECRET as string,
+    {
+      expiresIn: refreshTokenExpireIn,
+    }
+  );
+}
+export const accessTokenExpireIn: string = "5m";
+export function createAccessToken(player: VrplPlayer) {
+  return jwt.sign(
+    { sub: player.id },
+    process.env.ACCESS_TOKEN_SECRET as string,
+    {
+      expiresIn: accessTokenExpireIn,
+    }
+  );
 }

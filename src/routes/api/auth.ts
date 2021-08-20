@@ -11,12 +11,25 @@ import { APIUser, RESTPostOAuth2AccessTokenResult } from "discord-api-types/v9";
 import {
   createPlayerFromDiscordInfo,
   getPlayerFromDiscordId,
+  getPlayerFromId,
   updatePlayerDiscordInfo,
 } from "../../db/player";
-import { createJwtToken } from "../../authentication/jwt";
+import { accessTokenExpireIn } from "../../authentication/jwt";
 import ms from "ms";
-
+import {
+  generateNewRefreshToken,
+  getAccessToken,
+  getTokenByRefreshToken,
+} from "../../db/refreshToken";
+import jwt from "jsonwebtoken";
 const router = Router();
+
+const cookieName = "refresh_token";
+const cookieSettings = {
+  expires: new Date(Date.now() + ms("300d")),
+  httpOnly: true,
+  path: "/api/auth",
+};
 
 router.get("/discord", (req, res) => {
   res.redirect(getOAuthUrl());
@@ -65,43 +78,130 @@ router.get("/discord/callback", async (req, res) => {
     } else {
       player = await createPlayerFromDiscordInfo(user);
     }
-
+    const data = await generateNewRefreshToken(player, req.ip);
+    if (!data.success) throw new Error(data.error);
     res
-      .cookie("Authorization", createJwtToken(player), {
-        expires: new Date(Date.now() + ms("100d")),
-        //httpOnly: true,
-        //domain: frontEndDomain + ":3001",
-        //sameSite: "none",
-        //secure: true,
-        //path: "/api",
-      })
+      .cookie(cookieName, data.refreshToken, cookieSettings)
       .redirect(frontEndUrl);
   } catch (error) {
     // NOTE: An unauthorized token will not throw an error;
     // it will return a 401 Unauthorized response in the try block above
+    const time = new Date().toISOString();
+    console.log(time);
+    console.trace();
     console.error(error);
-    res.status(500).send({ message: "Error" });
+    res.status(500).send({
+      message: `Error, PLEASE contact Fish#2455 if you see this and give him the time`,
+      time: time,
+    });
   }
 });
-
-router.get("/token", async (req, res) => {
+router.get("/botToken", async (req, res) => {
   if (!req.user) return res.status(401).send({ msg: "Unauthorized" });
   const user = req.user;
   const apiKey = await newApiToken(user);
-  res.status(201).send(apiKey);
+  res.status(201).send({
+    key: apiKey,
+    message: `Treat this key with care ${user.discordTag}, anyone that has it can access your whole account!\nWhen you generate a new key by going to this url again, the old key will be deleted.`,
+  });
 });
 
 router.get("/logout", (req, res) => {
-  res.clearCookie("Authorization", { domain: frontEndDomain });
+  res.clearCookie(cookieName);
   res.redirect(frontEndUrl);
 });
 
-router.get("/", (req, res) => {
-  if (req.user) {
-    res.send(req.user);
-  } else {
-    res.status(401).send({ msg: "Unauthorized" });
+router.get("/", async (req, res) => {
+  if (req.user) return res.status(200).send(req.user);
+  if (req.cookies[cookieName]) {
+    try {
+      const decoded = jwt.verify(
+        req.cookies[cookieName],
+        process.env.REFRESH_TOKEN_SECRET as string
+      );
+
+      if (
+        !decoded ||
+        typeof decoded === "string" ||
+        typeof decoded.sub !== "string" ||
+        !decoded.exp
+      ) {
+        return res.status(400).send({ message: "Invalid refresh token" });
+      } else if (decoded.exp <= Math.floor(new Date().valueOf() / 1000)) {
+        return res.status(400).send({ message: "Refresh token expired" });
+      }
+      const [token, player] = await Promise.all([
+        getTokenByRefreshToken(req.cookies[cookieName]),
+        getPlayerFromId(decoded.sub),
+      ]);
+      if (!token)
+        return res.status(500).send({
+          message: "Refresh token doesn't exist!? pls send to Fish#2455",
+          token: token,
+          refreshToken: req.cookies[cookieName],
+          player: player,
+          decoded: decoded,
+        });
+      else if (token.userId !== decoded.sub)
+        return res.status(500).send({
+          message: "Refresh token has invalid user id!? pls send to Fish#2455",
+          token: token,
+          refreshToken: req.cookies[cookieName],
+          player: player,
+          decoded: decoded,
+        });
+      else if (+token.expireAt <= Date.now())
+        return res.status(500).send({
+          message: "Refresh token expired!? pls send to Fish#2455",
+          token: token,
+          refreshToken: req.cookies[cookieName],
+          player: player,
+          decoded: decoded,
+        });
+      else if (!player)
+        return res.status(500).send({
+          message: "Not an existing player!? pls send to Fish#2455",
+          token: token,
+          refreshToken: req.cookies[cookieName],
+          player: player,
+          decoded: decoded,
+        });
+      else if (!player.id == token.id)
+        return res.status(500).send({
+          message: "Invalid player id!? pls send to Fish#2455",
+          token: token,
+          refreshToken: req.cookies[cookieName],
+          player: player,
+          decoded: decoded,
+        });
+      const data = await getAccessToken(
+        req.cookies[cookieName],
+        player,
+        req.ip
+      );
+      if (!data.success)
+        return res.status(500).send({
+          message: "Error generating access token!? pls send to Fish#2455",
+          error: data.error,
+          token: token,
+          refreshToken: req.cookies[cookieName],
+          player: player,
+          decoded: decoded,
+        });
+      const userData: any = player;
+      userData.accessToken = data.accessToken;
+      userData.expiresAt = Date.now() + ms(accessTokenExpireIn);
+      return res
+        .cookie(cookieName, data.refreshToken, cookieSettings)
+        .status(201)
+        .send(userData);
+    } catch (err) {
+      console.trace();
+      console.error(err);
+    }
   }
+
+  res.status(401).send({ message: "Unauthorized" });
 });
 
 export default router;
