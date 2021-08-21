@@ -30,6 +30,7 @@ const cookieSettings: CookieOptions = {
   httpOnly: true,
   path: "/api/auth",
   sameSite: "none",
+  secure: true,
 };
 
 router.get("/discord", (req, res) => {
