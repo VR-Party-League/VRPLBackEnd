@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { CookieOptions, Router } from "express";
 import { frontEndDomain, frontEndUrl } from "../..";
 import {
   getOAuthUrl,
@@ -25,10 +25,11 @@ import jwt from "jsonwebtoken";
 const router = Router();
 
 const cookieName = "refresh_token";
-const cookieSettings = {
+const cookieSettings: CookieOptions = {
   expires: new Date(Date.now() + ms("300d")),
   httpOnly: true,
   path: "/api/auth",
+  sameSite: "none",
 };
 
 router.get("/discord", (req, res) => {
