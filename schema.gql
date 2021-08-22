@@ -108,12 +108,6 @@ type Query {
   tournamentFromName(name: String!): Tournament
 }
 
-type Rule {
-  body: String!
-  description: String!
-  title: String!
-}
-
 type Team {
   """The unique team id"""
   id: String!
@@ -186,7 +180,7 @@ type Tournament {
   registrationStart: Timestamp!
 
   """The tournament rules"""
-  rules: [Rule!]!
+  rules: String!
 
   """The start date"""
   start: Timestamp!

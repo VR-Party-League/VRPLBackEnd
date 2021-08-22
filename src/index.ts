@@ -42,7 +42,6 @@ import MatchResolver from "./resolvers/MatchResolver";
 import TournamentResolver from "./resolvers/TournamentResolver";
 import PlayerResolver from "./resolvers/PlayerResolver";
 import TeamPlayerResolver from "./resolvers/TeamPlayerResolver";
-import RuleResolver from "./resolvers/RuleResolver";
 import GameResolver from "./resolvers/GameResolver";
 import TeamResolver from "./resolvers/TeamResolver";
 
@@ -61,7 +60,6 @@ async function bootstrap() {
       MatchResolver,
       PlayerResolver,
       TeamPlayerResolver,
-      RuleResolver,
       GameResolver,
     ],
     emitSchemaFile: true,

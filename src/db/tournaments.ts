@@ -22,7 +22,7 @@ function storeTournament(tournament: VrplTournament) {
 
     matchRounds: tournament.matchRounds,
     matchMaxScore: tournament.matchMaxScore,
-    rules: tournament.rules.map((rule) => Object.assign({}, rule)),
+    rules: tournament.rules,
 
     eligibilityCheck: tournament.eligibilityCheck,
     region: tournament.region,

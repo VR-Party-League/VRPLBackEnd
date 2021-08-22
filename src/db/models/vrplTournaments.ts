@@ -15,7 +15,6 @@ export enum VrplRegion {
 const eligibilityChecks: {
   [Name: string]: (Player: VrplPlayer) => boolean | undefined | null;
 } = {};
-export type Rules = { title: string; description?: string; body: string }[];
 export interface VrplTournament {
   id: string;
   type: VrplTournamentType;
@@ -24,7 +23,7 @@ export interface VrplTournament {
   summary: string;
   banner: string;
   icon: string;
-  rules: Rules;
+  rules: String;
   gameId: string;
   matchRounds: number;
   matchMaxScore: number;
@@ -50,7 +49,7 @@ const TournamentSchema = new Schema<VrplTournament & Document>(
     description: String,
     banner: String,
     icon: String,
-    rules: Object,
+    rules: String,
     gameId: String,
     matchRounds: Number,
     matchMaxScore: Number,
