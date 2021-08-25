@@ -14,7 +14,10 @@ import {
   getPlayerFromId,
   updatePlayerDiscordInfo,
 } from "../../db/player";
-import { accessTokenExpireIn } from "../../authentication/jwt";
+import {
+  accessTokenExpireIn,
+  refreshTokenExpireIn,
+} from "../../authentication/jwt";
 import ms from "ms";
 import {
   generateNewRefreshToken,
@@ -26,7 +29,7 @@ const router = Router();
 
 const cookieName = "refresh_token";
 const cookieSettings: CookieOptions = {
-  expires: new Date(Date.now() + ms("300d")),
+  expires: new Date(Date.now() + ms(refreshTokenExpireIn)),
   httpOnly: true,
   path: "/api/auth",
   sameSite: "none",
