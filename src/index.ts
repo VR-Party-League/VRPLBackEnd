@@ -6,11 +6,11 @@ import "reflect-metadata";
 const PORT = process.env.PORT || 3001;
 export const frontEndUrl =
   process.env.NODE_ENV === "production"
-    ? "https://vrplf-frontend.vercel.app/"
+    ? "https://vrpl-frontend.vercel.app"
     : "http://localhost:3000";
 export const frontEndDomain =
   process.env.NODE_ENV === "production"
-    ? "vrplf-frontend.vercel.app"
+    ? "vrpl-frontend.vercel.app"
     : "localhost";
 
 // Graphql/Express
