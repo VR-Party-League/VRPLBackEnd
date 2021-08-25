@@ -70,7 +70,7 @@ export function createRefreshToken(player: VrplPlayer) {
     }
   );
 }
-export const accessTokenExpireIn: string = "5m";
+export const accessTokenExpireIn: string = "30m";
 export function createAccessToken(player: VrplPlayer) {
   return jwt.sign(
     { sub: player.id },
