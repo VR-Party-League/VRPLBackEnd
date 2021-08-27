@@ -1,4 +1,5 @@
 import { CookieOptions, Router } from "express";
+import * as Sentry from "@sentry/node";
 import { frontEndDomain, frontEndUrl } from "../..";
 import {
   getOAuthUrl,
@@ -24,7 +25,7 @@ import {
   getAccessToken,
   getTokenByRefreshToken,
 } from "../../db/refreshToken";
-import jwt from "jsonwebtoken";
+import jwt, { JsonWebTokenError } from "jsonwebtoken";
 const router = Router();
 
 const cookieName = "refresh_token";
@@ -95,6 +96,7 @@ router.get("/discord/callback", async (req, res) => {
     console.log(time);
     console.trace();
     console.error(error);
+    Sentry.captureException(error);
     res.status(500).send({
       message: `Error, PLEASE contact Fish#2455 if you see this and give him the time`,
       time: time,
@@ -201,8 +203,12 @@ router.get("/", async (req, res) => {
         .status(201)
         .send(userData);
     } catch (err) {
-      console.trace();
-      console.error(err);
+      if (!(err instanceof JsonWebTokenError)) {
+        console.trace();
+        console.error(err);
+        Sentry.captureException(err);
+        throw err;
+      }
     }
   }
 

@@ -26,7 +26,6 @@ export async function getUserFromOAuthData(
       authorization: `${oauthData.token_type} ${oauthData.access_token}`,
     },
   });
-  console.log(userResult.data);
   return userResult.data;
 }
 

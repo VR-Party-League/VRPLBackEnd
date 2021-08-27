@@ -4,6 +4,7 @@ import {
   playerCreateRecord,
   playerUpdateRecord,
 } from "./models/records/playerRecords";
+import * as Sentry from "@sentry/node";
 import { v4 as uuidv4 } from "uuid";
 import { recordType } from "./models/records";
 import { storeRecord } from "./logs";
@@ -53,6 +54,7 @@ export async function getPlayerFromId(
   } catch (err) {
     console.trace();
     console.error(err);
+    Sentry.captureException(err);
     return null;
   }
 }

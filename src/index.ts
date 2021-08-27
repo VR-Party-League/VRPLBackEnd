@@ -31,6 +31,10 @@ export interface Context {
   user?: VrplPlayer;
 }
 
+// Sentry
+import * as Sentry from "@sentry/node";
+import * as Tracing from "@sentry/tracing";
+
 // Other stuff
 import mongoose from "mongoose";
 import { json, urlencoded } from "body-parser";
@@ -53,6 +57,7 @@ import { authChecker } from "./permissions";
 import router from "./routes";
 
 async function bootstrap() {
+  // Setup GraphQl
   const schema = await buildSchema({
     resolvers: [
       TournamentResolver,
@@ -97,18 +102,36 @@ async function bootstrap() {
       const context: Context = {
         user: req.user,
       };
-      console.log("Context:", context);
-      //res.setHeader("Access-Control-Allow-Credentials", "true");
-      //console.log("Headersss ", res.header);
       return context;
     },
   });
   await server.start();
 
   const app = express();
+  // Setup sentry
+  Sentry.init({
+    environment: process.env.NODE_ENV || "Dev",
+    dsn: "https://9cbb37563c734339ab41f7c95c432abf@o501927.ingest.sentry.io/5932656",
+    integrations: [
+      // enable HTTP calls tracing
+      new Sentry.Integrations.Http({ tracing: true }),
+      // enable Express.js middleware tracing
+      new Tracing.Integrations.Express({ app }),
+    ],
+
+    // Set tracesSampleRate to 1.0 to capture 100%
+    // of transactions for performance monitoring.
+    // We recommend adjusting this value in production
+    tracesSampleRate: 1.0,
+  });
+
+  // RequestHandler creates a separate execution context using domains, so that every
+  // transaction/span/breadcrumb is attached to its own Hub instance
+  app.use(Sentry.Handlers.requestHandler());
+  // TracingHandler creates a trace for every incoming request
+  app.use(Sentry.Handlers.tracingHandler());
+
   app.set("trust proxy", 1);
-  //app.set("views", path.join(__dirname, "views"));
-  //app.set("view engine", "ejs");
   app.use(json());
   app.use(urlencoded({ extended: true }));
   app.use(cookieParser());
@@ -116,18 +139,16 @@ async function bootstrap() {
     origin: frontEndUrl, // origin should be where the frontend code is hosted
     credentials: true,
     methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS", "HEAD"],
-    //allowedHeaders: ["Authorization"],
   };
   app.use(cors(corsOptions));
 
   app.use(async function (req, res, next) {
-    console.log("REQUEST!");
-    //console.log(req.body);
     try {
       req.headers["if-none-match"] = "no-match-for-this";
     } catch (err) {
       console.trace();
-      console.log(err);
+      console.error(err);
+      Sentry.captureException(err);
     }
     next();
   });
@@ -135,6 +156,9 @@ async function bootstrap() {
   server.applyMiddleware({ app, cors: corsOptions });
 
   app.use(router);
+
+  // The error handler must be before any other error middleware and after all controllers
+  app.use(Sentry.Handlers.errorHandler());
 
   app.listen(PORT);
   console.log(`Server is running on http://localhost:${PORT}`);
@@ -144,6 +168,6 @@ mongoose.connect(process.env.DB_URI!, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   useFindAndModify: false,
+  useCreateIndex: true,
 });
-
 bootstrap();

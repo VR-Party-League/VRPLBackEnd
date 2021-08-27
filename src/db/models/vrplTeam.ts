@@ -28,7 +28,7 @@ export interface VrplTeam {
 const TeamSchema = new Schema<VrplTeam & Document>(
   {
     ownerId: String,
-    id: { type: String, required: true, unique: true },
+    id: { type: String, required: true },
     name: String,
     teamPlayers: { type: [Object], required: true },
     tournamentId: String,

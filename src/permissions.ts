@@ -28,9 +28,7 @@ export const authChecker: AuthChecker<any, any> = (
   opts: { context: Context },
   roles
 ) => {
-  console.log("Checking auth");
   if (!opts.context.user?.id) return false;
-  console.log("User had id");
 
   const userPerms = opts.context.user.permissions;
   if (bitFieldHas(userPerms, Permissions.Admin)) return true;

@@ -1,6 +1,7 @@
 import ms from "ms";
 import { ApiToken, ApiTokenModel } from "./models/ApiTokens";
 import { VrplPlayer } from "./models/vrplPlayer";
+import * as Sentry from "@sentry/node";
 import { v4 as uuidv4 } from "uuid";
 import {
   apiTokenCreateRecord,
@@ -53,6 +54,7 @@ export async function getUserFromKey(
   } catch (err) {
     console.trace();
     console.error(err);
+    Sentry.captureException(err);
     return undefined;
   }
 }

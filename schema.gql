@@ -120,6 +120,9 @@ type Team {
 
   """An array of team players"""
   teamPlayers: [TeamPlayer!]!
+
+  """The unique team name"""
+  tournament: Tournament!
 }
 
 type TeamPlayer {
