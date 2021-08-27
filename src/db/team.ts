@@ -4,6 +4,7 @@ import VrplTeamDB, {
   VrplTeamPlayer,
   VrplTeamPlayerRole,
 } from "../db/models/vrplTeam";
+import * as Sentry from "@sentry/node";
 import { v4 as uuidv4 } from "uuid";
 import { storeRecord } from "./logs";
 import {
@@ -15,7 +16,18 @@ import {
 import { recordType } from "./models/records";
 
 let teamCacheTimeStamp: number = 0;
-const teamCache = new Map<string, VrplTeam>();
+let teamCache: {
+  [teamId: string]:
+    | {
+        [tournamentId: string]: VrplTeam | undefined;
+      }
+    | undefined;
+} = {};
+
+function clearTeamCache() {
+  // TODO: re-implement this
+  teamCache = {};
+}
 
 function storeTeam(rawTeam: VrplTeam) {
   const team: VrplTeam = {
@@ -25,25 +37,28 @@ function storeTeam(rawTeam: VrplTeam) {
     teamPlayers: rawTeam.teamPlayers || [],
     tournamentId: rawTeam.tournamentId,
   };
-  teamCache.set(team.id, team);
+  const teams = teamCache[team.id];
+  if (teams) teams[team.tournamentId] = team;
+  else teamCache[team.id] = { [team.tournamentId]: team };
   return team;
+}
+
+async function storeTeams(teams: VrplTeam[]) {
+  clearTeamCache();
+  for (let rawTeam of teams) {
+    storeTeam(rawTeam);
+  }
 }
 
 export async function refreshTeams(force?: boolean): Promise<void> {
   if (teamCacheTimeStamp + ms("1hour") < Date.now() || force) {
     teamCacheTimeStamp = Date.now();
     const teams = await VrplTeamDB.find({});
-    teamCache.clear();
-    for (let rawTeam of teams) {
-      storeTeam(rawTeam);
-    }
+    storeTeams(teams);
   } else if (teamCacheTimeStamp + ms("15min") < Date.now()) {
     teamCacheTimeStamp = Date.now();
     VrplTeamDB.find({}).then((teams) => {
-      teamCache.clear();
-      for (let rawTeam of teams) {
-        storeTeam(rawTeam);
-      }
+      storeTeams(teams);
     });
   }
 }
@@ -60,11 +75,12 @@ export async function getTeamFromId(
 ): Promise<VrplTeam | null> {
   try {
     await refreshTeams();
-    const team = teamCache.get(TeamID);
+    const team = teamCache[TeamID]?.[tournamentId];
     if (team && team?.tournamentId == tournamentId) return team || null;
   } catch (err) {
     console.trace();
     console.error(err);
+    Sentry.captureException(err);
     return null;
   }
   return null;
@@ -72,19 +88,21 @@ export async function getTeamFromId(
 type findFunc = (Team: VrplTeam) => boolean | undefined | null;
 export async function findTeam(tournamentId: string, findFunc: findFunc) {
   await refreshTeams();
-  const teamIterable = teamCache.values();
-  for (const team of teamIterable) {
-    if (team.tournamentId !== tournamentId) continue;
+  const teamIterable = Object.values(teamCache);
+  for (const teams of teamIterable) {
+    const team = teams?.[tournamentId];
+    if (!team) continue;
     else if (findFunc(team)) return team;
   }
   return null;
 }
 export async function filterTeams(tournamentId: string, filterFunc: findFunc) {
   await refreshTeams();
-  const teamIterable = teamCache.values();
+  const teamIterable = Object.values(teamCache);
   const response = [];
-  for (const team of teamIterable) {
-    if (team.tournamentId !== tournamentId) continue;
+  for (const teams of teamIterable) {
+    const team = teams?.[tournamentId];
+    if (!team) continue;
     else if (filterFunc(team)) response.push(team);
   }
   return response;
@@ -109,13 +127,14 @@ export async function destroyTeam(
   try {
     const team = await getTeamFromId(tournamentId, TeamID);
     if (team && team?.tournamentId == tournamentId) {
-      teamCache.delete(team.id);
-      await VrplTeamDB.deleteOne({ id: team.id });
+      delete teamCache[team.id]?.[tournamentId];
+      await VrplTeamDB.deleteOne({ id: team.id, tournamentId: tournamentId });
       return team;
     }
   } catch (err) {
     console.trace();
     console.error(err);
+    Sentry.captureException(err);
     return undefined;
   }
 }
@@ -475,6 +494,7 @@ export async function createTeam(
   } catch (err) {
     console.trace();
     console.error(err);
+    Sentry.captureException(err);
     return { success: false, error: "Internal server error" };
   }
 }
@@ -514,12 +534,22 @@ export async function getAllTeamsOfPlayer(
   playerId: string
 ): Promise<VrplTeam[]> {
   const response: VrplTeam[] = [];
-  for (const team of teamCache.values()) {
-    if (
-      team.teamPlayers.find((teamPlayer) => teamPlayer.playerId === playerId)
-    ) {
-      response.push(team);
+  for (const teams of Object.values(teamCache)) {
+    if (!teams) continue;
+    for (const team of Object.values(teams)) {
+      if (!team) continue;
+      if (
+        team.teamPlayers.find((teamPlayer) => teamPlayer.playerId === playerId)
+      ) {
+        response.push(team);
+      }
     }
   }
   return response;
+}
+
+export async function getAllTeamsFromId(teamId: string): Promise<VrplTeam[]> {
+  // TODO: Fix this
+  // @ts-ignore
+  return teamCache[teamId] ? Object.values(teamCache[teamId]) : [];
 }
