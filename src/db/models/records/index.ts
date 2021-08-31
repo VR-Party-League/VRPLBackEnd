@@ -1,6 +1,7 @@
 import { Schema, model, Document } from "mongoose";
 import { VrplTeam } from "../vrplTeam";
 import { apiTokenCreateRecord } from "./authentication";
+import { badgeRecords } from "./badgeRecords";
 import { matchRecords } from "./matchRecords";
 import { playerRecords } from "./playerRecords";
 import { teamRecords } from "./teamRecordTypes";
@@ -23,6 +24,10 @@ export enum recordType {
   teamDelete = 32,
   teamPlayerCreate = 33, // WORKS
   teamPlayerUpdate = 34,
+
+  badgeCreate = 40,
+  badgeUpdate = 41,
+  badgeDelete = 42,
 }
 
 export interface baseRecord {
@@ -37,7 +42,8 @@ export type record =
   | teamRecords
   | playerRecords
   | matchRecords
-  | apiTokenCreateRecord;
+  | apiTokenCreateRecord
+  | badgeRecords;
 
 const logSchema = new Schema<record & Document>(
   {

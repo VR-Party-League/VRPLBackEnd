@@ -3,7 +3,7 @@ import {
   createAccessToken,
   createRefreshToken,
   refreshTokenExpireIn,
-} from "../authentication/jwt";
+} from "../utils/authentication/jwt";
 import RefreshTokenDB, { RefreshToken } from "./models/RefreshToken";
 import { VrplPlayer } from "./models/vrplPlayer";
 import { Document } from "mongoose";

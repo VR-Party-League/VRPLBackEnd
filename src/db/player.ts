@@ -10,6 +10,7 @@ import { recordType } from "./models/records";
 import { storeRecord } from "./logs";
 
 import { APIUser } from "discord-api-types/v9";
+import { cleanNameForChecking } from "../utils/regex/player";
 
 let playerCacheTimeStamp: number = 0;
 const playerCache = new Map<string, VrplPlayer>();
@@ -17,9 +18,19 @@ const playerCache = new Map<string, VrplPlayer>();
 export function storePlayer(RawPlayer: VrplPlayer) {
   const player: VrplPlayer = {
     id: RawPlayer.id,
+    about: RawPlayer.about,
+    email: RawPlayer.email,
+    nickname: RawPlayer.nickname,
+    avatar: RawPlayer.avatar,
+    region: RawPlayer.region,
+
     discordId: RawPlayer.discordId,
     discordTag: RawPlayer.discordTag,
     discordAvatar: RawPlayer.discordAvatar,
+
+    badgeField: RawPlayer.badgeField,
+    flags: RawPlayer.flags,
+    timeCreated: RawPlayer.timeCreated,
     permissions: RawPlayer.permissions,
   };
   playerCache.set(player.id, player);
@@ -69,6 +80,13 @@ async function findPlayer(findFunc: findFunc) {
   }
 }
 
+export async function getPlayerFromNickname(nickname: string) {
+  return findPlayer(
+    (player) =>
+      cleanNameForChecking(player.nickname) === cleanNameForChecking(nickname)
+  );
+}
+
 export async function getPlayerFromDiscordTag(discordTag: string) {
   return (
     (await findPlayer((player) => player.discordTag == discordTag)) ||
@@ -114,7 +132,7 @@ export async function updatePlayerDiscordInfo(
 ) {
   const oldPlayer = Object.assign({}, Player);
   Player.discordAvatar = User.avatar || undefined;
-  Player.discordTag = User.username + User.discriminator;
+  Player.discordTag = `${User.username}#${User.discriminator}`;
   Player.discordId = User.id;
 
   playerCache.delete(Player.id);
@@ -127,12 +145,23 @@ export async function updatePlayerDiscordInfo(
 export async function createPlayerFromDiscordInfo(
   User: APIUser
 ): Promise<VrplPlayer> {
+  if (!User.email) throw new Error("No User email");
   const player: VrplPlayer = {
     id: uuidv4(),
+    nickname: User.username, // TODO: Check for duplicate usernames
+    about: `This is the profile of ${User.username}!`,
+    avatar: undefined,
+    email: User.email,
+    region: undefined,
+
     discordId: User.id,
-    discordTag: User.username + User.discriminator,
+    discordTag: `${User.username}#${User.discriminator}`,
     discordAvatar: User.avatar || undefined,
+
     permissions: 0,
+    flags: 0,
+    badgeField: 0,
+    timeCreated: new Date(),
   };
   if (await getPlayerFromId(player.id))
     return createPlayerFromDiscordInfo(User);
@@ -198,4 +227,29 @@ function recordPlayerKeyUpdate(
     new: newValue,
   };
   return storeRecord(record);
+}
+
+export async function updatePlayerBadges(
+  player: VrplPlayer,
+  newBitField: number,
+  performedBy: string
+) {
+  const old = player.badgeField;
+  player.badgeField = newBitField;
+  const playerUpdateRecord: playerUpdateRecord = {
+    v: 1,
+    id: uuidv4(),
+    type: recordType.playerUpdate,
+    userId: performedBy,
+    playerId: player.id,
+    timestamp: new Date(),
+    valueChanged: "badgeField",
+    old: old,
+    new: player.badgeField,
+  };
+  await Promise.all([
+    VrplPlayerDB.updateOne({ id: player.id }, player),
+    storeRecord(playerUpdateRecord),
+  ]);
+  return storePlayer(player);
 }

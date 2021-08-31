@@ -9,7 +9,6 @@ import {
   Root,
   UnauthorizedError,
 } from "type-graphql";
-import { Context } from "vm";
 import {
   areScoresInValid,
   confirmMatch,
@@ -27,10 +26,11 @@ import {
   BadRequestError,
   ForbiddenError,
   InternalServerError,
-} from "../errors";
-import { userHasPermission } from "../permissions";
+} from "../utils/errors";
+import { userHasPermission } from "../utils/permissions";
 import Match, { MatchScoreInput } from "../schemas/Match";
-import { Permissions } from "../permissions";
+import { Permissions } from "../utils/permissions";
+import { Context } from "..";
 
 @Resolver((_of) => Match)
 export default class {

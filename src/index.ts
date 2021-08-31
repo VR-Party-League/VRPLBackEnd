@@ -18,7 +18,7 @@ import express from "express";
 import { ApolloServer } from "apollo-server-express";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
 import { buildSchema } from "type-graphql";
-import { CustomError } from "./errors";
+import { CustomError } from "./utils/errors";
 import { VrplPlayer } from "./db/models/vrplPlayer";
 declare global {
   namespace Express {
@@ -50,11 +50,12 @@ import GameResolver from "./resolvers/GameResolver";
 import TeamResolver from "./resolvers/TeamResolver";
 
 // Authentication
-import { Authenticate } from "./authentication/jwt";
-import { authChecker } from "./permissions";
+import { Authenticate } from "./utils/authentication/jwt";
+import { authChecker } from "./utils/permissions";
 
 // Routes
 import router from "./routes";
+import BadgeResolver from "./resolvers/BadgeResolver";
 
 async function bootstrap() {
   // Setup GraphQl
@@ -66,6 +67,7 @@ async function bootstrap() {
       PlayerResolver,
       TeamPlayerResolver,
       GameResolver,
+      BadgeResolver,
     ],
     emitSchemaFile: true,
     dateScalarMode: "timestamp",

@@ -24,8 +24,8 @@ import {
   BadRequestError,
   ForbiddenError,
   InternalServerError,
-} from "../errors";
-import { Permissions, userHasPermission } from "../permissions";
+} from "../utils/errors";
+import { Permissions, userHasPermission } from "../utils/permissions";
 import Team from "../schemas/Team";
 
 @Resolver((_of) => Team)
@@ -47,7 +47,6 @@ export default class {
 
   @FieldResolver()
   async owner(@Root() vrplTeam: VrplTeam): Promise<VrplPlayer> {
-    console.log(vrplTeam.ownerId);
     return (await getPlayerFromId(vrplTeam.ownerId))!;
   }
   // @FieldResolver()
@@ -72,7 +71,6 @@ export default class {
       ownerId,
       ctx.user.id
     );
-    console.log(createdTeamRes);
     if (!createdTeamRes.success)
       throw new BadRequestError(`${createdTeamRes.error}`);
 

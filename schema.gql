@@ -3,6 +3,26 @@
 # !!!   DO NOT MODIFY THIS FILE BY YOURSELF   !!!
 # -----------------------------------------------
 
+type Badge {
+  """The bit that represents the badge"""
+  bit: Int!
+
+  """The position of the set bit"""
+  bitPosition: Int!
+
+  """The date time when the badge was created"""
+  createdAt: Timestamp!
+
+  """The badge description"""
+  description: String!
+
+  """The badge icon"""
+  icon: String!
+
+  """The badge name"""
+  name: String!
+}
+
 type Game {
   """The banner of the game"""
   banner: String!
@@ -65,38 +85,64 @@ input MatchScoreInput {
 }
 
 type Mutation {
+  addBadgeToPlayer(bitPosition: Int!, playerId: String!): Player!
   addPlayerToTeamAsPlayer(playerId: String!, teamId: String!, tournamentId: String!): Team!
   addPlayerToTeamAsSub(playerId: String!, teamId: String!, tournamentId: String!): Team!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
   confirmMatch(matchId: String!, teamId: String!, tournamentId: String!): Match!
+  createBadge(bitPosition: Int, description: String!, icon: String!, name: String!): Badge!
   createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
+  removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
+  setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
   submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
   transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
 }
 
 type Player {
-  """The player's discord avatar"""
-  discordAvatar: String!
+  """The player's about page"""
+  about: String!
 
-  """The player's discord ID"""
+  """The player's avatar, most likely an image url"""
+  avatar: String
+
+  """The player's badges"""
+  badges: [Badge!]!
+
+  """The player's discord ID, only accessible to admins and mods"""
   discordId: String!
 
-  """The player's discord Tag"""
+  """The player's discord Tag, needs authorization"""
   discordTag: String!
 
-  """The players' id"""
+  """The player's flags, this includes cool-downs, punishments and alike"""
+  flags: Int
+
+  """The player's id"""
   id: String!
 
-  """The players permissions"""
+  """The player's nickname, unique and changeable"""
+  nickname: String!
+
+  """The player's permissions"""
   permissions: Int
+
+  """The region the player plays from"""
+  region: String
 
   """The teams this player is part of"""
   teams: [Team!]!
+
+  """The player's permissions"""
+  timeCreated: Timestamp!
 }
 
 type Query {
+  allBadges: [Badge!]!
   allGames: [Game!]!
   allTournaments: [Tournament!]!
+  badgeFromBitPosition(bitPosition: Int!): Badge
+  badgeFromName(name: String): Badge
+  badgesFromBitField(bitField: Int!): [Badge!]!
   gameFromId(gameId: String!): Game
   getMatchFromId(matchId: String!, tournamentId: String!): Match
   getMatchesForTeam(activeOnly: Boolean, teamId: String!, tournamentId: String!): [Match!]!

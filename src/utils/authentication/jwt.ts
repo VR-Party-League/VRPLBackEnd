@@ -1,8 +1,8 @@
 import { NextFunction, RequestHandler, response, request } from "express";
-import { getUserFromKey } from "../db/apiKeys";
-import { getPlayerFromId } from "../db/player";
+import { getUserFromKey } from "../../db/apiKeys";
+import { getPlayerFromId } from "../../db/player";
 import jwt from "jsonwebtoken";
-import { VrplPlayer } from "../db/models/vrplPlayer";
+import { VrplPlayer } from "../../db/models/vrplPlayer";
 import * as Sentry from "@sentry/node";
 
 export const Authenticate: (
@@ -12,36 +12,39 @@ export const Authenticate: (
 ) => Promise<any> = async (req, res, next) => {
   try {
     if (
-      req.headers["Authorization"] &&
-      typeof req.headers["Authorization"] === "string"
+      req.headers["authorization"] &&
+      typeof req.headers["authorization"] === "string"
     ) {
-      if (req.headers["Authorization"].startsWith("Token")) {
+      if (req.headers["authorization"].startsWith("Token")) {
         Sentry.addBreadcrumb({
           message: "Authenticating bot",
           category: "log",
           data: {
-            header: req.headers["Authorization"],
+            header: req.headers["authorization"],
           },
         });
-        const token = req.headers["Authorization"].substr("Token".length);
+        const token = req.headers["authorization"].substr("Token ".length);
         const ApiToken = await getUserFromKey(token.trim());
         if (ApiToken?.playerId) {
           req.user = (await getPlayerFromId(ApiToken.playerId)) || undefined;
         }
-      } else if (req.headers["Authorization"].startsWith("Bearer")) {
+      } else if (req.headers["authorization"].startsWith("Bearer")) {
         Sentry.addBreadcrumb({
           message: "Authenticating user",
           category: "log",
           data: {
-            header: req.headers["Authorization"],
+            header: req.headers["authorization"],
           },
         });
-        const token = req.headers["Authorization"].substr("Bearer".length);
+        const token = req.headers["authorization"].substr("Bearer ".length);
         try {
-          const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+          const decoded = jwt.verify(
+            token,
+            process.env.ACCESS_TOKEN_SECRET as string
+          );
           if (
             !decoded ||
-            typeof decoded === "string" ||
+            typeof decoded !== "object" ||
             typeof decoded.sub !== "string"
           ) {
             //return res.status(400).send({ message: "invalid jwt" });
@@ -49,6 +52,7 @@ export const Authenticate: (
             req.user = (await getPlayerFromId(decoded.sub)) || undefined;
           }
         } catch (err) {
+          console.log(err);
           //return res.status(403).send({ message: "Error decoding JWT" });
         }
       }

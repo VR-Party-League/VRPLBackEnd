@@ -5,7 +5,7 @@ import {
   getOAuthUrl,
   getRedirectUri,
   getUserFromOAuthData,
-} from "../../authentication/discord";
+} from "../../utils/authentication/discord";
 import { newApiToken } from "../../db/apiKeys";
 import axios from "axios";
 import { APIUser, RESTPostOAuth2AccessTokenResult } from "discord-api-types/v9";
@@ -18,7 +18,7 @@ import {
 import {
   accessTokenExpireIn,
   refreshTokenExpireIn,
-} from "../../authentication/jwt";
+} from "../../utils/authentication/jwt";
 import ms from "ms";
 import {
   generateNewRefreshToken,
@@ -66,7 +66,6 @@ router.get("/discord/callback", async (req, res) => {
     );
 
     const oauthData: RESTPostOAuth2AccessTokenResult = oauthResult.data;
-    console.log(oauthData);
     const user = await getUserFromOAuthData(oauthData);
     let player = await getPlayerFromDiscordId(user.id);
     if (player) {
@@ -77,7 +76,7 @@ router.get("/discord/callback", async (req, res) => {
         });
       } else if (
         player.discordAvatar !== user.avatar ||
-        player.discordTag !== user.username + user.discriminator
+        player.discordTag !== `${user.username}#${user.discriminator}`
       ) {
         await updatePlayerDiscordInfo(player, user);
       }
@@ -104,7 +103,7 @@ router.get("/discord/callback", async (req, res) => {
   }
 });
 router.get("/botToken", async (req, res) => {
-  if (!req.user) return res.status(401).send({ msg: "Unauthorized" });
+  if (!req.user) return res.status(401).send({ message: "Unauthorized" });
   const user = req.user;
   const apiKey = await newApiToken(user);
   res.status(201).send({

@@ -1,4 +1,4 @@
-import { VrplPlayer } from "../db/models/vrplPlayer";
+import { VrplPlayer } from "../../db/models/vrplPlayer";
 import axios from "axios";
 
 import { v4 as uuidv4 } from "uuid";
@@ -42,6 +42,6 @@ export function getOAuthUrl() {
   const redirect_uri = getRedirectUri();
   const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURI(
     redirect_uri
-  )}&response_type=code&scope=identify`;
+  )}&response_type=code&scope=email%20identify`;
   return url;
 }

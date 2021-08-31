@@ -1,12 +1,15 @@
 import { AuthChecker } from "type-graphql";
-import { Context } from ".";
-import { VrplPlayer } from "./db/models/vrplPlayer";
+import { Context } from "..";
+import { VrplPlayer } from "../db/models/vrplPlayer";
 export enum Permissions {
   None = 0,
   Admin = 1 << 0, // 0001 -- the bitshift is unnecessary, but done for consistency
   ManageTeams = 1 << 1, // 0010
   ManageTournaments = 1 << 2, // 0100
   ManageMatches = 1 << 3, // 1000
+  ManagePlayers = 1 << 4,
+  ManageBadges = 1 << 5,
+  AccessDiscordId = 1 << 10,
 
   //All = ~(~0 << 2), // 0111
 }
@@ -37,9 +40,11 @@ export const authChecker: AuthChecker<any, any> = (
 
   for (const role of roles) {
     if (typeof role !== "number")
-      throw new Error("Type of required role is not number");
-    else if (!bitFieldHas(userPerms, role)) return false;
+      throw new Error(
+        "The permission role type isn't a number. Try doing 'Permissions.Admin'"
+      );
+    else if (bitFieldHas(userPerms, role)) return true;
   }
 
-  return true;
+  return false;
 };

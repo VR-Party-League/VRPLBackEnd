@@ -49,7 +49,6 @@ export async function getUserFromKey(
 ): Promise<ApiToken | undefined> {
   try {
     await refreshApiTokens();
-    console.log(apiKeyCache);
     return apiKeyCache.get(key);
   } catch (err) {
     console.trace();
