@@ -15,6 +15,8 @@ import { cleanNameForChecking } from "../utils/regex/player";
 let playerCacheTimeStamp: number = 0;
 const playerCache = new Map<string, VrplPlayer>();
 
+let fetchingPlayers: undefined | Promise<any> | PromiseLike<any> = undefined;
+
 export function storePlayer(RawPlayer: VrplPlayer) {
   const player: VrplPlayer = {
     id: RawPlayer.id,
@@ -38,13 +40,19 @@ export function storePlayer(RawPlayer: VrplPlayer) {
 }
 
 export async function refreshPlayers(force?: boolean): Promise<void> {
+  if (fetchingPlayers) await fetchingPlayers;
   if (playerCacheTimeStamp + ms("1hour") < Date.now() || force) {
     playerCacheTimeStamp = Date.now();
-    const players = await VrplPlayerDB.find({});
-    playerCache.clear();
-    for (let RawPlayer of players) {
-      storePlayer(RawPlayer);
-    }
+    fetchingPlayers = new Promise<void>(async (resolve, reject) => {
+      const players = await VrplPlayerDB.find({});
+      playerCache.clear();
+      for (let RawPlayer of players) {
+        storePlayer(RawPlayer);
+      }
+      resolve();
+      fetchingPlayers = undefined;
+    });
+    await fetchingPlayers;
   } else if (playerCacheTimeStamp + ms("10seconds") < Date.now()) {
     playerCacheTimeStamp = Date.now();
     VrplPlayerDB.find({}).then((players) => {

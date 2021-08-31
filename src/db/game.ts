@@ -2,6 +2,7 @@ import ms from "ms";
 import VrplGameDB, { VrplGame } from "./models/vrplGame";
 
 let gameCacheTimestamp: number = 0;
+let fetchingGames: undefined | Promise<any> | PromiseLike<any> = undefined;
 const gameCache = new Map<string, VrplGame>();
 
 function storeGame(rawGame: VrplGame) {
@@ -15,14 +16,22 @@ function storeGame(rawGame: VrplGame) {
   gameCache.set(match.id, match);
   return match;
 }
-export async function refreshGames(force?: boolean): Promise<void> {
+
+async function refreshGames(force?: boolean): Promise<void> {
+  if (fetchingGames) await fetchingGames;
   if (gameCacheTimestamp + ms("24hour") < Date.now() || force) {
     gameCacheTimestamp = Date.now();
-    const games = await VrplGameDB.find({});
-    gameCache.clear();
-    for (let RawGame of games) {
-      storeGame(RawGame);
-    }
+    fetchingGames = new Promise<void>((resolve, reject) => {
+      VrplGameDB.find({}).then((games) => {
+        gameCache.clear();
+        for (let RawGame of games) {
+          storeGame(RawGame);
+        }
+        resolve();
+        fetchingGames = undefined;
+      });
+    });
+    await fetchingGames;
   } else if (gameCacheTimestamp + ms("1hour") < Date.now()) {
     gameCacheTimestamp = Date.now();
     VrplGameDB.find({}).then((games) => {

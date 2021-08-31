@@ -13,20 +13,28 @@ import { storeRecord } from "./logs";
 const apiKeyCache = new Map<string, ApiToken>();
 let cacheTimeStamp = 0;
 
+let fetchingApiKeys: undefined | Promise<any> | PromiseLike<any> = undefined;
+
 export async function refreshApiTokens(force?: boolean): Promise<void> {
+  if (fetchingApiKeys) await fetchingApiKeys;
   if (cacheTimeStamp + ms("1hour") < Date.now() || force) {
     cacheTimeStamp = Date.now();
-    const ApiTokens = await ApiTokenModel.find({});
-    apiKeyCache.clear();
-    for (let RawApiToken of ApiTokens) {
-      const ApiToken: ApiToken = {
-        playerId: RawApiToken.playerId,
-        apiToken: RawApiToken.apiToken,
-        timestamp: RawApiToken.timestamp,
-        //Uses: RawApiToken.Uses,
-      };
-      apiKeyCache.set(ApiToken.apiToken, ApiToken);
-    }
+    fetchingApiKeys = new Promise<void>(async (resolve, reject) => {
+      const ApiTokens = await ApiTokenModel.find({});
+      apiKeyCache.clear();
+      for (let RawApiToken of ApiTokens) {
+        const ApiToken: ApiToken = {
+          playerId: RawApiToken.playerId,
+          apiToken: RawApiToken.apiToken,
+          timestamp: RawApiToken.timestamp,
+          //Uses: RawApiToken.Uses,
+        };
+        apiKeyCache.set(ApiToken.apiToken, ApiToken);
+      }
+      resolve();
+      fetchingApiKeys = undefined;
+    });
+    await fetchingApiKeys;
   } else if (cacheTimeStamp + ms("10seconds") < Date.now()) {
     cacheTimeStamp = Date.now();
     ApiTokenModel.find({}).then((ApiTokens) => {

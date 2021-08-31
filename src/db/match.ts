@@ -13,10 +13,12 @@ import {
 import { recordType } from "./models/records";
 import { storeRecord, storeRecords } from "./logs";
 import { getTeamsOfTournament } from "./team";
-import * as _ from "lodash";
+import _ from "lodash";
 
 let matchCacheTimeStamp: number = 0;
 const matchCache = new Map<string, VrplMatch>();
+
+let fetchingMatches: undefined | Promise<any> | PromiseLike<any> = undefined;
 
 function storeMatch(rawMatch: VrplMatch) {
   const match: VrplMatch = {
@@ -45,13 +47,20 @@ function storeMatch(rawMatch: VrplMatch) {
 }
 
 export async function refreshMatches(force?: boolean): Promise<void> {
+  if (fetchingMatches) await fetchingMatches;
   if (matchCacheTimeStamp + ms("1hour") < Date.now() || force) {
     matchCacheTimeStamp = Date.now();
-    const matches = await VrplMatchDB.find({});
-    matchCache.clear();
-    for (let rawMatch of matches) {
-      storeMatch(rawMatch);
-    }
+    fetchingMatches = new Promise<void>(async (resolve, reject) => {
+      const matches = await VrplMatchDB.find({});
+      // TODO: Maybe only fetch active matches
+      matchCache.clear();
+      for (let rawMatch of matches) {
+        storeMatch(rawMatch);
+      }
+      resolve();
+      fetchingMatches = undefined;
+    });
+    await fetchingMatches;
   } else if (matchCacheTimeStamp + ms("15min") < Date.now()) {
     matchCacheTimeStamp = Date.now();
     VrplMatchDB.find({}).then((matches) => {

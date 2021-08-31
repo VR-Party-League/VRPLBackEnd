@@ -23,6 +23,7 @@ let teamCache: {
       }
     | undefined;
 } = {};
+let fetchingTeams: undefined | Promise<any> | PromiseLike<any> = undefined;
 
 function clearTeamCache() {
   // TODO: re-implement this
@@ -51,10 +52,16 @@ async function storeTeams(teams: VrplTeam[]) {
 }
 
 export async function refreshTeams(force?: boolean): Promise<void> {
+  if (fetchingTeams) await fetchingTeams;
   if (teamCacheTimeStamp + ms("1hour") < Date.now() || force) {
     teamCacheTimeStamp = Date.now();
-    const teams = await VrplTeamDB.find({});
-    storeTeams(teams);
+    fetchingTeams = new Promise<void>(async (resolve, reject) => {
+      const teams = await VrplTeamDB.find({});
+      storeTeams(teams);
+      resolve();
+      fetchingTeams = undefined;
+    });
+    await fetchingTeams;
   } else if (teamCacheTimeStamp + ms("15min") < Date.now()) {
     teamCacheTimeStamp = Date.now();
     VrplTeamDB.find({}).then((teams) => {

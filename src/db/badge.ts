@@ -9,6 +9,8 @@ import { findPositions } from "../utils/bitFields";
 const badgeCache = new Map<number, VrplBadge>();
 let badgeCacheTimestamp = 0;
 
+let fetchingBadges: undefined | Promise<any> | PromiseLike<any> = undefined;
+
 function storeBadge(badge: VrplBadge): VrplBadge {
   const cleanBadge: VrplBadge = {
     bitPosition: badge.bitPosition,
@@ -22,11 +24,17 @@ function storeBadge(badge: VrplBadge): VrplBadge {
 }
 
 async function refreshBadges(): Promise<void> {
+  if (fetchingBadges) await fetchingBadges;
   if (badgeCacheTimestamp + ms("30d") < Date.now()) {
     badgeCacheTimestamp = Date.now();
-    const badges = await VrplBadgeDB.find({});
-    badgeCache.clear();
-    badges.forEach((badge: VrplBadge) => storeBadge(badge));
+    fetchingBadges = new Promise<void>(async (resolve, reject) => {
+      const badges = await VrplBadgeDB.find({});
+      badgeCache.clear();
+      badges.forEach((badge: VrplBadge) => storeBadge(badge));
+      resolve();
+      fetchingBadges = undefined;
+    });
+    await fetchingBadges;
   } else if (badgeCacheTimestamp + ms("12h") < Date.now()) {
     badgeCacheTimestamp = Date.now();
     VrplBadgeDB.find({}).then((badges: VrplBadge[]) => {

@@ -4,6 +4,9 @@ import { TournamentModel, VrplTournament } from "./models/vrplTournaments";
 const tournamentCache = new Map<string, VrplTournament>();
 let cacheTimestamp: number = 0;
 
+let fetchingTournaments: undefined | Promise<any> | PromiseLike<any> =
+  undefined;
+
 function storeTournament(tournament: VrplTournament) {
   const data: VrplTournament = {
     id: tournament.id,
@@ -49,8 +52,14 @@ async function reCacheTournaments(): Promise<void> {
 export async function refreshTournaments(opts?: {
   force: boolean;
 }): Promise<void> {
+  if (fetchingTournaments) await fetchingTournaments;
   if (cacheTimestamp + ms("60min") < Date.now() || opts?.force) {
-    await reCacheTournaments();
+    fetchingTournaments = new Promise<void>(async (resolve, reject) => {
+      await reCacheTournaments();
+      resolve();
+      fetchingTournaments = undefined;
+    });
+    await fetchingTournaments;
   } else if (cacheTimestamp + ms("1min") < Date.now()) {
     Promise.resolve(reCacheTournaments());
   }
