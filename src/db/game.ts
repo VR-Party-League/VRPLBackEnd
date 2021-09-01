@@ -49,6 +49,19 @@ export async function getGameById(id: string): Promise<VrplGame | null> {
   return gameCache.get(id) ?? null;
 }
 
+// Get game from name
+export async function getGameFromName(name: string): Promise<VrplGame | null> {
+  await refreshGames();
+  for (let game of gameCache.values()) {
+    if (
+      game.name.trim().toLowerCase().replace(/\s/g, "") ===
+      name.trim().toLowerCase().replace(/\s/g, "")
+    )
+      return game;
+  }
+  return null;
+}
+
 export async function getGamesArray() {
   await refreshGames();
   return Array.from(gameCache.values());

@@ -1,5 +1,5 @@
 import { Arg, FieldResolver, Query, Resolver, Root } from "type-graphql";
-import { getGameById, getGamesArray } from "../db/game";
+import { getGameById, getGameFromName, getGamesArray } from "../db/game";
 import { VrplGame } from "../db/models/vrplGame";
 import { VrplTournament } from "../db/models/vrplTournaments";
 import { getTournamentsOfGame } from "../db/tournaments";
@@ -10,6 +10,10 @@ export default class GameResolver {
   @Query((_returns) => Game, { nullable: true })
   gameFromId(@Arg("gameId") gameId: string): Promise<VrplGame | null> {
     return getGameById(gameId);
+  }
+  @Query((_returns) => Game, { nullable: true })
+  gameFromName(@Arg("gameName") gameName: string): Promise<VrplGame | null> {
+    return getGameFromName(gameName);
   }
 
   @Query((_returns) => [Game])

@@ -144,6 +144,7 @@ type Query {
   badgeFromName(name: String): Badge
   badgesFromBitField(bitField: Int!): [Badge!]!
   gameFromId(gameId: String!): Game
+  gameFromName(gameName: String!): Game
   getMatchFromId(matchId: String!, tournamentId: String!): Match
   getMatchesForTeam(activeOnly: Boolean, teamId: String!, tournamentId: String!): [Match!]!
   playerFromDiscordId(discordId: String!): Player
