@@ -85,7 +85,3 @@ export default class BadgeResolver {
     return res;
   }
 }
-// TODO: Try creating a badge, then fetching it CHECKED!
-//       Then assign the badge to the player (maybe make a mutation for that)
-//       Then fetch the player and check if the badge is in the bitfield
-//       Then remove the badge from the player

@@ -56,6 +56,7 @@ import { authChecker } from "./utils/permissions";
 // Routes
 import router from "./routes";
 import BadgeResolver from "./resolvers/BadgeResolver";
+import { PlayerCooldownResolver } from "./resolvers/CooldownResolver";
 
 async function bootstrap() {
   // Setup GraphQl
@@ -68,6 +69,7 @@ async function bootstrap() {
       TeamPlayerResolver,
       GameResolver,
       BadgeResolver,
+      PlayerCooldownResolver,
     ],
     emitSchemaFile: true,
     dateScalarMode: "timestamp",
@@ -110,6 +112,7 @@ async function bootstrap() {
   await server.start();
 
   const app = express();
+
   // Setup sentry
   Sentry.init({
     environment: process.env.NODE_ENV || "Dev",
@@ -140,7 +143,7 @@ async function bootstrap() {
   const corsOptions: CorsOptions = {
     origin: frontEndUrl, // origin should be where the frontend code is hosted
     credentials: true,
-    methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS", "HEAD"],
+    methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS", "HEAD", "BREW"],
   };
   app.use(cors(corsOptions));
 
@@ -173,3 +176,5 @@ mongoose.connect(process.env.DB_URI!, {
   useCreateIndex: true,
 });
 bootstrap();
+
+// TODO: make sure all updateOne thingies dont push the entire player, but only the changed fields

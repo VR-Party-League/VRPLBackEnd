@@ -88,6 +88,7 @@ type Mutation {
   addBadgeToPlayer(bitPosition: Int!, playerId: String!): Player!
   addPlayerToTeamAsPlayer(playerId: String!, teamId: String!, tournamentId: String!): Team!
   addPlayerToTeamAsSub(playerId: String!, teamId: String!, tournamentId: String!): Team!
+  changePlayerName(newName: String!, playerId: String!): Player!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
   confirmMatch(matchId: String!, teamId: String!, tournamentId: String!): Match!
   createBadge(bitPosition: Int, description: String!, icon: String!, name: String!): Badge!
@@ -108,20 +109,23 @@ type Player {
   """The player's badges"""
   badges: [Badge!]!
 
+  """The player's cooldowns, this is slow"""
+  cooldowns: [PlayerCooldown!]!
+
   """The player's discord ID, only accessible to admins and mods"""
   discordId: String!
 
   """The player's discord Tag, needs authorization"""
   discordTag: String!
 
-  """The player's flags, this includes cool-downs, punishments and alike"""
-  flags: Int
-
   """The player's id"""
   id: String!
 
   """The player's nickname, unique and changeable"""
   nickname: String!
+
+  """Previous nicknames of this player"""
+  nicknameHistory: [PlayerNicknameHistoryItem!]!
 
   """The player's permissions"""
   permissions: Int
@@ -136,6 +140,31 @@ type Player {
   timeCreated: Timestamp!
 }
 
+type PlayerCooldown {
+  """When the cooldown was created"""
+  createdAt: Timestamp!
+
+  """When the cooldown will expire"""
+  expiresAt: Timestamp!
+
+  """Explanation about what this cooldown effects"""
+  explanation: String
+
+  """The cooldown identifier"""
+  id: String!
+
+  """The cooldown type"""
+  type: String!
+}
+
+type PlayerNicknameHistoryItem {
+  """The nickname the player had"""
+  nickname: String!
+
+  """When this nickname was replaced"""
+  replacedAt: Timestamp!
+}
+
 type Query {
   allBadges: [Badge!]!
   allGames: [Game!]!
@@ -147,6 +176,7 @@ type Query {
   gameFromName(gameName: String!): Game
   getMatchFromId(matchId: String!, tournamentId: String!): Match
   getMatchesForTeam(activeOnly: Boolean, teamId: String!, tournamentId: String!): [Match!]!
+  getPlayerCooldownFromId(cooldownId: String!): PlayerCooldown
   playerFromDiscordId(discordId: String!): Player
   playerFromId(playerId: String!): Player
   teamFromId(id: String!, tournamentId: String!): Team

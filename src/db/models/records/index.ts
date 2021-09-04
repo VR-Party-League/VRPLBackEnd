@@ -48,7 +48,7 @@ export type record =
 const logSchema = new Schema<record & Document>(
   {
     v: { type: Number, required: true },
-    id: { type: String, required: true, unique: true },
+    id: { type: String, required: true },
     type: { type: Number, required: true },
     userId: { type: String, required: true },
     timestamp: { type: Date, required: true },

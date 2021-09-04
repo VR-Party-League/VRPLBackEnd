@@ -10,7 +10,12 @@ import { recordType } from "./models/records";
 import { storeRecord } from "./logs";
 
 import { APIUser } from "discord-api-types/v9";
-import { cleanNameForChecking } from "../utils/regex/player";
+import {
+  cleanNameForChecking,
+  cleanNameFromInput,
+} from "../utils/regex/player";
+import { PlayerNicknameHistoryItem } from "../schemas/Player";
+import { BadRequestError } from "../utils/errors";
 
 let playerCacheTimeStamp: number = 0;
 const playerCache = new Map<string, VrplPlayer>();
@@ -23,6 +28,7 @@ export function storePlayer(RawPlayer: VrplPlayer) {
     about: RawPlayer.about,
     email: RawPlayer.email,
     nickname: RawPlayer.nickname,
+    nicknameHistory: RawPlayer.nicknameHistory,
     avatar: RawPlayer.avatar,
     region: RawPlayer.region,
 
@@ -31,7 +37,6 @@ export function storePlayer(RawPlayer: VrplPlayer) {
     discordAvatar: RawPlayer.discordAvatar,
 
     badgeField: RawPlayer.badgeField,
-    flags: RawPlayer.flags,
     timeCreated: RawPlayer.timeCreated,
     permissions: RawPlayer.permissions,
   };
@@ -108,32 +113,6 @@ export async function getPlayerFromDiscordId(discordId: string) {
   return (await findPlayer((player) => player.discordId == discordId)) || null;
 }
 
-export async function createOrUpdatePlayer(Player: VrplPlayer) {
-  const oldPlayer = await getPlayerFromDiscordId(Player.discordId);
-  console.log("Old player: ", oldPlayer);
-
-  console.log("Player1 ", Player);
-  Player = storePlayer(Player);
-  console.log("Player2 ", Player);
-  if (oldPlayer) {
-    console.log("opt1 ", Player);
-    if (checkPlayerSimilarity(oldPlayer, Player)) return;
-    console.log("not similar ", Player);
-    Player.id = oldPlayer.id;
-    await Promise.all([
-      VrplPlayerDB.updateOne({ id: oldPlayer.id }, Player),
-      recordPlayerUpdate(oldPlayer, Player),
-    ]);
-  } else {
-    console.log("opt2 ", Player);
-    await Promise.all([
-      VrplPlayerDB.create(Player),
-      recordPlayerCreate(Player),
-    ]);
-    storePlayer(Player);
-  }
-}
-
 export async function updatePlayerDiscordInfo(
   Player: VrplPlayer,
   User: APIUser
@@ -157,6 +136,7 @@ export async function createPlayerFromDiscordInfo(
   const player: VrplPlayer = {
     id: uuidv4(),
     nickname: User.username, // TODO: Check for duplicate usernames
+    nicknameHistory: [],
     about: `This is the profile of ${User.username}!`,
     avatar: undefined,
     email: User.email,
@@ -167,7 +147,6 @@ export async function createPlayerFromDiscordInfo(
     discordAvatar: User.avatar || undefined,
 
     permissions: 0,
-    flags: 0,
     badgeField: 0,
     timeCreated: new Date(),
   };
@@ -176,15 +155,6 @@ export async function createPlayerFromDiscordInfo(
 
   await Promise.all([VrplPlayerDB.create(player), recordPlayerCreate(player)]);
   return storePlayer(player);
-}
-
-function checkPlayerSimilarity(player1: VrplPlayer, player2: VrplPlayer) {
-  return !(
-    player1.discordAvatar !== player2.discordAvatar ||
-    player1.discordTag !== player2.discordTag ||
-    player1.discordId !== player2.discordId ||
-    player1.permissions !== player2.permissions
-  );
 }
 
 function recordPlayerCreate(player: VrplPlayer) {
@@ -256,7 +226,49 @@ export async function updatePlayerBadges(
     new: player.badgeField,
   };
   await Promise.all([
-    VrplPlayerDB.updateOne({ id: player.id }, player),
+    VrplPlayerDB.updateOne(
+      { id: player.id },
+      { $set: { badgeField: player.badgeField } }
+    ),
+    storeRecord(playerUpdateRecord),
+  ]);
+  return storePlayer(player);
+}
+export async function updatePlayerName(
+  player: VrplPlayer,
+  newPlayerName: string,
+  performedBy: string
+) {
+  const foundPlayer = await getPlayerFromNickname(newPlayerName);
+  if (foundPlayer)
+    throw new BadRequestError("A player with that name already exists");
+  newPlayerName = cleanNameFromInput(newPlayerName);
+  const nicknameHistoryItem: PlayerNicknameHistoryItem = {
+    nickname: player.nickname,
+    replacedAt: new Date(),
+  };
+  player.nickname = newPlayerName;
+  player.nicknameHistory.push(nicknameHistoryItem);
+
+  const playerUpdateRecord: playerUpdateRecord = {
+    v: 1,
+    id: uuidv4(),
+    type: recordType.playerUpdate,
+    userId: performedBy,
+    playerId: player.id,
+    timestamp: new Date(),
+    valueChanged: "nickname",
+    old: nicknameHistoryItem.nickname,
+    new: player.nickname,
+  };
+  await Promise.all([
+    VrplPlayerDB.updateOne(
+      { id: player.id },
+      {
+        $set: { nickname: newPlayerName },
+        $push: { nicknameHistory: nicknameHistoryItem },
+      }
+    ),
     storeRecord(playerUpdateRecord),
   ]);
   return storePlayer(player);

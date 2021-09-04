@@ -15,31 +15,51 @@ import {
   getBadgeFromBitPosition,
   getBadgesFromBitField,
 } from "../db/badge";
+import {
+  addPlayerCooldown,
+  doesPlayerHaveCooldown,
+  getPlayerCooldowns,
+} from "../db/cooldown";
+import { VrplPlayerCooldown } from "../db/models/cooldowns";
 import { VrplBadge } from "../db/models/vrplBadge";
 import { VrplPlayer } from "../db/models/vrplPlayer";
 import { VrplTeam } from "../db/models/vrplTeam";
 import {
   getPlayerFromDiscordId,
   getPlayerFromId,
+  getPlayerFromNickname,
   updatePlayerBadges,
+  updatePlayerName,
 } from "../db/player";
 import { getAllTeamsOfPlayer } from "../db/team";
 import Player from "../schemas/Player";
 import { findPositions } from "../utils/bitFields";
-import { BadRequestError, InternalServerError } from "../utils/errors";
-import { Permissions } from "../utils/permissions";
+import {
+  BadRequestError,
+  ForbiddenError,
+  InternalServerError,
+} from "../utils/errors";
+import { Permissions, userHasPermission } from "../utils/permissions";
 
 @Resolver((_of) => Player)
 export default class {
   @Query((_returns) => Player, { nullable: true })
-  playerFromId(@Arg("playerId") playerId: string): Promise<VrplPlayer | null> {
-    return getPlayerFromId(playerId);
+  async playerFromId(
+    @Arg("playerId") playerId: string
+  ): Promise<VrplPlayer | null> {
+    return await getPlayerFromId(playerId);
   }
   @Query((_returns) => Player, { nullable: true })
   playerFromDiscordId(
     @Arg("discordId") discordId: string
   ): Promise<VrplPlayer | null> {
     return getPlayerFromDiscordId(discordId);
+  }
+  @FieldResolver()
+  nicknameHistory(
+    @Root() vrplPlayer: VrplPlayer
+  ): VrplPlayer["nicknameHistory"] {
+    return vrplPlayer.nicknameHistory;
   }
 
   @FieldResolver()
@@ -49,6 +69,11 @@ export default class {
   @FieldResolver()
   badges(@Root() vrplPlayer: VrplPlayer): Promise<VrplBadge[]> {
     return getBadgesFromBitField(vrplPlayer.badgeField);
+  }
+
+  @FieldResolver()
+  cooldowns(@Root() vrplPlayer: VrplPlayer): Promise<VrplPlayerCooldown[]> {
+    return getPlayerCooldowns(vrplPlayer.id);
   }
 
   @Authorized([Permissions.ManageBadges])
@@ -112,5 +137,35 @@ export default class {
       );
 
     return await updatePlayerBadges(vrplPlayer, bitField, user.id);
+  }
+
+  @Authorized()
+  @Mutation((_returns) => Player)
+  async changePlayerName(
+    @Arg("playerId") playerId: string,
+    @Arg("newName") newName: string,
+    @Ctx() ctx: Context
+  ) {
+    const user = ctx.user;
+    if (!user) throw new InternalServerError("No user found in context");
+    const vrplPlayer = await getPlayerFromId(playerId);
+    if (!vrplPlayer) throw new BadRequestError("Player not found");
+    const foundPlayer = await getPlayerFromNickname(newName);
+    if (foundPlayer)
+      throw new BadRequestError("A player with that name already exists.");
+
+    const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
+    if (!userHasPerms) {
+      if (vrplPlayer.id !== user.id)
+        throw new ForbiddenError("You can't change other players' names");
+      const hasCooldown = await doesPlayerHaveCooldown(
+        playerId,
+        "changeNickname"
+      );
+      if (hasCooldown) throw new BadRequestError("You are on a cooldown!");
+    }
+    const newPlayer = await updatePlayerName(vrplPlayer, newName, user.id);
+    if (!userHasPerms) await addPlayerCooldown(playerId, "changeNickname");
+    return newPlayer;
   }
 }

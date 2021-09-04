@@ -1,7 +1,16 @@
 import { Authorized, Field, Int, ObjectType } from "type-graphql";
 import { Permissions } from "../utils/permissions";
 import Badge from "./Badge";
+import { PlayerCooldown } from "./Cooldown";
 import Team from "./Team";
+
+@ObjectType()
+export class PlayerNicknameHistoryItem {
+  @Field({ description: "The nickname the player had" })
+  nickname: string;
+  @Field({ description: "When this nickname was replaced" })
+  replacedAt: Date;
+}
 
 @ObjectType()
 export default class Player {
@@ -13,6 +22,11 @@ export default class Player {
     // TODO: add a player nickname history, with timestamps
   })
   nickname: string;
+
+  @Field((_type) => [PlayerNicknameHistoryItem], {
+    description: "Previous nicknames of this player",
+  })
+  nicknameHistory: PlayerNicknameHistoryItem[];
 
   @Field({
     description: "The player's avatar, most likely an image url",
@@ -43,12 +57,10 @@ export default class Player {
   @Field({ description: "The player's discord Tag, needs authorization" })
   discordTag: string;
 
-  @Field((_type) => Int, {
-    description:
-      "The player's flags, this includes cool-downs, punishments and alike",
-    defaultValue: 0,
+  @Field((_type) => [PlayerCooldown], {
+    description: "The player's cooldowns, this is slow",
   })
-  flags: number;
+  cooldowns: PlayerCooldown[];
 
   @Field((_type) => [Badge], {
     description: "The player's badges",
