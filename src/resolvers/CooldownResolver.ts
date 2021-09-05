@@ -7,7 +7,7 @@ import { VrplPlayerCooldownTypes } from "../utils/cooldowns";
 @Resolver((_of) => PlayerCooldown)
 export class PlayerCooldownResolver {
   @Query((_returns) => PlayerCooldown, { nullable: true })
-  getPlayerCooldownFromId(
+  playerCooldownFromId(
     @Arg("cooldownId") cooldownId: string
   ): Promise<VrplPlayerCooldown | undefined> {
     return getCooldownFromId(cooldownId);

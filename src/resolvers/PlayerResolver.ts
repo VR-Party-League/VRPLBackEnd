@@ -168,4 +168,14 @@ export default class {
     if (!userHasPerms) await addPlayerCooldown(playerId, "changeNickname");
     return newPlayer;
   }
+
+  @Authorized()
+  @Mutation((_returns) => Player)
+  async setPlayerRegion(
+    @Arg("playerId") playerId: string,
+    @Arg("region") newName: string,
+    @Ctx() ctx: Context
+  ) {
+    // TODO: Do this!!!!
+  }
 }

@@ -35,7 +35,7 @@ import { Context } from "..";
 @Resolver((_of) => Match)
 export default class {
   @Query((_returns) => [Match])
-  getMatchesForTeam(
+  matchesForTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("activeOnly", { nullable: true }) activeOnly: boolean
@@ -44,7 +44,7 @@ export default class {
   }
 
   @Query((_returns) => Match, { nullable: true })
-  getMatchFromId(
+  matchFromId(
     @Arg("tournamentId") tournamentId: string,
     @Arg("matchId") matchId: string
   ): Promise<VrplMatch | null> {
