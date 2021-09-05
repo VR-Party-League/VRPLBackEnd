@@ -133,9 +133,16 @@ export async function createPlayerFromDiscordInfo(
   User: APIUser
 ): Promise<VrplPlayer> {
   if (!User.email) throw new Error("No User email");
+  let userName = cleanNameFromInput(User.username);
+  if (await getPlayerFromNickname(userName)) {
+    userName = cleanNameFromInput(userName + uuidv4());
+    if (await getPlayerFromNickname(userName))
+      userName = cleanNameFromInput(uuidv4());
+  }
+
   const player: VrplPlayer = {
     id: uuidv4(),
-    nickname: User.username, // TODO: Check for duplicate usernames
+    nickname: userName,
     nicknameHistory: [],
     about: `This is the profile of ${User.username}!`,
     avatar: undefined,

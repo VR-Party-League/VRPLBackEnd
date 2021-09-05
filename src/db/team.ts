@@ -556,7 +556,6 @@ export async function getAllTeamsOfPlayer(
 }
 
 export async function getAllTeamsFromId(teamId: string): Promise<VrplTeam[]> {
-  // TODO: Fix this
   // @ts-ignore
   return teamCache[teamId] ? Object.values(teamCache[teamId]) : [];
 }

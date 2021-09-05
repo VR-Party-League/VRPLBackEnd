@@ -176,5 +176,3 @@ mongoose.connect(process.env.DB_URI!, {
   useCreateIndex: true,
 });
 bootstrap();
-
-// TODO: make sure all updateOne thingies dont push the entire player, but only the changed fields

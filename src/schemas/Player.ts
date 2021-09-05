@@ -19,7 +19,6 @@ export default class Player {
 
   @Field({
     description: "The player's nickname, unique and changeable",
-    // TODO: add a player nickname history, with timestamps
   })
   nickname: string;
 

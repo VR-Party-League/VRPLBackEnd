@@ -36,5 +36,3 @@ const CooldownSchema = new Schema<Cooldown & Document>(
 
 const CooldownModel = model<Cooldown & Document>("cooldowns", CooldownSchema);
 export default CooldownModel;
-
-// TODO: Set the expireAt to delete the document once it expires
