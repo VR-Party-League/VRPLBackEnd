@@ -22,6 +22,8 @@ export default class Team {
   @Field((_type) => [TeamPlayer], { description: "An array of team players" })
   teamPlayers: TeamPlayer[];
 
+  @Field((_type) => Date, { description: "The date this team was created" })
+  createdAt: Date;
   //@Field((type) => [Tournament], { description: "An array of players" })
   //tournament!: Tournament[];
 }

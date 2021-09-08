@@ -23,7 +23,10 @@ export interface VrplTeam {
   name: string;
   teamPlayers: VrplTeamPlayer[];
   tournamentId: string;
+  createdAt: Date;
 }
+
+// TODO: team socials
 
 const TeamSchema = new Schema<VrplTeam & Document>(
   {
@@ -32,6 +35,7 @@ const TeamSchema = new Schema<VrplTeam & Document>(
     name: String,
     teamPlayers: { type: [Object], required: true },
     tournamentId: String,
+    createdAt: Date,
   },
   { collection: "teams" }
 );

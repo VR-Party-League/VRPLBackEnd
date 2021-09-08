@@ -37,6 +37,7 @@ function storeTeam(rawTeam: VrplTeam) {
     ownerId: rawTeam.ownerId,
     teamPlayers: rawTeam.teamPlayers || [],
     tournamentId: rawTeam.tournamentId,
+    createdAt: rawTeam.createdAt,
   };
   const teams = teamCache[team.id];
   if (teams) teams[team.tournamentId] = team;
@@ -478,8 +479,10 @@ export async function createTeam(
       name: teamName,
       teamPlayers: [],
       tournamentId: tournamentId,
+      createdAt: new Date(),
     };
-
+    // TODO: Handle teams having subteams and they having the same id
+    // Also make sure those teams have same createdAt
     if (await getTeamFromId(tournamentId, teamData.id)) {
       return createTeam(tournamentId, teamName, ownerId, performedBy);
     }
