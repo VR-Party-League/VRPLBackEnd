@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config({});
 
+import "./utils/storage/player";
+
 import "reflect-metadata";
 
 const PORT = process.env.PORT || 3001;

@@ -15,7 +15,7 @@ export interface VrplPlayer {
   id: string;
   nickname: string;
   nicknameHistory: VrplPlayerNickname[];
-  avatar?: string; // TODO: set up s3
+  //  avatar?: string; // TODO: set up s3
   about: string;
   email: string;
   region?: string;
@@ -34,7 +34,7 @@ const PlayerSchema = new Schema<VrplPlayer & Document>(
     id: { type: String, required: true, unique: true },
     nickname: { type: String, require: true },
     nicknameHistory: { type: [Object], require: true },
-    avatar: { type: String, require: true },
+    //    avatar: { type: String, require: true },
     about: { type: String, require: false },
     email: { type: String, require: true },
     region: { type: String, require: false },

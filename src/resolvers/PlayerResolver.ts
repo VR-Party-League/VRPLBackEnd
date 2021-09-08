@@ -40,6 +40,7 @@ import {
   InternalServerError,
 } from "../utils/errors";
 import { Permissions, userHasPermission } from "../utils/permissions";
+import { getPlayerAvatar } from "../utils/storage/player";
 
 @Resolver((_of) => Player)
 export default class {
@@ -74,6 +75,10 @@ export default class {
   @FieldResolver()
   cooldowns(@Root() vrplPlayer: VrplPlayer): Promise<VrplPlayerCooldown[]> {
     return getPlayerCooldowns(vrplPlayer.id);
+  }
+  @FieldResolver()
+  avatar(@Root() vrplPlayer: VrplPlayer): Promise<string> {
+    return getPlayerAvatar(vrplPlayer.id);
   }
 
   @Authorized([Permissions.ManageBadges])

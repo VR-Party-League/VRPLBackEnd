@@ -29,7 +29,6 @@ export function storePlayer(RawPlayer: VrplPlayer) {
     email: RawPlayer.email,
     nickname: RawPlayer.nickname,
     nicknameHistory: RawPlayer.nicknameHistory,
-    avatar: RawPlayer.avatar,
     region: RawPlayer.region,
 
     discordId: RawPlayer.discordId,
@@ -145,7 +144,6 @@ export async function createPlayerFromDiscordInfo(
     nickname: userName,
     nicknameHistory: [],
     about: `This is the profile of ${User.username}!`,
-    avatar: undefined,
     email: User.email,
     region: undefined,
 

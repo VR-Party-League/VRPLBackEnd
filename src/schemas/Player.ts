@@ -28,10 +28,11 @@ export default class Player {
   nicknameHistory: PlayerNicknameHistoryItem[];
 
   @Field({
-    description: "The player's avatar, most likely an image url",
+    description:
+      "The player's avatar, an url pointing to the image, or pointing to nothing!",
     nullable: true,
   })
-  avatar?: string;
+  avatar: string;
 
   @Field({ description: "The player's about page" })
   about: string;
