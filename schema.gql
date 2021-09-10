@@ -104,7 +104,9 @@ type Player {
   """The player's about page"""
   about: String!
 
-  """The player's avatar, an url pointing to the image"""
+  """
+  The player's avatar, an url pointing to the image, or pointing to nothing!
+  """
   avatar: String
 
   """The player's badges"""

@@ -20,3 +20,4 @@ export default class Badge {
   @Field({ description: "The date time when the badge was created" })
   createdAt!: Date;
 }
+// TODO: Badges addedOn ?

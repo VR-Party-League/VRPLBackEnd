@@ -160,6 +160,7 @@ async function bootstrap() {
     next();
   });
   app.use(Authenticate);
+
   server.applyMiddleware({ app, cors: corsOptions });
 
   app.use(router);
