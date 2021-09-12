@@ -144,7 +144,8 @@ async function bootstrap() {
     origin: function (origin, callback) {
       if (
         origin &&
-        [frontEndUrl, "http://localhost:3000"].indexOf(origin) !== -1
+        ["https://vrpl.vercel.app", "http://localhost:3000"].indexOf(origin) !==
+          -1
       ) {
         callback(null, true);
       } else {
