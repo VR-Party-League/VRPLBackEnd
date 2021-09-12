@@ -141,7 +141,7 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true }));
   app.use(cookieParser());
   const corsOptions: CorsOptions = {
-    origin: "*", // origin should be where the frontend code is hosted
+    origin: frontEndUrl, // origin should be where the frontend code is hosted
     credentials: true,
     methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS", "HEAD", "BREW"],
   };
