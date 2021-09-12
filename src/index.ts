@@ -141,21 +141,12 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true }));
   app.use(cookieParser());
   const corsOptions: CorsOptions = {
-    origin: function (origin, callback) {
-      if (
-        origin &&
-        [
-          "https://vrpl-graphql.herokuapp.com",
-          "https://discord.com",
-          "https://vrpl.vercel.app",
-          "http://localhost:3000",
-        ].indexOf(origin) !== -1
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    }, // origin should be where the frontend code is hosted
+    origin: [
+      "https://vrpl-graphql.herokuapp.com",
+      "https://discord.com",
+      "https://vrpl.vercel.app",
+      "http://localhost:3000",
+    ], // origin should be where the frontend code is hosted
     credentials: true,
     methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS", "HEAD", "BREW"],
   };
