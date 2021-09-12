@@ -25,10 +25,11 @@ router.post("/user/:id", async (req, res) => {
     // Check if the player is on cooldown
     else if (
       !userHasPermission(req.user, Permissions.ManagePlayers) &&
-      doesHaveCooldown("player", req.user.id, "changeAvatar")
-    )
+      (await doesHaveCooldown("player", req.user.id, "changeAvatar"))
+    ) {
+      // TODO: make other promises in if statemenets also awaited
       return res.status(429).send({ message: "You are on a cooldown" });
-
+    }
     // Verify file properties
     const file = req.file;
     if (!file) return res.status(400).send({ message: "No file uploaded" });
