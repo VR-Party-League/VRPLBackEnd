@@ -62,11 +62,13 @@ export async function doesHaveCooldown(
   if (forWho === "player") {
     if (!isVrplPlayerCooldownType(type))
       throw new Error("Cooldown type not for player");
+
     res = await CooldownDB.exists({
       playerId: forId,
       for: forWho,
       type: type,
     });
+    console.log(res);
   } else {
     if (!isVrplTeamCooldownType(type))
       throw new Error("Cooldown type not for team");
@@ -76,6 +78,7 @@ export async function doesHaveCooldown(
       type: type,
     });
   }
+  console.log(res);
   return res;
 }
 
