@@ -9,9 +9,7 @@ export const frontEndUrl =
     ? "https://vrpl.vercel.app"
     : "http://localhost:3000";
 export const frontEndDomain =
-  process.env.NODE_ENV === "production"
-    ? "vrpl.vercel.app"
-    : "localhost";
+  process.env.NODE_ENV === "production" ? "vrpl.vercel.app" : "localhost";
 
 // Graphql/Express
 import express from "express";
@@ -143,7 +141,13 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true }));
   app.use(cookieParser());
   const corsOptions: CorsOptions = {
-    origin: [frontEndUrl, "localhost"], // origin should be where the frontend code is hosted
+    origin: function (origin, callback) {
+      if (origin && [frontEndUrl, "localhost"].indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    }, // origin should be where the frontend code is hosted
     credentials: true,
     methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS", "HEAD", "BREW"],
   };

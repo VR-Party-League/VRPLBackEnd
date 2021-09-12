@@ -1,6 +1,6 @@
 import { CookieOptions, Router } from "express";
 import * as Sentry from "@sentry/node";
-import { frontEndDomain, frontEndUrl } from "../..";
+import { frontEndUrl } from "../..";
 import {
   getOAuthUrl,
   getRedirectUri,
