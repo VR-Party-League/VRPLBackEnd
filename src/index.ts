@@ -142,7 +142,10 @@ async function bootstrap() {
   app.use(cookieParser());
   const corsOptions: CorsOptions = {
     origin: function (origin, callback) {
-      if (origin && [frontEndUrl, "localhost"].indexOf(origin) !== -1) {
+      if (
+        origin &&
+        [frontEndUrl, "http://localhost:3000"].indexOf(origin) !== -1
+      ) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
