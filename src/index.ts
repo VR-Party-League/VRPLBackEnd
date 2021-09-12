@@ -144,8 +144,12 @@ async function bootstrap() {
     origin: function (origin, callback) {
       if (
         origin &&
-        ["https://vrpl.vercel.app", "http://localhost:3000"].indexOf(origin) !==
-          -1
+        [
+          "https://vrpl-graphql.herokuapp.com",
+          "https://discord.com",
+          "https://vrpl.vercel.app",
+          "http://localhost:3000",
+        ].indexOf(origin) !== -1
       ) {
         callback(null, true);
       } else {
