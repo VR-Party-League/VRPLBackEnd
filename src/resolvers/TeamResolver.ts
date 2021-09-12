@@ -9,7 +9,7 @@ import {
   Root,
 } from "type-graphql";
 import { Context } from "..";
-import { VrplPlayer } from "../db/models/vrplPlayer";
+import vrplPlayer, { VrplPlayer } from "../db/models/vrplPlayer";
 import { VrplTeam, VrplTeamPlayerRole } from "../db/models/vrplTeam";
 import { getPlayerFromId } from "../db/player";
 import {
@@ -27,6 +27,9 @@ import {
 } from "../utils/errors";
 import { Permissions, userHasPermission } from "../utils/permissions";
 import Team from "../schemas/Team";
+import { VrplTournament } from "../db/models/vrplTournaments";
+import { getTournamentFromId } from "../db/tournaments";
+import { getAvatar } from "../utils/storage";
 
 @Resolver((_of) => Team)
 export default class {
@@ -49,10 +52,15 @@ export default class {
   async owner(@Root() vrplTeam: VrplTeam): Promise<VrplPlayer> {
     return (await getPlayerFromId(vrplTeam.ownerId))!;
   }
-  // @FieldResolver()
-  // teamPlayers(@Root() vrplTeam: VrplTeam): Promise<(VrplPlayer | null)[]> {
-  //   return Promise.all(vrplTeam.teamPlayers.map((id) => getPlayerFromId(id)));
-  // }
+  @FieldResolver()
+  async tournament(@Root() vrplTeam: VrplTeam): Promise<VrplTournament> {
+    return (await getTournamentFromId(vrplTeam.tournamentId))!;
+  }
+
+  @FieldResolver()
+  avatar(@Root() vrplTeam: VrplTeam): Promise<string | undefined> {
+    return getAvatar("team", vrplTeam.id, vrplTeam.tournamentId);
+  }
 
   // TODO: Slightly tested
   @Authorized()

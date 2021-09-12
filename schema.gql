@@ -189,6 +189,9 @@ type Query {
 }
 
 type Team {
+  """The team avatar"""
+  avatar: String
+
   """The date this team was created"""
   createdAt: Timestamp!
 

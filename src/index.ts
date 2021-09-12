@@ -59,7 +59,9 @@ import { authChecker } from "./utils/permissions";
 import router from "./routes";
 import BadgeResolver from "./resolvers/BadgeResolver";
 import { PlayerCooldownResolver } from "./resolvers/CooldownResolver";
-
+// TODO: handle team avatars u dumbass
+// TODO: also handle uploading them
+// TODO: also maybe to team and profile banners, idk
 async function bootstrap() {
   // Setup GraphQl
   const schema = await buildSchema({
@@ -172,10 +174,5 @@ async function bootstrap() {
   console.log(`Server is running on http://localhost:${PORT}`);
 }
 
-mongoose.connect(process.env.DB_URI!, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  useFindAndModify: false,
-  useCreateIndex: true,
-});
+mongoose.connect(process.env.DB_URI!);
 bootstrap();

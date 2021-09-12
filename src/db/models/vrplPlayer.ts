@@ -1,4 +1,4 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, SchemaTypes } from "mongoose";
 
 // Nickname history
 export interface VrplPlayerNickname {
@@ -33,7 +33,15 @@ const PlayerSchema = new Schema<VrplPlayer & Document>(
   {
     id: { type: String, required: true, unique: true },
     nickname: { type: String, require: true },
-    nicknameHistory: { type: [Object], require: true },
+    nicknameHistory: {
+      type: [
+        {
+          nickname: String,
+          replacedAt: Date,
+        },
+      ],
+      required: true,
+    },
     //    avatar: { type: String, require: true },
     about: { type: String, require: false },
     email: { type: String, require: true },

@@ -10,7 +10,7 @@ export class PlayerCooldownResolver {
   playerCooldownFromId(
     @Arg("cooldownId") cooldownId: string
   ): Promise<VrplPlayerCooldown | undefined> {
-    return getCooldownFromId(cooldownId);
+    return getCooldownFromId("player", cooldownId);
   }
 
   @FieldResolver()

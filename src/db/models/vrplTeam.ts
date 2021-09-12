@@ -33,7 +33,16 @@ const TeamSchema = new Schema<VrplTeam & Document>(
     ownerId: String,
     id: { type: String, required: true },
     name: String,
-    teamPlayers: { type: [Object], required: true },
+    teamPlayers: {
+      type: [
+        {
+          playerId: String,
+          role: Number,
+          since: Date,
+        },
+      ],
+      required: true,
+    },
     tournamentId: String,
     createdAt: Date,
   },

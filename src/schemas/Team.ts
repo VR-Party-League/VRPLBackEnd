@@ -10,6 +10,8 @@ export default class Team {
 
   @Field({ description: "The unique team name" })
   name: string;
+  @Field({ description: "The team avatar", nullable: true })
+  avatar: string;
 
   @Field((_type) => Tournament, { description: "The unique team name" })
   tournament: Tournament;

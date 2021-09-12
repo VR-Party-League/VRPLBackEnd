@@ -4,6 +4,7 @@ import {
   VrplTeamCooldownType,
 } from "../../utils/cooldowns";
 export type Cooldown = VrplPlayerCooldown | VrplTeamCooldown;
+
 export interface VrplPlayerCooldown {
   id: string;
   for: "player";
@@ -20,6 +21,7 @@ export interface VrplTeamCooldown {
   createdAt: Date;
   expiresAt: Date;
 }
+
 const CooldownSchema = new Schema<Cooldown & Document>(
   {
     id: { type: String, required: true, unique: true },
@@ -34,5 +36,5 @@ const CooldownSchema = new Schema<Cooldown & Document>(
   { collection: "cooldowns" }
 );
 
-const CooldownModel = model<Cooldown & Document>("cooldowns", CooldownSchema);
+const CooldownModel = model("cooldowns", CooldownSchema);
 export default CooldownModel;

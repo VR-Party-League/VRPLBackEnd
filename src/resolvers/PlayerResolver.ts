@@ -16,8 +16,8 @@ import {
   getBadgesFromBitField,
 } from "../db/badge";
 import {
-  addPlayerCooldown,
-  doesPlayerHaveCooldown,
+  addCooldown,
+  doesHaveCooldown,
   getPlayerCooldowns,
 } from "../db/cooldown";
 import { VrplPlayerCooldown } from "../db/models/cooldowns";
@@ -40,7 +40,7 @@ import {
   InternalServerError,
 } from "../utils/errors";
 import { Permissions, userHasPermission } from "../utils/permissions";
-import { getPlayerAvatar } from "../utils/storage/player";
+import { getAvatar } from "../utils/storage";
 
 @Resolver((_of) => Player)
 export default class {
@@ -77,8 +77,8 @@ export default class {
     return getPlayerCooldowns(vrplPlayer.id);
   }
   @FieldResolver()
-  avatar(@Root() vrplPlayer: VrplPlayer): Promise<string> {
-    return getPlayerAvatar(vrplPlayer.id);
+  avatar(@Root() vrplPlayer: VrplPlayer): Promise<string | undefined> {
+    return getAvatar("player", vrplPlayer.id);
   }
 
   @Authorized([Permissions.ManageBadges])
@@ -163,14 +163,15 @@ export default class {
     if (!userHasPerms) {
       if (vrplPlayer.id !== user.id)
         throw new ForbiddenError("You can't change other players' names");
-      const hasCooldown = await doesPlayerHaveCooldown(
+      const hasCooldown = await doesHaveCooldown(
+        "player",
         playerId,
         "changeNickname"
       );
       if (hasCooldown) throw new BadRequestError("You are on a cooldown!");
     }
     const newPlayer = await updatePlayerName(vrplPlayer, newName, user.id);
-    if (!userHasPerms) await addPlayerCooldown(playerId, "changeNickname");
+    if (!userHasPerms) await addCooldown("player", playerId, "changeNickname");
     return newPlayer;
   }
 

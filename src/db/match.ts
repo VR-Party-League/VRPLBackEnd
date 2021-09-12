@@ -171,7 +171,7 @@ export async function submitMatch(
     scores: match.scores,
   };
   const [result] = await Promise.all([resultPromise, storeRecord(record)]);
-  if (result.nModified === 0) return null;
+  if (result.modifiedCount === 0) return null;
   else return match;
 }
 
@@ -219,7 +219,7 @@ export async function confirmMatch(
     }
   );
   const [result] = await Promise.all([resultPromise, storeRecord(record)]);
-  if (result.nModified === 0) return null;
+  if (result.modifiedCount === 0) return null;
   return match;
 }
 
@@ -305,7 +305,7 @@ export async function forfeitMatch(
   );
   match.teamIdsForfeited.push(teamId);
   const [result] = await Promise.all([resultPromise, storeRecord(record)]);
-  if (result.nModified === 0) return null;
+  if (result.modifiedCount === 0) return null;
 
   if (match.teamIdsForfeited.length + 1 === match.teamIds.length && giveWin) {
     const scores: number[][] = [];

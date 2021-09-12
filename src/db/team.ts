@@ -543,10 +543,14 @@ export async function validateTeamName(
 export async function getAllTeamsOfPlayer(
   playerId: string
 ): Promise<VrplTeam[]> {
+  await refreshTeams();
   const response: VrplTeam[] = [];
+  console.log(teamCache);
   for (const teams of Object.values(teamCache)) {
+    console.log(teams);
     if (!teams) continue;
     for (const team of Object.values(teams)) {
+      console.log(team);
       if (!team) continue;
       if (
         team.teamPlayers.find((teamPlayer) => teamPlayer.playerId === playerId)
