@@ -27,6 +27,16 @@ import {
 } from "../../db/refreshToken";
 import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import { URLSearchParams } from "url";
+import {
+  decodeOculusData,
+  getBaseRedirect,
+  getOculusAuthUrl,
+  getOculusTokens,
+  getOculusUser,
+  OculusRawData,
+  OculusTokens,
+  OculusUser,
+} from "../../utils/authentication/oculus";
 const router = Router();
 
 const cookieName = "refresh_token";
@@ -117,7 +127,51 @@ router.get("/logout", (req, res) => {
   res.clearCookie(cookieName);
   res.redirect(frontEndUrl);
 });
+router.get("/oculus", async (req, res) => {
+  res.redirect(getOculusAuthUrl());
+});
+router.get("/oculus/callback", async (req, res) => {
+  res.status(200).send(`
+<h1 id="waiting">Please wait a sec, <3</h1>
+<script>
+const hash = window.location.hash;
+if(!hash) {
+  const el = document.getElementById("waiting"); 
+  el.innerHTML = "Oi, ur url be wackadoodle! if u didn't do anything weird then u should ping make support ticket!";
+  return;
+}
+window.location.replace("${getBaseRedirect()}/api/auth/oculus/callback/"+hash.substring(1));
+const el = document.getElementById("waiting"); 
+el.innerHTML = '<a href=\"${getBaseRedirect()}/api/auth/oculus/callback/'+hash.substring(1)+'">Click here if redirect not working within like 4 seconds </a>';  
+</script>
+`);
+});
+router.get("/oculus/callback/:data", async (req, res) => {
+  let data: OculusRawData;
+  try {
+    data = decodeOculusData(req.params.data);
+  } catch (err) {
+    return res.status(400).send({ message: "Error parsing oauth data" });
+  }
+  // decode data as base64 string and then json format it
 
+  let tokenData: OculusTokens;
+  try {
+    tokenData = await getOculusTokens(data);
+  } catch (err) {
+    return res.status(400).send({ message: "Error fetching oculus token" });
+  }
+  let user: OculusUser;
+  try {
+    user = await getOculusUser(tokenData.oauth_token);
+  } catch (err) {
+    return res.status(400).send({ message: "Error fetching oculus user" });
+  }
+  res.status(200).send({
+    user,
+    tokenData,
+  });
+});
 router.get("/", async (req, res) => {
   if (req.user) return res.status(200).send(req.user);
   if (req.cookies[cookieName]) {
@@ -214,5 +268,4 @@ router.get("/", async (req, res) => {
 
   res.status(401).send({ message: "Unauthorized" });
 });
-
 export default router;
