@@ -65,5 +65,5 @@ export function getBaseRedirect() {
 export function getOculusAuthUrl() {
   return `https://auth.oculus.com/sso/?redirect_uri=${encodeURIComponent(
     `${getBaseRedirect()}/api/auth/discord/callback`
-  )}organization_id=${process.env.OCULUS_ORGANIZATION}`;
+  )}&organization_id=${process.env.OCULUS_ORGANIZATION}`;
 }
