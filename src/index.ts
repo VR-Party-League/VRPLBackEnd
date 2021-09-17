@@ -1,11 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config({});
-import fs from "fs";
-import https from "https";
-const key = fs.readFileSync(
-  "/home/fish/code/cert/CA/localhost/localhost.decrypted.key"
-);
-const cert = fs.readFileSync("/home/fish/code/cert/CA/localhost/localhost.crt");
+// import fs from "fs";
+// import https from "https";
+// const key = fs.readFileSync(
+//   "/home/fish/code/cert/CA/localhost/localhost.decrypted.key"
+// );
+// const cert = fs.readFileSync("/home/fish/code/cert/CA/localhost/localhost.crt");
 
 import "reflect-metadata";
 
@@ -171,10 +171,13 @@ async function bootstrap() {
 
   // The error handler must be before any other error middleware and after all controllers
   app.use(Sentry.Handlers.errorHandler());
-  const httpServer = https.createServer({ key, cert }, app);
-  httpServer.listen(PORT, () => {
-    console.log(`Server is listening on https://localhost:${PORT}`);
+  app.listen(PORT, () => {
+    console.log(`Server is listening on http://localhost:${PORT}`);
   });
+  // const httpServer = https.createServer({ key, cert }, app);
+  // httpServer.listen(PORT, () => {
+  //   console.log(`Server is listening on https://localhost:${PORT}`);
+  // });
 }
 
 mongoose.connect(process.env.DB_URI!);
