@@ -138,12 +138,12 @@ const hash = window.location.hash;
 if(!hash) {
   const el = document.getElementById("waiting"); 
   el.innerHTML = "Oi, ur url be wackadoodle! if u didn't do anything weird then u should ping make support ticket!";
-  return;
-}
+  
+}else{
 window.location.replace("${getBaseRedirect()}/api/auth/oculus/callback/"+hash.substring(1));
 const el = document.getElementById("waiting"); 
 el.innerHTML = '<a href=\"${getBaseRedirect()}/api/auth/oculus/callback/'+hash.substring(1)+'">Click here if redirect not working within like 4 seconds </a>';  
-</script>
+}</script>
 `);
 });
 router.get("/oculus/callback/:data", async (req, res) => {
