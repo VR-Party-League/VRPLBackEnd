@@ -17,7 +17,7 @@ import {
   isMatchSubmitted,
   submitMatch,
 } from "../db/match";
-import { VrplMatch } from "../db/models/vrplMatch";
+import { SubmittedVrplMatch, VrplMatch } from "../db/models/vrplMatch";
 import { VrplTeam } from "../db/models/vrplTeam";
 import { VrplTournament } from "../db/models/vrplTournaments";
 import { getTeamFromId, getTeamFromName } from "../db/team";
@@ -37,10 +37,10 @@ export default class {
   @Query((_returns) => [Match])
   matchesForTeam(
     @Arg("tournamentId") tournamentId: string,
-    @Arg("teamId") teamId: string,
-    @Arg("activeOnly", { nullable: true }) activeOnly: boolean
-  ): Promise<VrplMatch[]> {
-    return getMatchesForTeam(tournamentId, teamId, activeOnly);
+    @Arg("teamId") teamId: string
+    // @Arg("activeOnly", { nullable: true }) activeOnly: boolean
+  ): Promise<VrplMatch[] | null> {
+    return getMatchesForTeam(tournamentId, teamId);
   }
 
   @Query((_returns) => Match, { nullable: true })
@@ -48,6 +48,7 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("matchId") matchId: string
   ): Promise<VrplMatch | null> {
+    tournamentId;
     return getMatchFromId(tournamentId, matchId);
   }
 
@@ -66,90 +67,94 @@ export default class {
   }
 
   @FieldResolver()
-  teamsConfirmed(@Root() vrplMatch: VrplMatch): Promise<VrplTeam[]> {
-    return Promise.all(
-      vrplMatch.teamIdsConfirmed.map(
-        async (id) => (await getTeamFromId(vrplMatch.tournamentId, id))!
-      )
-    );
+  async teamsConfirmed(
+    @Root() vrplMatch: SubmittedVrplMatch
+  ): Promise<VrplTeam[] | null> {
+    return vrplMatch.teamIdsConfirmed
+      ? await Promise.all(
+          vrplMatch.teamIdsConfirmed.map(
+            async (id) => (await getTeamFromId(vrplMatch.tournamentId, id))!
+          )
+        )
+      : null;
   }
 
-  // TODO: Untested
-  @Authorized()
-  @Mutation((returns) => Match)
-  async confirmMatch(
-    @Arg("tournamentId") tournamentId: string,
-    @Arg("teamId") teamId: string,
-    @Arg("matchId") matchId: string,
-    @Ctx() ctx: Context
-  ) {
-    if (!ctx.user) throw new UnauthorizedError();
-    const [team, tournament] = await Promise.all([
-      getTeamFromId(tournamentId, teamId),
-      getTournamentFromId(tournamentId),
-    ]);
-    if (!team) throw new BadRequestError("Team not found");
-    else if (!tournament) throw new BadRequestError("Tournament not found");
-    const match = await getMatchFromId(tournamentId, teamId);
-    if (!match) throw new BadRequestError("Match not found");
-    else if (
-      !match.teamIds.includes(team.id) &&
-      !userHasPermission(ctx.user, Permissions.ManageMatches)
-    )
-      throw new ForbiddenError();
-    else if (match.timeDeadline.getTime() < Date.now())
-      throw new BadRequestError("Match expired");
-    else if (match.teamIdsConfirmed.includes(team.id))
-      throw new BadRequestError("Match already confirmed by this team");
-    else if (!isMatchSubmitted(match, tournament))
-      throw new BadRequestError("Match not submitted");
-    const res = await confirmMatch(tournamentId, teamId, matchId, ctx.user.id);
-    if (!res) throw new InternalServerError();
-    return res;
-  }
+  // TODO: Create match confirmation mutation
+  // @Authorized()
+  // @Mutation((returns) => Match)
+  // async confirmMatch(
+  //   @Arg("tournamentId") tournamentId: string,
+  //   @Arg("teamId") teamId: string,
+  //   @Arg("matchId") matchId: string,
+  //   @Ctx() ctx: Context
+  // ) {
+  //   if (!ctx.user) throw new UnauthorizedError();
+  //   const [team, tournament] = await Promise.all([
+  //     getTeamFromId(tournamentId, teamId),
+  //     getTournamentFromId(tournamentId),
+  //   ]);
+  //   if (!team) throw new BadRequestError("Team not found");
+  //   else if (!tournament) throw new BadRequestError("Tournament not found");
+  //   const match = await getMatchFromId(tournamentId, teamId);
+  //   if (!match) throw new BadRequestError("Match not found");
+  //   else if (
+  //     !match.teamIds.includes(team.id) &&
+  //     !userHasPermission(ctx.user, Permissions.ManageMatches)
+  //   )
+  //     throw new ForbiddenError();
+  //   else if (match.timeDeadline.getTime() < Date.now())
+  //     throw new BadRequestError("Match expired");
+  //   else if (match.teamIdsConfirmed.includes(team.id))
+  //     throw new BadRequestError("Match already confirmed by this team");
+  //   else if (!isMatchSubmitted(match, tournament))
+  //     throw new BadRequestError("Match not submitted");
+  //   const res = await confirmMatch(tournamentId, teamId, matchId, ctx.user.id);
+  //   if (!res) throw new InternalServerError();
+  //   return res;
+  // }
 
-  // TODO: Untested
-  @Authorized()
-  @Mutation((returns) => Match)
-  async submitMatch(
-    @Arg("tournamentId") tournamentId: string,
-    @Arg("teamId") teamId: string,
-    @Arg("matchId") matchId: string,
-    @Arg("scores", (_type) => MatchScoreInput) scores: MatchScoreInput,
-    @Ctx() ctx: Context
-  ) {
-    if (!ctx.user) throw new UnauthorizedError();
-    const [team, tournament, match] = await Promise.all([
-      getTeamFromId(tournamentId, teamId),
-      getTournamentFromId(tournamentId),
-      getMatchFromId(tournamentId, teamId),
-    ]);
-    if (!team) throw new BadRequestError("Team not found");
-    else if (!tournament) throw new BadRequestError("Tournament not found");
-    else if (!match) throw new BadRequestError("Match not found");
-    else if (
-      !match.teamIds.includes(team.id) &&
-      !userHasPermission(ctx.user, Permissions.ManageMatches)
-    )
-      throw new ForbiddenError();
-    else if (match.timeDeadline.getTime() < Date.now())
-      throw new BadRequestError("Match expired");
-    else if (match.timeStart.getTime() > Date.now())
-      throw new BadRequestError("Match not yet started");
-    else if (match.teamIdsConfirmed.includes(team.id))
-      throw new BadRequestError("Match already confirmed by this team");
-    else if (!isMatchSubmitted(match, tournament))
-      throw new BadRequestError("Match not submitted");
-    const validation = areScoresInValid(scores.rounds, match, tournament);
-    if (validation) throw new BadRequestError(`Invalid scores: ${validation}`);
-    const res = await submitMatch(
-      tournamentId,
-      matchId,
-      teamId,
-      scores.rounds,
-      ctx.user.id
-    );
-    if (!res) throw new InternalServerError();
-    return res;
-  }
+  // TODO: Create match submission mutation
+  // @Authorized()
+  // @Mutation((returns) => Match)
+  // async submitMatch(
+  //   @Arg("tournamentId") tournamentId: string,
+  //   @Arg("teamId") teamId: string,
+  //   @Arg("matchId") matchId: string,
+  //   @Arg("scores", (_type) => MatchScoreInput) scores: MatchScoreInput,
+  //   @Ctx() ctx: Context
+  // ) {
+  //   if (!ctx.user) throw new UnauthorizedError();
+  //   const [team, tournament, match] = await Promise.all([
+  //     getTeamFromId(tournamentId, teamId),
+  //     getTournamentFromId(tournamentId),
+  //     getMatchFromId(tournamentId, teamId),
+  //   ]);
+  //   if (!team) throw new BadRequestError("Team not found");
+  //   else if (!tournament) throw new BadRequestError("Tournament not found");
+  //   else if (!match) throw new BadRequestError("Match not found");
+  //   else if (
+  //     !match.teamIds.includes(team.id) &&
+  //     !userHasPermission(ctx.user, Permissions.ManageMatches)
+  //   )
+  //     throw new ForbiddenError();
+  //   else if (match.timeDeadline.getTime() < Date.now())
+  //     throw new BadRequestError("Match expired");
+  //   else if (match.timeStart.getTime() > Date.now())
+  //     throw new BadRequestError("Match not yet started");
+  //   else if (match.teamIdsConfirmed.includes(team.id))
+  //     throw new BadRequestError("Match already confirmed by this team");
+  //   else if (!isMatchSubmitted(match, tournament))
+  //     throw new BadRequestError("Match not submitted");
+  //   const validation = areScoresInValid(scores.rounds, match, tournament);
+  //   if (validation) throw new BadRequestError(`Invalid scores: ${validation}`);
+  //   const res = await submitMatch(
+  //     tournamentId,
+  //     matchId,
+  //     teamId,
+  //     scores.rounds,
+  //     ctx.user.id
+  //   );
+  //   if (!res) throw new InternalServerError();
+  //   return res;
+  // }
 }

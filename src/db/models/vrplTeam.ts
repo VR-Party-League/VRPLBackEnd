@@ -24,15 +24,21 @@ export interface VrplTeam {
   teamPlayers: VrplTeamPlayer[];
   tournamentId: string;
   createdAt: Date;
+
+  gp: number;
+  wins: number;
+  losses: number;
+  ties: number;
 }
 
 // TODO: team socials
 
+// TODO: Whats text indexing, is it useful?
 const TeamSchema = new Schema<VrplTeam & Document>(
   {
     ownerId: String,
     id: { type: String, required: true },
-    name: String,
+    name: { type: String, required: true },
     teamPlayers: {
       type: [
         {
@@ -45,6 +51,11 @@ const TeamSchema = new Schema<VrplTeam & Document>(
     },
     tournamentId: String,
     createdAt: Date,
+
+    gp: Number,
+    wins: Number,
+    losses: Number,
+    ties: Number,
   },
   { collection: "teams" }
 );

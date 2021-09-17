@@ -152,3 +152,5 @@ export async function removeAvatar(
   avatarCache.delete(blobName);
   return deleteBlobResponse;
 }
+
+// TODO: Log changing avatars

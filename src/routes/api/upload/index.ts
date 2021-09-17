@@ -78,7 +78,7 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
     // Check if the player is on cooldown
     else if (
       !userHasPermission(req.user, Permissions.ManageTeams) &&
-      doesHaveCooldown("team", team.id, "changeAvatar")
+      (await doesHaveCooldown("team", team.id, "changeAvatar"))
     )
       return res.status(429).send({ message: "This team is on a cooldown" });
 
@@ -115,3 +115,4 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
   });
 });
 export default router;
+// TODO: Return new avatar image

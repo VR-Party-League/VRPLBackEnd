@@ -26,6 +26,20 @@ export default class Team {
 
   @Field((_type) => Date, { description: "The date this team was created" })
   createdAt: Date;
+
+  @Field({ description: "The amount of games played" })
+  gp: number;
+
+  @Field({ description: "The amount of games won" })
+  wins: number;
+
+  @Field({
+    description: "The amount of games [insert a form of 'losing' here]",
+  })
+  losses: number;
+
+  @Field({ description: "The amount of games tied" })
+  ties: number;
   //@Field((type) => [Tournament], { description: "An array of players" })
   //tournament!: Tournament[];
 }

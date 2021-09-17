@@ -85,7 +85,7 @@ export default class {
     if (makeCaptain) {
       await addPlayerToTeam(
         tournamentId,
-        createdTeamRes.doc.id,
+        createdTeamRes.doc,
         ownerId,
         VrplTeamPlayerRole.Captain,
         ctx.user.id
@@ -114,7 +114,7 @@ export default class {
       throw new ForbiddenError();
     const newTeam = await addPlayerToTeam(
       tournamentId,
-      teamId,
+      originalTeam,
       playerId,
       VrplTeamPlayerRole.Player,
       ctx.user.id
@@ -141,7 +141,7 @@ export default class {
       throw new ForbiddenError();
     const newTeam = await addPlayerToTeam(
       tournamentId,
-      teamId,
+      originalTeam,
       playerId,
       VrplTeamPlayerRole.Sub,
       ctx.user.id
@@ -179,7 +179,7 @@ export default class {
 
     const newTeam = await changeTeamPlayerRole(
       tournamentId,
-      teamId,
+      originalTeam,
       playerId,
       role,
       ctx.user.id
@@ -209,7 +209,7 @@ export default class {
 
     const res = transferTeam(
       tournamentId,
-      teamId,
+      originalTeam,
       playerId,
       ctx.user.id,
       addAsPlayer ? VrplTeamPlayerRole.Player : undefined

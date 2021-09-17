@@ -33,14 +33,26 @@ type Game {
   """The game fields"""
   fields: [GameField!]!
 
+  """Games Played"""
+  gp: Float!
+
   """The game id"""
   id: String!
+
+  """Games Lost"""
+  losses: Float!
 
   """The name of the game"""
   name: String!
 
+  """Games Tied"""
+  ties: Float!
+
   """The tournaments of this game"""
   tournaments: [Tournament!]!
+
+  """Games Won"""
+  wins: Float!
 }
 
 type GameField {
@@ -55,6 +67,12 @@ type Match {
   """The unique match id"""
   id: String!
 
+  """If set to true the match is a forfeit"""
+  isForfeit: Boolean
+
+  """The teams that lost"""
+  losers: [Team!]
+
   """The submitted scores"""
   scores: [[Int!]!]
 
@@ -64,8 +82,11 @@ type Match {
   """The teams that have confirmed the scores"""
   teamsConfirmed: [Team!]
 
+  """The teams that tied """
+  tied: [Team!]
+
   """The time the score was fully confirmed"""
-  timeConfirmed: Timestamp!
+  timeConfirmed: Timestamp
 
   """The submission deadline"""
   timeDeadline: Timestamp!
@@ -74,14 +95,13 @@ type Match {
   timeStart: Timestamp!
 
   """The time the score was submitted"""
-  timeSubmitted: Timestamp!
+  timeSubmitted: Timestamp
 
   """The tournament"""
   tournament: Tournament!
-}
 
-input MatchScoreInput {
-  rounds: [[Float!]!]!
+  """The winner of the match"""
+  winner: Team
 }
 
 type Mutation {
@@ -90,13 +110,11 @@ type Mutation {
   addPlayerToTeamAsSub(playerId: String!, teamId: String!, tournamentId: String!): Team!
   changePlayerName(newName: String!, playerId: String!): Player!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
-  confirmMatch(matchId: String!, teamId: String!, tournamentId: String!): Match!
   createBadge(bitPosition: Int, description: String!, icon: String!, name: String!): Badge!
   createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
   setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
   setPlayerRegion(playerId: String!, region: String!): Player!
-  submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
   transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
 }
 
@@ -178,7 +196,7 @@ type Query {
   gameFromId(gameId: String!): Game
   gameFromName(gameName: String!): Game
   matchFromId(matchId: String!, tournamentId: String!): Match
-  matchesForTeam(activeOnly: Boolean, teamId: String!, tournamentId: String!): [Match!]!
+  matchesForTeam(teamId: String!, tournamentId: String!): [Match!]!
   playerCooldownFromId(cooldownId: String!): PlayerCooldown
   playerFromDiscordId(discordId: String!): Player
   playerFromId(playerId: String!): Player
@@ -195,8 +213,14 @@ type Team {
   """The date this team was created"""
   createdAt: Timestamp!
 
+  """The amount of games played"""
+  gp: Float!
+
   """The unique team id"""
   id: String!
+
+  """The amount of games [insert a form of 'losing' here]"""
+  losses: Float!
 
   """The unique team name"""
   name: String!
@@ -207,8 +231,14 @@ type Team {
   """An array of team players"""
   teamPlayers: [TeamPlayer!]!
 
+  """The amount of games tied"""
+  ties: Float!
+
   """The unique team name"""
   tournament: Tournament!
+
+  """The amount of games won"""
+  wins: Float!
 }
 
 type TeamPlayer {

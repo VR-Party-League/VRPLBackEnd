@@ -18,6 +18,7 @@ export enum recordType {
   matchConfirm = 21,
   matchForfeit = 22,
   matchCreate = 23,
+  matchComplete = 24,
 
   teamCreate = 30, // WORKS
   teamUpdate = 31, // WORKS

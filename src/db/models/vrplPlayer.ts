@@ -15,7 +15,6 @@ export interface VrplPlayer {
   id: string;
   nickname: string;
   nicknameHistory: VrplPlayerNickname[];
-  //  avatar?: string; // TODO: set up s3
   about: string;
   email: string;
   region?: string;

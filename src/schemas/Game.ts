@@ -22,6 +22,15 @@ export default class Game {
     description: "The tournaments of this game",
   })
   tournaments: Array<Tournament>;
+
+  @Field({ description: "Games Played" })
+  gp: number;
+  @Field({ description: "Games Won" })
+  wins: number;
+  @Field({ description: "Games Lost" })
+  losses: number;
+  @Field({ description: "Games Tied" })
+  ties: number;
 }
 
 @ObjectType()
@@ -31,3 +40,14 @@ export class GameField {
   @Field({ description: "The field value", nullable: false })
   value!: string;
 }
+
+// TODO: team stats
+/**
+ * i was thinking of the following:
+ *  .matches played
+ *  .matches won
+ *  .matches lost
+ *  .matches tied
+ *  .points scored
+ */
+// TODO: update those scores when a match gets confirmed
