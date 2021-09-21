@@ -1,4 +1,5 @@
 import ms from "ms";
+import { convertSiteInput } from "../utils/regex/general";
 import { TournamentModel, VrplTournament } from "./models/vrplTournaments";
 //import { getTeamsOfTournament } from "./team";
 const tournamentCache = new Map<string, VrplTournament>();
@@ -87,12 +88,10 @@ export async function getAllTournaments(): Promise<VrplTournament[]> {
 export async function getTournamentFromName(tournamentName: string) {
   const tournaments = await getAllTournaments();
   return (
-    tournaments.find((tournament) => tournament.name === tournamentName) ||
     tournaments.find(
       (tournament) =>
-        tournament.name.toLowerCase() === tournamentName.toLowerCase()
-    ) ||
-    null
+        convertSiteInput(tournament.name) === convertSiteInput(tournamentName)
+    ) || null
   );
 }
 

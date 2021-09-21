@@ -1,4 +1,5 @@
 import ms from "ms";
+import { convertSiteInput } from "../utils/regex/general";
 import VrplGameDB, { VrplGame } from "./models/vrplGame";
 
 let gameCacheTimestamp: number = 0;
@@ -53,11 +54,7 @@ export async function getGameById(id: string): Promise<VrplGame | null> {
 export async function getGameFromName(name: string): Promise<VrplGame | null> {
   await refreshGames();
   for (let game of gameCache.values()) {
-    if (
-      game.name.trim().toLowerCase().replace(/\s/g, "") ===
-      name.trim().toLowerCase().replace(/\s/g, "")
-    )
-      return game;
+    if (convertSiteInput(game.name) === convertSiteInput(name)) return game;
   }
   return null;
 }
