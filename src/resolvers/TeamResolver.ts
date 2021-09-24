@@ -28,23 +28,40 @@ import {
 import { Permissions, userHasPermission } from "../utils/permissions";
 import Team from "../schemas/Team";
 import { VrplTournament } from "../db/models/vrplTournaments";
-import { getTournamentFromId } from "../db/tournaments";
+import {
+  getTournamentFromId,
+  getTournamentIdFromName,
+} from "../db/tournaments";
 import { getAvatar } from "../utils/storage";
 
 @Resolver((_of) => Team)
 export default class {
   @Query((_returns) => Team, { nullable: true })
-  teamFromName(
-    @Arg("tournamentId") tournamentId: string,
-    @Arg("name") name: string
+  async teamFromName(
+    @Arg("name") name: string,
+    @Arg("tournamentName", { nullable: true }) tournamentName?: string,
+    @Arg("tournamentId", { nullable: true }) enteredTournamentId?: string
   ): Promise<VrplTeam | null> {
+    if (enteredTournamentId) {
+      return getTeamFromName(enteredTournamentId, name);
+    } else if (!tournamentName)
+      throw new BadRequestError("Must enter tournament name or id");
+    const tournamentId = await getTournamentIdFromName(tournamentName);
+    if (!tournamentId) throw new BadRequestError("Invalid tournament name");
     return getTeamFromName(tournamentId, name);
   }
   @Query((_returns) => Team, { nullable: true })
-  teamFromId(
-    @Arg("tournamentId") tournamentId: string,
-    @Arg("id") id: string
+  async teamFromId(
+    @Arg("id") id: string,
+    @Arg("tournamentName", { nullable: true }) tournamentName?: string,
+    @Arg("tournamentId", { nullable: true }) enteredTournamentId?: string
   ): Promise<VrplTeam | null> {
+    if (enteredTournamentId) {
+      return getTeamFromId(enteredTournamentId, id);
+    } else if (!tournamentName)
+      throw new BadRequestError("Must enter tournament name or id");
+    const tournamentId = await getTournamentIdFromName(tournamentName);
+    if (!tournamentId) throw new BadRequestError("Invalid tournament name");
     return getTeamFromId(tournamentId, id);
   }
 

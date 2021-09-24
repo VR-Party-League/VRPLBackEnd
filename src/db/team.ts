@@ -30,7 +30,7 @@ export async function getTeamFromId(
   return (
     (await VrplTeamDB.findOne({
       tournamentId: tournamentId,
-      teamId: teamId,
+      id: teamId,
     })) || null
   );
 }
@@ -38,7 +38,7 @@ export async function getTeamsFromIds(tournamentId: string, teamIds: string[]) {
   return (
     (await VrplTeamDB.find({
       tournamentId: tournamentId,
-      teamId: { $in: teamIds },
+      id: { $in: teamIds },
     })) || []
   );
 }

@@ -100,6 +100,13 @@ export async function getTournamentFromId(tournamentId: string) {
   return tournamentCache.get(tournamentId) || null;
 }
 
+export async function getTournamentIdFromName(
+  name: string
+): Promise<string | null> {
+  const tournament = await getTournamentFromName(name);
+  if (tournament) return tournament.id;
+  return null;
+}
 export async function getTournamentsOfGame(gameId: string) {
   await refreshTournaments();
   const res: VrplTournament[] = [];

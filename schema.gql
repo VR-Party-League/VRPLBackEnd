@@ -200,8 +200,8 @@ type Query {
   playerCooldownFromId(cooldownId: String!): PlayerCooldown
   playerFromDiscordId(discordId: String!): Player
   playerFromId(playerId: String!): Player
-  teamFromId(id: String!, tournamentId: String!): Team
-  teamFromName(name: String!, tournamentId: String!): Team
+  teamFromId(id: String!, tournamentId: String, tournamentName: String): Team
+  teamFromName(name: String!, tournamentId: String, tournamentName: String): Team
   tournamentFromId(id: String!): Tournament
   tournamentFromName(name: String!): Tournament
 }
