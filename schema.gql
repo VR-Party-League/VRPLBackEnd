@@ -189,6 +189,7 @@ type PlayerNicknameHistoryItem {
 type Query {
   allBadges: [Badge!]!
   allGames: [Game!]!
+  allPlayerIds: [String!]!
   allTournaments: [Tournament!]!
   badgeFromBitPosition(bitPosition: Int!): Badge
   badgeFromName(name: String): Badge

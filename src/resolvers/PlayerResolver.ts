@@ -25,6 +25,7 @@ import { VrplBadge } from "../db/models/vrplBadge";
 import { VrplPlayer } from "../db/models/vrplPlayer";
 import { VrplTeam } from "../db/models/vrplTeam";
 import {
+  getAllPlayerIds,
   getPlayerFromDiscordId,
   getPlayerFromId,
   getPlayerFromNickname,
@@ -49,6 +50,12 @@ export default class {
     @Arg("playerId") playerId: string
   ): Promise<VrplPlayer | null> {
     return await getPlayerFromId(playerId);
+  }
+
+  @Authorized([Permissions.Server])
+  @Query((_returns) => [String])
+  async allPlayerIds(): Promise<string[]> {
+    return await getAllPlayerIds();
   }
   @Query((_returns) => Player, { nullable: true })
   playerFromDiscordId(

@@ -82,6 +82,11 @@ export async function getPlayerFromId(
   }
 }
 
+export async function getAllPlayerIds() {
+  const data = await VrplPlayerDB.find({}, { id: 1 });
+  return data.map((player) => player.id);
+}
+
 type findFunc = (Team: VrplPlayer) => boolean | undefined | null;
 
 async function findPlayer(findFunc: findFunc) {
