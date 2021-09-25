@@ -20,7 +20,7 @@ export async function getTokenByRefreshToken(
 export async function revokeTokenByRefreshToken(
   refreshToken: string
 ): Promise<void> {
-  await RefreshTokenDB.remove({
+  await RefreshTokenDB.deleteOne({
     token: refreshToken,
   });
 }

@@ -65,6 +65,11 @@ import { PlayerCooldownResolver } from "./resolvers/CooldownResolver";
 // TODO: also handle uploading them
 // TODO: also maybe to team and profile banners, idk
 async function bootstrap() {
+  try {
+    await mongoose.connect(process.env.DB_URI!, {});
+  } catch (err) {
+    console.log(err);
+  }
   // Setup GraphQl
   const schema = await buildSchema({
     resolvers: [
@@ -180,5 +185,4 @@ async function bootstrap() {
   // });
 }
 
-mongoose.connect(process.env.DB_URI!);
 bootstrap();

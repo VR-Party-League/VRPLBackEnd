@@ -24,6 +24,7 @@ import {
   generateNewRefreshToken,
   getAccessToken,
   getTokenByRefreshToken,
+  revokeTokenByRefreshToken,
 } from "../../db/refreshToken";
 import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import { URLSearchParams } from "url";
@@ -123,9 +124,15 @@ router.get("/botToken", async (req, res) => {
   });
 });
 
-router.get("/logout", (req, res) => {
-  res.clearCookie(cookieName);
-  res.redirect(frontEndUrl);
+router.get("/logout", async (req, res) => {
+  const cookie = req.cookies[cookieName];
+  if (cookie) {
+    await revokeTokenByRefreshToken(cookie);
+  }
+  res.cookie(cookieName, "how_to_delete_cookie_pls_help", cookieSettings);
+
+  res.status(200);
+  res.send({ message: "Cleared cookie!" });
 });
 router.get("/oculus", async (req, res) => {
   res.redirect(getOculusAuthUrl());
