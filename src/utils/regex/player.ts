@@ -1,4 +1,5 @@
 export const MAX_PLAYER_NAME_LENGTH = 18;
+export const MIN_PLAYER_NAME_LENGTH = 4;
 export function cleanNameForChecking(name: string) {
   const newName = name
     .trim()
@@ -9,6 +10,8 @@ export function cleanNameForChecking(name: string) {
 }
 
 export function cleanNameFromInput(name: string) {
+  if (name.length < MIN_PLAYER_NAME_LENGTH)
+    name = name.padEnd(MIN_PLAYER_NAME_LENGTH, "-");
   const newName = name
     .trim()
     .replace(/\s+/g, "__WHITE__SPACE__")
