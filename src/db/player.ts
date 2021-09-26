@@ -249,10 +249,10 @@ export async function updatePlayerName(
   newPlayerName: string,
   performedBy: string
 ) {
+  newPlayerName = cleanNameFromInput(newPlayerName);
   const foundPlayer = await getPlayerFromNickname(newPlayerName);
   if (foundPlayer)
     throw new BadRequestError("A player with that name already exists");
-  newPlayerName = cleanNameFromInput(newPlayerName);
   const nicknameHistoryItem: PlayerNicknameHistoryItem = {
     nickname: player.nickname,
     replacedAt: new Date(),
