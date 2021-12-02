@@ -76,6 +76,9 @@ type Match {
   """The submitted scores"""
   scores: [[Int!]!]
 
+  """The team who submitted the match"""
+  submitter: Team
+
   """The teams playing the match"""
   teams: [Team!]!
 
@@ -104,17 +107,23 @@ type Match {
   winner: Team
 }
 
+input MatchScoreInput {
+  rounds: [[Float!]!]!
+}
+
 type Mutation {
   addBadgeToPlayer(bitPosition: Int!, playerId: String!): Player!
   addPlayerToTeamAsPlayer(playerId: String!, teamId: String!, tournamentId: String!): Team!
   addPlayerToTeamAsSub(playerId: String!, teamId: String!, tournamentId: String!): Team!
   changePlayerName(newName: String!, playerId: String!): Player!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
+  confirmMatch(matchId: String!, teamId: String!, tournamentId: String!): Match!
   createBadge(bitPosition: Int, description: String!, icon: String!, name: String!): Badge!
   createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
   setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
   setPlayerRegion(playerId: String!, region: String!): Player!
+  submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
   transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
 }
 

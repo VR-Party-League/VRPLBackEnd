@@ -493,7 +493,7 @@ export async function updateTeamsAfterMatch(
     }
   );
 
-  let gamesWon;
+  let gamesWon: any = undefined;
   if (match.winnerId) {
     gamesWon = VrplTeamDB.updateMany(
       {
@@ -508,7 +508,7 @@ export async function updateTeamsAfterMatch(
     );
   }
 
-  let gamesTied;
+  let gamesTied: any = undefined;
   if (match.tiedIds) {
     gamesTied = VrplTeamDB.updateMany(
       {
@@ -523,7 +523,7 @@ export async function updateTeamsAfterMatch(
     );
   }
 
-  let gamesLost;
+  let gamesLost: any = undefined;
   if (match.loserIds) {
     gamesLost = VrplTeamDB.updateMany(
       {

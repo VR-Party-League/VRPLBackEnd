@@ -68,7 +68,6 @@ export async function doesHaveCooldown(
       for: forWho,
       type: type,
     });
-    console.log(res);
   } else {
     if (!isVrplTeamCooldownType(type))
       throw new Error("Cooldown type not for team");
@@ -78,7 +77,6 @@ export async function doesHaveCooldown(
       type: type,
     });
   }
-  console.log(res);
   return res;
 }
 

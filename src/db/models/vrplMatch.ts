@@ -13,22 +13,43 @@ export interface PlainVrplMatch {
 }
 export interface SubmittedVrplMatch extends PlainVrplMatch {
   teamIdsConfirmed: string[];
+  submitterTeamId: string;
   /**
    * An array of rounds, which contain scores of teams
    */
   scores: number[][];
   timeSubmitted: Date;
   isForfeit: boolean;
-}
-
-export interface CompletedVrplMatch extends SubmittedVrplMatch {
-  timeConfirmed: Date;
 
   winnerId?: string;
   tiedIds?: string[];
   loserIds?: string[];
 }
+
+export interface CompletedVrplMatch extends SubmittedVrplMatch {
+  timeConfirmed: Date;
+
+
+}
 // TODO: Do they need to be optional?
+
+// make function to check if the type of the match is submitted
+export function isSubmitted(match: VrplMatch): match is SubmittedVrplMatch {
+  // Check if teamIdsConfirmed isnt undefined or null
+  const subMatch = match as SubmittedVrplMatch;
+  return (
+    subMatch.timeSubmitted !== undefined &&
+    subMatch.timeSubmitted !== null
+  );
+}
+
+// make function to check if the type of the match is completed
+export function isCompleted(match: VrplMatch): match is CompletedVrplMatch {
+  const compMatch = match as CompletedVrplMatch;
+  return (
+    compMatch.timeConfirmed !== undefined && compMatch.timeConfirmed !== null
+  );
+}
 
 const MatchSchema = new Schema<VrplMatch & Document>(
   {
@@ -39,15 +60,18 @@ const MatchSchema = new Schema<VrplMatch & Document>(
     timeDeadline: Date,
 
     teamIdsConfirmed: { type: [String], required: false },
+    submitterTeamId: { type: String, required: false },
+    /**
+     * An array of rounds, which contain scores of teams
+     */
     scores: { type: [[Number]], required: false },
     timeSubmitted: { type: Date, required: false },
     isForfeit: { type: Boolean, required: false },
-
-    timeConfirmed: { type: Date, required: false },
     winnerId: { type: String, required: false },
     tiedIds: { type: [String], required: false },
     loserIds: { type: [String], required: false },
-  },
+    timeConfirmed: { type: Date, required: false },
+},
   { collection: "matches" }
 );
 

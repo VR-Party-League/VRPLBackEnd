@@ -64,6 +64,13 @@ export default class Match {
     nullable: true,
   })
   losers: [Team];
+
+  @Field((_type) => Team, {
+    description: "The team who submitted the match",
+    nullable: true,
+  })
+  submitter: Team
+  
 }
 
 @InputType()
