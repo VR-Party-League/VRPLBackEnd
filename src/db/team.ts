@@ -462,13 +462,15 @@ export async function getAllTeamsOfPlayer(
   playerId: string,
   tournamentId?: string
 ): Promise<VrplTeam[]> {
-  return VrplTeamDB.find({
-    tournamentId: tournamentId,
+  let query: any = {
     $or: [
       { teamPlayers: { $elemMatch: { playerId: playerId } } },
       { ownerId: playerId },
     ],
-  });
+  }
+  if(tournamentId) query['tournamentId'] = tournamentId
+  let res =  await VrplTeamDB.find(query);
+  return res;
 }
 
 export async function getAllTeamsFromId(teamId: string): Promise<VrplTeam[]> {
