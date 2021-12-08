@@ -61,6 +61,7 @@ import { authChecker } from './utils/permissions'
 import router from './routes'
 import BadgeResolver from './resolvers/BadgeResolver'
 import { PlayerCooldownResolver } from './resolvers/CooldownResolver'
+import SiteSettingsResolver from './resolvers/SiteSettingsResolver'
 // TODO: handle team avatars u dumbass
 // TODO: also handle uploading them
 // TODO: also maybe to team and profile banners, idk
@@ -80,7 +81,8 @@ async function bootstrap () {
       TeamPlayerResolver,
       GameResolver,
       BadgeResolver,
-      PlayerCooldownResolver
+      PlayerCooldownResolver,
+      SiteSettingsResolver
     ],
     emitSchemaFile: true,
     dateScalarMode: 'timestamp',

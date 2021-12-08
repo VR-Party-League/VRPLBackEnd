@@ -125,6 +125,7 @@ type Mutation {
   setPlayerRegion(playerId: String!, region: String!): Player!
   submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
   transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
+  updateSettingValue(key: String!, value: String!): SiteSettings!
 }
 
 type Player {
@@ -205,6 +206,7 @@ type Query {
   badgesFromBitField(bitField: Int!): [Badge!]!
   gameFromId(gameId: String!): Game
   gameFromName(gameName: String!): Game
+  getSettingFromKey(key: String!): SiteSettings
   matchFromId(matchId: String!, tournamentId: String!): Match
   matchesForTeam(teamId: String!, tournamentId: String!): [Match!]!
   playerCooldownFromId(cooldownId: String!): PlayerCooldown
@@ -214,6 +216,29 @@ type Query {
   teamFromName(name: String!, tournamentId: String, tournamentName: String): Team
   tournamentFromId(id: String!): Tournament
   tournamentFromName(name: String!): Tournament
+}
+
+type SiteSettings {
+  """
+  You need all of these perms to edit the setting (defaults to disallowing)
+  """
+  editPerms: Float
+
+  """The setting's key"""
+  key: String!
+
+  """
+  The real type of the setting (everything is converted to string to transfer it over graphql). Think of this as 'string' 'number' etc.
+  """
+  type: String!
+
+  """The settings value (as a string)"""
+  value: String!
+
+  """
+  If anyone has one of the permissions in this bitfield they are able to view it (defaults to allowing)
+  """
+  viewPerms: Float
 }
 
 type Team {

@@ -1,6 +1,6 @@
 export class CustomError extends Error {
   code: number = 500;
-  message: string = this.message || "Internal server error";
+  message: string = this.message;
 }
 export class UnauthorizedError extends CustomError {
   code: number = 401;
