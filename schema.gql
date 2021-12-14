@@ -288,7 +288,7 @@ The javascript `Date` as integer. Type represents date and time as number of mil
 scalar Timestamp
 
 type Tournament {
-  """The tournament banner"""
+  """The tournament banner, as a link to a png"""
   banner: String!
 
   """The currently active matches"""
@@ -306,7 +306,7 @@ type Tournament {
   """The tournament game"""
   game: Game!
 
-  """The tournament icon"""
+  """The tournament icon, as a link to an svg"""
   icon: String!
 
   """The unique tournament id"""
@@ -333,7 +333,7 @@ type Tournament {
   """The registration start date"""
   registrationStart: Timestamp!
 
-  """The tournament rules"""
+  """The tournament rules, as markdown text"""
   rules: String!
 
   """The start date"""

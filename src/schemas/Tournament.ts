@@ -22,16 +22,16 @@ export default class Tournament {
   @Field({ description: "The tournament summary" })
   summary: string;
 
-  @Field({ description: "The tournament banner" })
+  @Field({ description: "The tournament banner, as a link to a png" })
   banner: string;
 
-  @Field({ description: "The tournament icon" })
+  @Field({ description: "The tournament icon, as a link to an svg" })
   icon: string;
 
   @Field({ description: "The tournament game" })
   game: Game;
 
-  @Field({ description: "The tournament rules" })
+  @Field({ description: "The tournament rules, as markdown text" })
   rules: string;
 
   @Field({ description: "The amount of rounds a match has in this tournament" })
