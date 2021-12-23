@@ -36,7 +36,9 @@ export const Authenticate: (
             header: req.headers["authorization"],
           },
         });
-        const token = req.headers["authorization"].substr("Bearer ".length);
+        const token = req.headers["authorization"]
+          .substr("Bearer ".length)
+          .trim();
         try {
           const decoded = jwt.verify(
             token,
@@ -52,7 +54,7 @@ export const Authenticate: (
             req.user = (await getPlayerFromId(decoded.sub)) || undefined;
           }
         } catch (err) {
-          console.log(err);
+          console.error(err);
           //return res.status(403).send({ message: "Error decoding JWT" });
         }
       }

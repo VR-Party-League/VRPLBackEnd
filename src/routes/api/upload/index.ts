@@ -7,7 +7,7 @@ import { Permissions, userHasPermission } from "../../../utils/permissions";
 import { uploadAvatar } from "../../../utils/storage";
 const router = Router();
 const upload = multer({ limits: { fileSize: 1024 ** 2 } });
-
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
 router.post("/user/:id", async (req, res) => {
   upload.single("avatar")(req, res, async function (err) {
     // Check for the player is logged in
@@ -33,7 +33,7 @@ router.post("/user/:id", async (req, res) => {
     // Verify file properties
     const file = req.file;
     if (!file) return res.status(400).send({ message: "No file uploaded" });
-    else if (file.size > 50 * 1024 * 1024)
+    else if (file.size > MAX_FILE_SIZE)
       return res.status(400).send({ message: "File to big" });
 
     // Verify image
@@ -85,7 +85,7 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
     // Verify file properties
     const file = req.file;
     if (!file) return res.status(400).send({ message: "No file uploaded" });
-    else if (file.size > 50 * 1024 * 1024)
+    else if (file.size > MAX_FILE_SIZE)
       return res.status(400).send({ message: "File to big" });
 
     // Verify image
