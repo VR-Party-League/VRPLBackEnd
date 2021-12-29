@@ -14,6 +14,8 @@ import {
 } from "./models/records/teamRecordTypes";
 import { recordType } from "./models/records";
 import { CompletedVrplMatch } from "./models/vrplMatch";
+import { VrplTournament } from "./models/vrplTournaments";
+import { BadRequestError, InternalServerError } from "../utils/errors";
 
 // TODO: add Sentry.captureException(err) to more places!
 
@@ -23,10 +25,7 @@ export async function getTeamsOfTournament(
 ): Promise<VrplTeam[]> {
   return VrplTeamDB.find({ tournamentId: tournamentId });
 }
-export async function getTeamFromId(
-  tournamentId: string,
-  teamId: string
-): Promise<VrplTeam | null> {
+export async function getTeamFromId(tournamentId: string, teamId: string) {
   return (
     (await VrplTeamDB.findOne({
       tournamentId: tournamentId,
@@ -381,17 +380,14 @@ export async function createTeam(
   teamName: string,
   ownerId: string,
   performedBy: string
-): Promise<
-  { success: true; doc: VrplTeam } | { success: false; error: string }
-> {
+): Promise<VrplTeam> {
   try {
     const validatedTeamName = await validateTeamName(tournamentId, teamName);
-    if (typeof validatedTeamName !== "string")
-      return { success: false, error: validatedTeamName[0] };
+
     const teamData: VrplTeam = {
       ownerId: ownerId,
       id: uuidv4(),
-      name: teamName,
+      name: validatedTeamName,
       teamPlayers: [],
       tournamentId: tournamentId,
       createdAt: new Date(),
@@ -418,41 +414,60 @@ export async function createTeam(
     };
     await Promise.all([storeRecord(TeamCreateRecord), TeamModel.save()]);
 
-    return { success: true, doc: teamData };
+    return teamData;
   } catch (err) {
+    if (err instanceof invalidTeamNameError) throw err;
     console.trace();
     console.error(err);
     Sentry.captureException(err);
-    return { success: false, error: "Internal server error" };
+    throw err;
   }
 }
 
-export async function validateTeamName(
-  Tournament: string,
-  raw: any
-): Promise<string | [string, (string | undefined)?]> {
-  if (typeof raw !== "string") return ["TeamName is not a string"];
+class invalidTeamNameError extends BadRequestError {
+  constructor(message: string) {
+    super(message);
+  }
+}
 
-  let TeamName = raw
+/**
+ * Validates a team name and throws errors if its invalid
+ * It returns the valid team name
+ * The team name cant be smaller then 5 chars, and not longer then 25 chars
+ * @param tournamentId string
+ * @param name string
+ * @returns string
+ */
+export async function validateTeamName(
+  tournamentId: string,
+  name: any
+): Promise<string> {
+  if (typeof name !== "string")
+    throw new invalidTeamNameError("TeamName is not a string");
+
+  let TeamName = name
     .replace(/\s+/g, " ")
     .replace(/^\s+|\s+$/, "")
     .replace(/-+/, "-")
     .replace(/_+/, "_")
     .trim();
-  if (!/^[\w-_\s]+$/.test(TeamName)) return ["Invalid name", TeamName];
+  if (!/^[\w-_\s]+$/.test(TeamName))
+    throw new invalidTeamNameError("Invalid name: " + TeamName);
   else if (TeamName.length < 5)
-    return ["TeamName must at least be 5 characters long", TeamName];
+    throw new invalidTeamNameError(
+      "TeamName must at least be 5 characters long: " + TeamName
+    );
   else if (TeamName.length > 25)
-    return [
-      "TeamName cannot be longer then 25 characters",
-      // The name can actually be "longer then 25 characters" because it is 25 characters long! :D
-      TeamName,
-    ];
+    throw new invalidTeamNameError(
+      "TeamName cannot be longer then 25 characters: " + TeamName
+    );
+  // The name can actually be "longer then 25 characters" because the string "longer then 25 characters" is exactly 25 characters long! :D
 
   // Check for other teams
-  const existingTeamName = await getTeamFromName(Tournament, TeamName);
+  const existingTeamName = await getTeamFromName(tournamentId, TeamName);
 
-  if (existingTeamName) return ["Team name has been taken", TeamName];
+  if (existingTeamName)
+    throw new invalidTeamNameError("Team name has been taken: " + TeamName);
 
   return TeamName;
 }
@@ -467,9 +482,9 @@ export async function getAllTeamsOfPlayer(
       { teamPlayers: { $elemMatch: { playerId: playerId } } },
       { ownerId: playerId },
     ],
-  }
-  if(tournamentId) query['tournamentId'] = tournamentId
-  let res =  await VrplTeamDB.find(query);
+  };
+  if (tournamentId) query["tournamentId"] = tournamentId;
+  let res = await VrplTeamDB.find(query);
   return res;
 }
 
@@ -542,3 +557,40 @@ export async function updateTeamsAfterMatch(
 
   await Promise.all([gamesPlayed, gamesWon, gamesTied, gamesLost]);
 }
+
+export const updateTeamName = async (
+  team: VrplTeam,
+  tournament: VrplTournament,
+  newTeamName: string,
+  performedBy: string
+): Promise<VrplTeam> => {
+  const validatedTeamName = await validateTeamName(tournament.id, newTeamName);
+
+  const teamData: VrplTeam = Object.assign({}, team);
+  teamData.name = validatedTeamName;
+  const UpdatePromise = VrplTeamDB.findOne({
+    tournamentId: tournament.id,
+    id: team.id,
+  })
+    .updateOne({ name: validatedTeamName })
+    .exec();
+  const TeamUpdateRecord: teamUpdateRecord = {
+    id: uuidv4(),
+    tournamentId: teamData.tournamentId,
+    teamId: teamData.id,
+    timestamp: new Date(),
+    type: recordType.teamUpdate,
+    userId: performedBy,
+    valueChanged: "name",
+    new: validateTeamName,
+    old: team.name,
+    v: 1,
+  };
+  const [rec, res] = await Promise.all([
+    storeRecord(TeamUpdateRecord),
+    UpdatePromise,
+  ]);
+  if (res.modifiedCount === 0)
+    throw new InternalServerError("No team modified");
+  return teamData;
+};

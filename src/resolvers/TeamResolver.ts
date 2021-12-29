@@ -19,11 +19,13 @@ import {
   getTeamFromId,
   getTeamFromName,
   transferTeam,
+  updateTeamName,
 } from "../db/team";
 import {
   BadRequestError,
   ForbiddenError,
   InternalServerError,
+  UnauthorizedError,
 } from "../utils/errors";
 import { Permissions, userHasPermission } from "../utils/permissions";
 import Team from "../schemas/Team";
@@ -96,20 +98,18 @@ export default class {
       ownerId,
       ctx.user.id
     );
-    if (!createdTeamRes.success)
-      throw new BadRequestError(`${createdTeamRes.error}`);
 
     if (makeCaptain) {
       await addPlayerToTeam(
         tournamentId,
-        createdTeamRes.doc,
+        createdTeamRes,
         ownerId,
         VrplTeamPlayerRole.Captain,
         ctx.user.id
       );
     }
 
-    return Object.assign(new Team(), createdTeamRes.doc);
+    return Object.assign(new Team(), createdTeamRes);
   }
 
   // TODO: Untested
@@ -137,7 +137,7 @@ export default class {
       ctx.user.id
     );
     if (!newTeam) throw new InternalServerError(`Failed to add player to team`);
-    return Object.assign(new Team(), newTeam);
+    return newTeam;
   }
   // TODO: Untested
   @Authorized()
@@ -165,7 +165,7 @@ export default class {
     );
 
     if (!newTeam) throw new InternalServerError(`Failed to add sub to team`);
-    return Object.assign(new Team(), newTeam);
+    return newTeam;
   }
 
   // TODO: Untested
@@ -202,7 +202,7 @@ export default class {
       ctx.user.id
     );
     if (!newTeam) throw new InternalServerError(`Failed to add sub to team`);
-    return Object.assign(new Team(), newTeam);
+    return newTeam;
   }
 
   // TODO: Untested
@@ -215,7 +215,7 @@ export default class {
     @Arg("addAsPlayer", { nullable: true }) addAsPlayer: boolean,
     @Ctx() ctx: Context
   ) {
-    if (!ctx.user) throw new BadRequestError("Not logged in");
+    if (!ctx.user) throw new UnauthorizedError("Not logged in");
     const originalTeam = await getTeamFromId(tournamentId, teamId);
     if (!originalTeam) throw new BadRequestError("Team not found");
     else if (
@@ -232,6 +232,38 @@ export default class {
       addAsPlayer ? VrplTeamPlayerRole.Player : undefined
     );
     if (!res) throw new InternalServerError("Failed to transfer teams");
-    return Object.assign(new Team(), res);
+    return res;
+  }
+
+  @Authorized()
+  @Mutation((_returns) => Team)
+  async changeTeamName(
+    @Arg("tournamentId") tournamentId: string,
+    @Arg("teamId") teamId: string,
+    @Arg("newName") newName: string,
+    @Ctx() ctx: Context
+  ): Promise<VrplTeam> {
+    if (!ctx.user) throw new BadRequestError("Not logged in");
+    const [team, tournament] = await Promise.all([
+      getTeamFromId(tournamentId, teamId),
+      getTournamentFromId(tournamentId),
+    ]);
+    if (!team) throw new BadRequestError("Team not found");
+    else if (!tournament) throw new BadRequestError("Tournament not found");
+    else if (
+      team.ownerId !== ctx.user.id &&
+      !userHasPermission(ctx.user, Permissions.ManageTeams)
+    )
+      throw new ForbiddenError();
+    const res = await updateTeamName(
+      team.toObject(),
+      tournament,
+      newName,
+      ctx.user.id
+    );
+
+    if (!res) throw new InternalServerError("Failed to change team name");
+    console.log("res", res);
+    return res;
   }
 }

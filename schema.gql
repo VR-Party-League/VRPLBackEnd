@@ -117,6 +117,7 @@ type Mutation {
   addPlayerToTeamAsSub(playerId: String!, teamId: String!, tournamentId: String!): Team!
   changePlayerName(newName: String!, playerId: String!): Player!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
+  changeTeamName(newName: String!, teamId: String!, tournamentId: String!): Team!
   confirmMatch(matchId: String!, teamId: String!, tournamentId: String!): Match!
   createBadge(bitPosition: Int, description: String!, icon: String!, name: String!): Badge!
   createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!

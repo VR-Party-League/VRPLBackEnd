@@ -30,5 +30,5 @@ export const VrplTeamCooldownTypes = {
   },
 };
 export function isVrplTeamCooldownType(s: string): s is VrplTeamCooldownType {
-  return s === "changeProfilePicture";
+  return s === "changeAvatar";
 }
