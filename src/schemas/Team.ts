@@ -1,4 +1,5 @@
 import { Field, InputType, Int, ObjectType } from "type-graphql";
+import Match from "./Match";
 import Player from "./Player";
 import { TeamPlayer } from "./TeamPlayer";
 import Tournament from "./Tournament";
@@ -40,6 +41,12 @@ export default class Team {
 
   @Field({ description: "The amount of games tied" })
   ties: number;
+
+  @Field((_type) => [Match], {
+    description:
+      "The matches of the team that should be displayed on their profile",
+  })
+  matches: Match[];
   //@Field((type) => [Tournament], { description: "An array of players" })
   //tournament!: Tournament[];
 }

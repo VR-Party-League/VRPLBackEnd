@@ -35,6 +35,8 @@ import {
   getTournamentIdFromName,
 } from "../db/tournaments";
 import { getAvatar } from "../utils/storage";
+import { getMatchesForTeam } from "../db/match";
+import Match from "../schemas/Match";
 
 @Resolver((_of) => Team)
 export default class {
@@ -81,6 +83,15 @@ export default class {
     return getAvatar("team", vrplTeam.id, vrplTeam.tournamentId);
   }
 
+  @FieldResolver((_returns) => [Match])
+  async matches(@Root() vrplTeam: VrplTeam) {
+    const matches = await getMatchesForTeam(
+      vrplTeam.tournamentId,
+      vrplTeam.id,
+      true
+    );
+    return matches;
+  }
   // TODO: Slightly tested
   @Authorized()
   @Mutation((_returns) => Team)

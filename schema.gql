@@ -258,6 +258,9 @@ type Team {
   """The amount of games [insert a form of 'losing' here]"""
   losses: Float!
 
+  """The matches of the team that should be displayed on their profile"""
+  matches: [Match!]!
+
   """The unique team name"""
   name: String!
 
