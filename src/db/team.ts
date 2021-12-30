@@ -119,7 +119,7 @@ export async function addPlayerToTeam(
     (teamPlayer) => teamPlayer.playerId !== playerId
   );
   let record: teamPlayerCreateRecord | teamPlayerUpdateRecord;
-  if (filteredTeamPlayers.length !== team.teamPlayers.length) {
+  if (filteredTeamPlayers.length < team.teamPlayers.length) {
     const oldPlayer = team.teamPlayers.find(
       (teamPlayer) => teamPlayer.playerId === playerId
     );

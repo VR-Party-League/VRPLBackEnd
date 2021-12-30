@@ -283,3 +283,8 @@ export async function updatePlayerName(
   ]);
   return storePlayer(player);
 }
+
+export async function howManyOfThesePlayersExist(players: string[]) {
+  const count = await VrplPlayerDB.count({ id: { $in: players } });
+  return count;
+}

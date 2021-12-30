@@ -2,13 +2,13 @@ import { Schema, model, Document } from "mongoose";
 import { VrplPlayer } from "./vrplPlayer";
 
 export enum VrplTeamPlayerRole {
-  "Captain" = 0,
+  Captain = 0,
   "Co-Captain" = 1,
-  "Player" = 2,
-  "Sub" = 3,
-  "Pending" = 4,
+  Player = 2,
+  Sub = 3,
+  Pending = 4,
 
-  "None" = 5,
+  Left = 5,
 }
 
 export interface VrplTeamPlayer {

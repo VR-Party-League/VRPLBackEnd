@@ -10,6 +10,7 @@ export enum Permissions {
   ManagePlayers = 1 << 4,
   ManageBadges = 1 << 5,
   ManageTeams = 1 << 6, // 0010
+  ManageMessages = 1 << 7,
   AccessDiscordId = 1 << 10,
 
   //All = ~(~0 << 2), // 0111

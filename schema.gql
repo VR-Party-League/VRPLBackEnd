@@ -4,106 +4,170 @@
 # -----------------------------------------------
 
 type Badge {
-  """The bit that represents the badge"""
+  """
+  The bit that represents the badge
+  """
   bit: Int!
 
-  """The position of the set bit"""
+  """
+  The position of the set bit
+  """
   bitPosition: Int!
 
-  """The date time when the badge was created"""
+  """
+  The date time when the badge was created
+  """
   createdAt: Timestamp!
 
-  """The badge description"""
+  """
+  The badge description
+  """
   description: String!
 
-  """The badge icon"""
+  """
+  The badge icon
+  """
   icon: String!
 
-  """The badge name"""
+  """
+  The badge name
+  """
   name: String!
 }
 
 type Game {
-  """The banner of the game"""
+  """
+  The banner of the game
+  """
   banner: String!
 
-  """The description of the game"""
+  """
+  The description of the game
+  """
   description: String!
 
-  """The game fields"""
+  """
+  The game fields
+  """
   fields: [GameField!]!
 
-  """Games Played"""
+  """
+  Games Played
+  """
   gp: Float!
 
-  """The game id"""
+  """
+  The game id
+  """
   id: String!
 
-  """Games Lost"""
+  """
+  Games Lost
+  """
   losses: Float!
 
-  """The name of the game"""
+  """
+  The name of the game
+  """
   name: String!
 
-  """Games Tied"""
+  """
+  Games Tied
+  """
   ties: Float!
 
-  """The tournaments of this game"""
+  """
+  The tournaments of this game
+  """
   tournaments: [Tournament!]!
 
-  """Games Won"""
+  """
+  Games Won
+  """
   wins: Float!
 }
 
 type GameField {
-  """The field title"""
+  """
+  The field title
+  """
   title: String!
 
-  """The field value"""
+  """
+  The field value
+  """
   value: String!
 }
 
 type Match {
-  """The unique match id"""
+  """
+  The unique match id
+  """
   id: String!
 
-  """If set to true the match is a forfeit"""
+  """
+  If set to true the match is a forfeit
+  """
   isForfeit: Boolean
 
-  """The teams that lost"""
+  """
+  The teams that lost
+  """
   losers: [Team!]
 
-  """The submitted scores"""
+  """
+  The submitted scores
+  """
   scores: [[Int!]!]
 
-  """The team who submitted the match"""
+  """
+  The team who submitted the match
+  """
   submitter: Team
 
-  """The teams playing the match"""
+  """
+  The teams playing the match
+  """
   teams: [Team!]!
 
-  """The teams that have confirmed the scores"""
+  """
+  The teams that have confirmed the scores
+  """
   teamsConfirmed: [Team!]
 
-  """The teams that tied """
+  """
+  The teams that tied
+  """
   tied: [Team!]
 
-  """The time the score was fully confirmed"""
+  """
+  The time the score was fully confirmed
+  """
   timeConfirmed: Timestamp
 
-  """The submission deadline"""
+  """
+  The submission deadline
+  """
   timeDeadline: Timestamp!
 
-  """The time people can start submitting"""
+  """
+  The time people can start submitting
+  """
   timeStart: Timestamp!
 
-  """The time the score was submitted"""
+  """
+  The time the score was submitted
+  """
   timeSubmitted: Timestamp
 
-  """The tournament"""
+  """
+  The tournament
+  """
   tournament: Tournament!
 
-  """The winner of the match"""
+  """
+  The winner of the match
+  """
   winner: Team
 }
 
@@ -111,26 +175,211 @@ input MatchScoreInput {
   rounds: [[Float!]!]!
 }
 
+type Message {
+  """
+  An link to an image
+  """
+  buttons: [MessageButton!]!
+
+  """
+  The main content of the post
+  """
+  content: String!
+
+  """
+  When the message was created / sent
+  """
+  createdAt: Timestamp!
+
+  """
+  When the message was deleted by the recipient or sender
+  """
+  deletedAt: Timestamp
+
+  """
+  The message id
+  """
+  id: String!
+
+  """
+  The recipient of the message
+  """
+  recipient: Player!
+
+  """
+  The user that sent the message, if its undefined it got sent by the system
+  """
+  sender: Player
+
+  """
+  When the message was first shown to the user
+  """
+  shownAt: Timestamp
+
+  """
+  The title of the post
+  """
+  title: String!
+}
+
+type MessageButton {
+  """
+  The button action, only for debug purposes, and a JSON string bc i dont know how to have like an 'any' type
+  """
+  action: String!
+
+  """
+  When the recipient clicked the button (you can only click a button once)
+  """
+  clickedAt: Timestamp
+
+  """
+  The button color, as a string representation of a hex number (#3ff021)
+  """
+  colorHex: String
+
+  """
+  The button icon, as a link to an svg
+  """
+  icon: String
+
+  """
+  The button id
+  """
+  id: String!
+
+  """
+  The button text
+  """
+  text: String!
+}
+
+input MessageButtonActionInput {
+  """
+  Player id (currently not used for anything so dont use it dum dum)
+  """
+  playerId: String
+
+  """
+  Team id for if the action requires that
+  """
+  teamId: String
+
+  """
+  Tournament id for if the action requires that (this is always required if the teamId is required)
+  """
+  tournamentId: String
+
+  """
+  The type of the action, currently there are only 'AcceptTeamInvite' 'DeclineTeamInvite' or 'Debug'
+  """
+  type: String!
+}
+
+input MessageButtonInput {
+  """
+  The action the button will perform when pressed
+  """
+  action: MessageButtonActionInput!
+
+  """
+  The color of the button as a hex string
+  """
+  colorHex: String
+
+  """
+  The icon of the button, a link to an svg
+  """
+  icon: String
+
+  """
+  The text of the button
+  """
+  text: String!
+}
+
+input MessageInput {
+  """
+  These are the clickable buttons of the message
+  """
+  buttons: [MessageButtonInput!]!
+
+  """
+  The main content of the message
+  """
+  content: String!
+
+  """
+  If this is set it wil send as a user, if it isnt it will be sent from [SYSTEM]
+  """
+  senderId: String
+
+  """
+  The title of the message
+  """
+  title: String!
+}
+
 type Mutation {
   addBadgeToPlayer(bitPosition: Int!, playerId: String!): Player!
-  addPlayerToTeamAsPlayer(playerId: String!, teamId: String!, tournamentId: String!): Team!
-  addPlayerToTeamAsSub(playerId: String!, teamId: String!, tournamentId: String!): Team!
+  addPlayerToTeamAsPlayer(
+    playerId: String!
+    teamId: String!
+    tournamentId: String!
+  ): Team!
+  addPlayerToTeamAsSub(
+    playerId: String!
+    teamId: String!
+    tournamentId: String!
+  ): Team!
   changePlayerName(newName: String!, playerId: String!): Player!
-  changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
-  changeTeamName(newName: String!, teamId: String!, tournamentId: String!): Team!
+  changePlayerRole(
+    playerId: String!
+    role: Float!
+    teamId: String!
+    tournamentId: String!
+  ): Team!
+  changeTeamName(
+    newName: String!
+    teamId: String!
+    tournamentId: String!
+  ): Team!
   confirmMatch(matchId: String!, teamId: String!, tournamentId: String!): Match!
-  createBadge(bitPosition: Int, description: String!, icon: String!, name: String!): Badge!
-  createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
+  createBadge(
+    bitPosition: Int
+    description: String!
+    icon: String!
+    name: String!
+  ): Badge!
+  createMessages(message: MessageInput!, recipientIds: [String!]!): [Message!]!
+  createTeam(
+    makeCaptain: Boolean
+    ownerId: String!
+    teamName: String!
+    tournamentId: String!
+  ): Team!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
   setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
   setPlayerRegion(playerId: String!, region: String!): Player!
-  submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
-  transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
+  submitMatch(
+    matchId: String!
+    scores: MatchScoreInput!
+    teamId: String!
+    tournamentId: String!
+  ): Match!
+  transferTeam(
+    addAsPlayer: Boolean
+    playerId: String!
+    teamId: String!
+    tournamentId: String!
+  ): Team!
   updateSettingValue(key: String!, value: String!): SiteSettings!
 }
 
 type Player {
-  """The player's about page"""
+  """
+  The player's about page
+  """
   about: String!
 
   """
@@ -138,62 +387,98 @@ type Player {
   """
   avatar: String
 
-  """The player's badges"""
+  """
+  The player's badges
+  """
   badges: [Badge!]!
 
-  """The player's cooldowns, this is slow"""
+  """
+  The player's cooldowns, this is slow
+  """
   cooldowns: [PlayerCooldown!]!
 
-  """The player's discord ID, only accessible to admins and mods"""
+  """
+  The player's discord ID, only accessible to admins and mods
+  """
   discordId: String!
 
-  """The player's discord Tag, needs authorization"""
+  """
+  The player's discord Tag, needs authorization
+  """
   discordTag: String!
 
-  """The player's id"""
+  """
+  The player's id
+  """
   id: String!
 
-  """The player's nickname, unique and changeable"""
+  """
+  The player's nickname, unique and changeable
+  """
   nickname: String!
 
-  """Previous nicknames of this player"""
+  """
+  Previous nicknames of this player
+  """
   nicknameHistory: [PlayerNicknameHistoryItem!]!
 
-  """The player's permissions"""
+  """
+  The player's permissions
+  """
   permissions: Int
 
-  """The region the player plays from"""
+  """
+  The region the player plays from
+  """
   region: String
 
-  """The teams this player is part of"""
+  """
+  The teams this player is part of
+  """
   teams: [Team!]!
 
-  """The player's permissions"""
+  """
+  The player's permissions
+  """
   timeCreated: Timestamp!
 }
 
 type PlayerCooldown {
-  """When the cooldown was created"""
+  """
+  When the cooldown was created
+  """
   createdAt: Timestamp!
 
-  """When the cooldown will expire"""
+  """
+  When the cooldown will expire
+  """
   expiresAt: Timestamp!
 
-  """Explanation about what this cooldown effects"""
+  """
+  Explanation about what this cooldown effects
+  """
   explanation: String
 
-  """The cooldown identifier"""
+  """
+  The cooldown identifier
+  """
   id: String!
 
-  """The cooldown type"""
+  """
+  The cooldown type
+  """
   type: String!
 }
 
 type PlayerNicknameHistoryItem {
-  """The nickname the player had"""
+  """
+  The nickname the player had
+  """
   nickname: String!
 
-  """When this nickname was replaced"""
+  """
+  When this nickname was replaced
+  """
   replacedAt: Timestamp!
 }
 
@@ -207,6 +492,7 @@ type Query {
   badgesFromBitField(bitField: Int!): [Badge!]!
   gameFromId(gameId: String!): Game
   gameFromName(gameName: String!): Game
+  getMessagesForPlayer(limit: Int, playerId: String!): [Message!]!
   getSettingFromKey(key: String!): SiteSettings
   matchFromId(matchId: String!, tournamentId: String!): Match
   matchesForTeam(teamId: String!, tournamentId: String!): [Match!]!
@@ -214,7 +500,11 @@ type Query {
   playerFromDiscordId(discordId: String!): Player
   playerFromId(playerId: String!): Player
   teamFromId(id: String!, tournamentId: String, tournamentName: String): Team
-  teamFromName(name: String!, tournamentId: String, tournamentName: String): Team
+  teamFromName(
+    name: String!
+    tournamentId: String
+    tournamentName: String
+  ): Team
   tournamentFromId(id: String!): Tournament
   tournamentFromName(name: String!): Tournament
 }
@@ -225,7 +515,9 @@ type SiteSettings {
   """
   editPerms: Float
 
-  """The setting's key"""
+  """
+  The setting's key
+  """
   key: String!
 
   """
@@ -233,7 +525,9 @@ type SiteSettings {
   """
   type: String!
 
-  """The settings value (as a string)"""
+  """
+  The settings value (as a string)
+  """
   value: String!
 
   """
@@ -243,40 +537,64 @@ type SiteSettings {
 }
 
 type Team {
-  """The team avatar"""
+  """
+  The team avatar
+  """
   avatar: String
 
-  """The date this team was created"""
+  """
+  The date this team was created
+  """
   createdAt: Timestamp!
 
-  """The amount of games played"""
+  """
+  The amount of games played
+  """
   gp: Float!
 
-  """The unique team id"""
+  """
+  The unique team id
+  """
   id: String!
 
-  """The amount of games [insert a form of 'losing' here]"""
+  """
+  The amount of games [insert a form of 'losing' here]
+  """
   losses: Float!
 
-  """The matches of the team that should be displayed on their profile"""
+  """
+  The matches of the team that should be displayed on their profile
+  """
   matches: [Match!]!
 
-  """The unique team name"""
+  """
+  The unique team name
+  """
   name: String!
 
-  """The owner of the team, this player holds the permissions"""
+  """
+  The owner of the team, this player holds the permissions
+  """
   owner: Player!
 
-  """An array of team players"""
+  """
+  An array of team players
+  """
   teamPlayers: [TeamPlayer!]!
 
-  """The amount of games tied"""
+  """
+  The amount of games tied
+  """
   ties: Float!
 
-  """The unique team name"""
+  """
+  The unique team name
+  """
   tournament: Tournament!
 
-  """The amount of games won"""
+  """
+  The amount of games won
+  """
   wins: Float!
 }
 
@@ -292,63 +610,103 @@ The javascript `Date` as integer. Type represents date and time as number of mil
 scalar Timestamp
 
 type Tournament {
-  """The tournament banner, as a link to a png"""
+  """
+  The tournament banner, as a link to a png
+  """
   banner: String!
 
-  """The currently active matches"""
+  """
+  The currently active matches
+  """
   currentMatches: [Match!]!
 
-  """The tournament description"""
+  """
+  The tournament description
+  """
   description: String!
 
-  """The eligibility check that has to be run"""
+  """
+  The eligibility check that has to be run
+  """
   eligibilityCheck: String
 
-  """The end date"""
+  """
+  The end date
+  """
   end: Timestamp!
 
-  """The tournament game"""
+  """
+  The tournament game
+  """
   game: Game!
 
-  """The tournament icon, as a link to an svg"""
+  """
+  The tournament icon, as a link to an svg
+  """
   icon: String!
 
-  """The unique tournament id"""
+  """
+  The unique tournament id
+  """
   id: String!
 
-  """The maximum score allowed to enter by players for a match"""
+  """
+  The maximum score allowed to enter by players for a match
+  """
   matchMaxScore: Float!
 
-  """The amount of rounds a match has in this tournament"""
+  """
+  The amount of rounds a match has in this tournament
+  """
   matchRounds: Float!
 
-  """All the matches that the tournament had"""
+  """
+  All the matches that the tournament had
+  """
   matches: [Match!]!
 
-  """The unique tournament name"""
+  """
+  The unique tournament name
+  """
   name: String!
 
-  """The allowed region"""
+  """
+  The allowed region
+  """
   region: String
 
-  """The registration end date"""
+  """
+  The registration end date
+  """
   registrationEnd: Timestamp!
 
-  """The registration start date"""
+  """
+  The registration start date
+  """
   registrationStart: Timestamp!
 
-  """The tournament rules, as markdown text"""
+  """
+  The tournament rules, as markdown text
+  """
   rules: String!
 
-  """The start date"""
+  """
+  The start date
+  """
   start: Timestamp!
 
-  """The tournament summary"""
+  """
+  The tournament summary
+  """
   summary: String!
 
-  """Teams in the tournament"""
+  """
+  Teams in the tournament
+  """
   teams: [Team!]!
 
-  """The tournament type"""
+  """
+  The tournament type
+  """
   type: String!
 }
