@@ -31,11 +31,22 @@ export async function getMatchFromId(tournamentId: string, matchId: string) {
   return match;
 }
 
-export async function getMatchesForTeam(tournamentId: string, teamId: string) {
+export async function getMatchesForTeam(
+  tournamentId: string,
+  teamId: string,
+  recentOnly: boolean = true
+) {
+  const aWeekLater = new Date();
+  aWeekLater.setDate(aWeekLater.getDate() + 7);
+  const aWeekAgo = new Date();
+  aWeekAgo.setDate(aWeekAgo.getDate() - 7);
   return await VrplMatchDB.find({
     tournamentId: tournamentId,
     teamIds: teamId,
-    // TODO: add an activeOnly option
+    $or: [
+      { timeDeadline: recentOnly ? { $lt: aWeekLater } : undefined },
+      { timeStart: recentOnly ? { $gt: aWeekAgo } : undefined },
+    ],
   });
 }
 
