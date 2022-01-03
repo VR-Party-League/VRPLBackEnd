@@ -225,6 +225,7 @@ type Mutation {
   createBadge(bitPosition: Int, description: String!, icon: String!, name: String!): Badge!
   createMessages(message: MessageInput!, recipientIds: [String!]!): [Message!]!
   createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
+  performMessageButtonAction(buttonId: String!, messageId: String!): Message!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
   setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
   setPlayerRegion(playerId: String!, region: String!): Player!

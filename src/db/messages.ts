@@ -8,17 +8,17 @@ import MessageModel, {
 import { VrplTeamPlayerRole } from "./models/vrplTeam";
 import { getPlayerFromId, howManyOfThesePlayersExist } from "./player";
 import { addPlayerToTeam, getTeamFromId } from "./team";
+import { v4 as uuidv4 } from "uuid";
+import { BadRequestError, InternalServerError } from "../utils/errors";
 
 async function getMessageFromId(
-  messageId: number
+  messageId: string
 ): Promise<vrplMessage | null> {
   const result = await MessageModel.findOne({
     id: messageId,
   });
   return result;
 }
-import { v4 as uuidv4 } from "uuid";
-import { BadRequestError } from "../utils/errors";
 
 export async function getButtonFromId(buttonId: string, messageId: string) {
   const result = await MessageModel.findOne({
@@ -32,9 +32,9 @@ export async function performButtonAction(
   button: vrplMessageButton,
   messageId: string,
   performedBy: string
-) {
+): Promise<vrplMessage | undefined> {
   const action = button.action;
-  await storeClickedButton(button, messageId);
+  const newMessage = await storeClickedButton(button, messageId);
   if (action.type === MessageButtonActionTypes.AcceptTeamInvite) {
     const { teamId, tournamentId } = action;
     // Check if the user has an invite to the team
@@ -57,21 +57,23 @@ export async function performButtonAction(
         VrplTeamPlayerRole.Player,
         performedBy
       );
-      return res;
+      if (!res) throw new InternalServerError("Player not added to team");
     } else {
-      throw new Error("Player is not a pending player for that team");
+      throw new BadRequestError("Player is not a pending player for that team");
     }
   } else if (action.type === MessageButtonActionTypes.Debug) {
     console.log("HEYO DEBUG BUTTON CLICKED!!!!");
+
     // TODO: Send a message bek or something
   }
+  return newMessage;
 }
 
 async function storeClickedButton(
   button: vrplMessageButton,
   messageId: string
 ) {
-  const result = await MessageModel.updateOne(
+  const result = await MessageModel.findOneAndUpdate(
     {
       id: messageId,
       buttons: { $elemMatch: { id: button.id, clickedAt: null } },
@@ -79,10 +81,10 @@ async function storeClickedButton(
     {
       // TODO: test this
       "buttons.$.clickedAt": new Date(),
-    }
+    },
+    { new: true }
   );
-  if (result.matchedCount === 0)
-    throw new Error("Button not found or already clicked");
+  if (!result) throw new BadRequestError("Button not found or already clicked");
   return result;
 }
 
@@ -160,5 +162,16 @@ export async function getMessagesForPlayer(
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
+  return result;
+}
+
+export async function getMessageForPlayerFromId(
+  playerId: string,
+  messageId: string
+) {
+  const result = await MessageModel.findOne({
+    recipientId: playerId,
+    id: messageId,
+  });
   return result;
 }
