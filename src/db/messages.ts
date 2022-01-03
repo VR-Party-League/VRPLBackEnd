@@ -148,3 +148,17 @@ export async function createMessages(
   const res = await MessageModel.insertMany(messages);
   return res;
 }
+
+export async function getMessagesForPlayer(
+  playerId: string,
+  limit: number = 10,
+  skip: number = 0
+) {
+  const result = await MessageModel.find({
+    recipientId: playerId,
+  })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+  return result;
+}

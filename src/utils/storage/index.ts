@@ -95,8 +95,10 @@ export async function getAvatar(
   if (!foundItem || foundItem.createdAt + ms("20m") < Date.now()) {
     const url = await fetchAvatar(blobName);
     avatarCache.set(blobName, { createdAt: Date.now(), url: url });
+    console.log("Fetched item", url);
     return url;
   }
+  console.log("Cached item", foundItem.url, foundItem);
   return foundItem.url;
 }
 

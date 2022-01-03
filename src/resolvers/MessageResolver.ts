@@ -24,7 +24,7 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../utils/errors";
-import { createMessages } from "../db/messages";
+import { createMessages, getMessagesForPlayer } from "../db/messages";
 
 @Resolver((_of) => Message)
 export default class {
@@ -51,7 +51,8 @@ export default class {
   async getMessagesForPlayer(
     @Ctx() ctx: Context,
     @Arg("playerId") playerId: string,
-    @Arg("limit", (_type) => Int, { nullable: true }) limit?: number
+    @Arg("limit", (_type) => Int, { nullable: true }) limit?: number,
+    @Arg("skip", (_type) => Int, { nullable: true }) skip?: number
   ): Promise<vrplMessage[]> {
     const user = ctx.user;
     if (!user) throw new UnauthorizedError();
@@ -63,12 +64,9 @@ export default class {
     )
       throw new ForbiddenError();
     if (!player) throw new Error("Player not found");
+    else if (limit || 0 > 100) throw new BadRequestError("Limit too high");
 
-    const query = MessageModel.find({
-      $or: [{ senderId: playerId }, { recipientId: playerId }],
-    }).sort({ createdAt: -1 });
-    if (limit) query.limit(limit);
-    const messages = await query;
+    const messages = await getMessagesForPlayer(playerId, limit, skip);
     return messages;
   }
 
