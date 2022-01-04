@@ -159,7 +159,7 @@ export async function getMessagesForPlayer(
 ) {
   const result = await MessageModel.find({
     recipientId: playerId,
-    hiddenAt: showHidden ? undefined : { $exists: false },
+    hiddenAt: !showHidden ? { $exists: false } : undefined,
   })
     .sort({ createdAt: -1 })
     .skip(skip)
