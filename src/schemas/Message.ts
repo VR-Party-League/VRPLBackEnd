@@ -43,10 +43,10 @@ export default class Message {
   })
   readAt?: Date;
   @Field({
-    description: "When the message was deleted by the recipient or sender",
+    description: "When the message was hidden by the recipient",
     nullable: true,
   })
-  deletedAt?: Date;
+  hiddenAt?: Date;
 }
 
 @InputType("MessageInput")

@@ -27,6 +27,7 @@ import {
 import {
   createMessages,
   getMessagesForPlayer,
+  hideMessage,
   readMessagesOfPlayer,
 } from "../db/messages";
 
@@ -56,7 +57,8 @@ export default class {
     @Ctx() ctx: Context,
     @Arg("playerId") playerId: string,
     @Arg("limit", (_type) => Int, { nullable: true }) limit?: number,
-    @Arg("skip", (_type) => Int, { nullable: true }) skip?: number
+    @Arg("skip", (_type) => Int, { nullable: true }) skip?: number,
+    @Arg("showHidden", { nullable: true }) showHidden?: boolean
   ): Promise<vrplMessage[]> {
     const user = ctx.user;
     if (!user) throw new UnauthorizedError();
@@ -70,7 +72,12 @@ export default class {
     if (!player) throw new Error("Player not found");
     else if (limit || 0 > 100) throw new BadRequestError("Limit too high");
 
-    const messages = await getMessagesForPlayer(playerId, limit, skip);
+    const messages = await getMessagesForPlayer(
+      playerId,
+      limit,
+      skip,
+      showHidden
+    );
     return messages;
   }
 
@@ -117,5 +124,26 @@ export default class {
       messageIds
     );
     return res?.modifiedCount;
+  }
+
+  @Authorized()
+  @Mutation((_returns) => Message)
+  async hideMessage(
+    @Arg("playerId") playerId: string,
+    @Arg("messageId") messageId: string,
+    @Ctx() ctx: Context
+  ) {
+    const user = ctx.user;
+    if (!user) throw new UnauthorizedError();
+    const player = await getPlayerFromId(playerId);
+    if (!player) throw new Error("Player not found");
+    else if (
+      user.id !== player.id &&
+      !userHasPermission(user, Permissions.ManageMessages)
+    )
+      throw new ForbiddenError();
+
+    const res = hideMessage(playerId, messageId);
+    return res;
   }
 }

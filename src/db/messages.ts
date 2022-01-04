@@ -154,10 +154,12 @@ export async function createMessages(
 export async function getMessagesForPlayer(
   playerId: string,
   limit: number = 10,
-  skip: number = 0
+  skip: number = 0,
+  showHidden: boolean = false
 ) {
   const result = await MessageModel.find({
     recipientId: playerId,
+    hiddenAt: showHidden ? undefined : { $exists: false },
   })
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -209,4 +211,19 @@ export async function readMessagesOfPlayer(
   );
   console.log("res", res);
   return res;
+}
+
+export async function hideMessage(playerId: string, messageId: string) {
+  const result = await MessageModel.findOneAndUpdate(
+    {
+      id: messageId,
+      recipientId: playerId,
+      hiddenAt: { $exists: false },
+    },
+    {
+      $set: { hiddenAt: new Date() },
+    },
+    { new: true }
+  );
+  return result;
 }

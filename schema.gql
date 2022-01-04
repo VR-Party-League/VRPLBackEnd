@@ -121,8 +121,8 @@ type Message {
   """When the message was created / sent"""
   createdAt: Timestamp!
 
-  """When the message was deleted by the recipient or sender"""
-  deletedAt: Timestamp
+  """When the message was hidden by the recipient"""
+  hiddenAt: Timestamp
 
   """The message id"""
   id: String!
@@ -225,7 +225,8 @@ type Mutation {
   createBadge(bitPosition: Int, description: String!, icon: String!, name: String!): Badge!
   createMessages(message: MessageInput!, recipientIds: [String!]!): [Message!]!
   createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
-  performMessageButtonAction(buttonId: String!, messageId: String!): Message!
+  hideMessage(messageId: String!, playerId: String!): Message!
+  performMessageButtonAction(buttonId: String!, messageId: String!, playerId: String!): Message!
   readAllUnreadMessages(limit: Float, messageIds: [String!], playerId: String!, reverse: Boolean): Int!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
   setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
@@ -313,7 +314,7 @@ type Query {
   badgesFromBitField(bitField: Int!): [Badge!]!
   gameFromId(gameId: String!): Game
   gameFromName(gameName: String!): Game
-  getMessagesForPlayer(limit: Int, playerId: String!, skip: Int): [Message!]!
+  getMessagesForPlayer(limit: Int, playerId: String!, showHidden: Boolean, skip: Int): [Message!]!
   getSettingFromKey(key: String!): SiteSettings
   matchFromId(matchId: String!, tournamentId: String!): Match
   matchesForTeam(teamId: String!, tournamentId: String!): [Match!]!
