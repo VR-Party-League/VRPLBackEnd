@@ -56,7 +56,7 @@ export interface vrplMessage {
   //     };
   buttons: vrplMessageButton[];
   createdAt: Date;
-  shownAt?: Date;
+  readAt?: Date;
   deletedAt?: Date;
 }
 
@@ -86,7 +86,7 @@ const MessageSchema = new Schema<vrplMessage & Document>(
     },
 
     createdAt: Date,
-    shownAt: Date,
+    readAt: Date,
     deletedAt: Date,
   },
   { collection: "messages" }

@@ -24,7 +24,11 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../utils/errors";
-import { createMessages, getMessagesForPlayer } from "../db/messages";
+import {
+  createMessages,
+  getMessagesForPlayer,
+  readMessagesOfPlayer,
+} from "../db/messages";
 
 @Resolver((_of) => Message)
 export default class {
@@ -80,5 +84,38 @@ export default class {
       throw new BadRequestError("You must specify at least 1 recipient");
     const res = await createMessages(messageArgs, recipientIds);
     return res;
+  }
+
+  @Authorized()
+  @Mutation((_returns) => Int)
+  async readAllUnreadMessages(
+    @Arg("playerId") playerId: string,
+    @Arg("limit", { nullable: true }) limit: number,
+    @Arg("reverse", { nullable: true }) reverse: boolean,
+    @Arg("messageIds", (_type) => [String], { nullable: true })
+    messageIds: string[],
+    @Ctx() ctx: Context
+  ) {
+    const user = ctx.user;
+    if (!user) throw new UnauthorizedError();
+    const player = await getPlayerFromId(playerId);
+    if (!player) throw new Error("Player not found");
+    if (
+      user.id !== player.id &&
+      !userHasPermission(user, Permissions.ManageMessages)
+    )
+      throw new ForbiddenError();
+    if (!player) throw new Error("Player not found");
+    else if ((limit || 0) > 100) throw new BadRequestError("Limit too high");
+    else if (messageIds && messageIds.length > 100)
+      throw new BadRequestError("to many messageIds");
+
+    const res = await readMessagesOfPlayer(
+      playerId,
+      limit,
+      reverse,
+      messageIds
+    );
+    return res?.modifiedCount;
   }
 }

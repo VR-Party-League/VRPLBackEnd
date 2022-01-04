@@ -175,3 +175,37 @@ export async function getMessageForPlayerFromId(
   });
   return result;
 }
+
+export async function readMessagesOfPlayer(
+  playerId: string,
+  limit: number = 10,
+  reverse: boolean = false,
+  messageIds: string[]
+) {
+  const toUpdateIds =
+    messageIds ||
+    (
+      await MessageModel.find(
+        {
+          recipientId: playerId,
+          readAt: { $exists: false },
+        },
+        { id: 1, createdAt: 1 }
+      )
+        .sort(reverse ? { createdAt: 1 } : { createdAt: -1 })
+        .limit(limit)
+    ).map((message) => message.id);
+
+  console.log("toUpdateIds", toUpdateIds);
+  const res = await MessageModel.updateMany(
+    {
+      id: { $in: toUpdateIds },
+      recipientId: playerId,
+    },
+    {
+      $set: { readAt: new Date() },
+    }
+  );
+  console.log("res", res);
+  return res;
+}
