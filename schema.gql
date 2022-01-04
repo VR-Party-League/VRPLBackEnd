@@ -127,6 +127,9 @@ type Message {
   """The message id"""
   id: String!
 
+  """When the message was first shown to the user"""
+  readAt: Timestamp
+
   """The recipient of the message"""
   recipient: Player!
 
@@ -134,9 +137,6 @@ type Message {
   The user that sent the message, if its undefined it got sent by the system
   """
   sender: Player
-
-  """When the message was first shown to the user"""
-  shownAt: Timestamp
 
   """The title of the post"""
   title: String!

@@ -41,7 +41,7 @@ export default class Message {
     description: "When the message was first shown to the user",
     nullable: true,
   })
-  shownAt?: Date;
+  readAt?: Date;
   @Field({
     description: "When the message was deleted by the recipient or sender",
     nullable: true,

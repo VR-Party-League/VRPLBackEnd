@@ -200,6 +200,7 @@ export async function readMessagesOfPlayer(
   const res = await MessageModel.updateMany(
     {
       id: { $in: toUpdateIds },
+      readAt: { $exists: false },
       recipientId: playerId,
     },
     {
