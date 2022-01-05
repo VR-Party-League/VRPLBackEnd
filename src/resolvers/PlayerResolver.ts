@@ -22,13 +22,14 @@ import {
 } from "../db/cooldown";
 import { VrplPlayerCooldown } from "../db/models/cooldowns";
 import { VrplBadge } from "../db/models/vrplBadge";
-import { VrplPlayer } from "../db/models/vrplPlayer";
+import { VrplPlayer, VrplRegion } from "../db/models/vrplPlayer";
 import { VrplTeam } from "../db/models/vrplTeam";
 import {
   getAllPlayerIds,
   getPlayerFromDiscordId,
   getPlayerFromId,
   getPlayerFromNickname,
+  setPlayerRegion,
   updatePlayerBadges,
   updatePlayerName,
 } from "../db/player";
@@ -186,9 +187,21 @@ export default class {
   @Mutation((_returns) => Player)
   async setPlayerRegion(
     @Arg("playerId") playerId: string,
-    @Arg("region") newName: string,
+    @Arg("region") region: string,
     @Ctx() ctx: Context
   ) {
-    // TODO: Do this!!!!
+    const user = ctx.user;
+    if (!user) throw new InternalServerError("No user found in context");
+    const player = await getPlayerFromId(playerId);
+    if (!player) throw new BadRequestError("Player not found");
+    const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
+    if (player.id !== user.id && !userHasPerms)
+      throw new ForbiddenError("You can't change other players' regions");
+
+    if (!Object.keys(VrplRegion).includes(region))
+      throw new BadRequestError(
+        `Invalid region, options are: ${Object.keys(VrplRegion).join(", ")} `
+      );
+    return await setPlayerRegion(player, region as VrplRegion);
   }
 }

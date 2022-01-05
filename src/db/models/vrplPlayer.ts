@@ -11,13 +11,20 @@ export interface VrplPlayerNickname {
 // });
 
 // Player model
+export enum VrplRegion {
+  NA = "NA",
+  EU = "EU",
+  ASIA = "ASIA",
+  OCEANIA = "OCEANIA",
+  UNKNOWN = "UNKNOWN",
+}
 export interface VrplPlayer {
   id: string;
   nickname: string;
   nicknameHistory: VrplPlayerNickname[];
   about: string;
   email: string;
-  region?: string;
+  region: VrplRegion;
 
   discordId: string;
   discordTag: string;
@@ -44,7 +51,7 @@ const PlayerSchema = new Schema<VrplPlayer & Document>(
     //    avatar: { type: String, require: true },
     about: { type: String, require: false },
     email: { type: String, require: true },
-    region: { type: String, require: false },
+    region: { type: String, require: true, default: VrplRegion.UNKNOWN },
 
     discordId: { type: String, required: true, unique: true },
     discordTag: { type: String, required: true },

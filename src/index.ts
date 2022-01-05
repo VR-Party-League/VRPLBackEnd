@@ -64,9 +64,7 @@ import { PlayerCooldownResolver } from "./resolvers/CooldownResolver";
 import SiteSettingsResolver from "./resolvers/SiteSettingsResolver";
 import MessageResolver from "./resolvers/MessageResolver";
 import MessageButtonResolver from "./resolvers/MessageButtonResolver";
-// TODO: handle team avatars u dumbass
-// TODO: also handle uploading them
-// TODO: also maybe to team and profile banners, idk
+
 async function bootstrap() {
   try {
     await mongoose.connect(process.env.DB_URI!, {});

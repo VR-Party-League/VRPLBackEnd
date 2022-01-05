@@ -50,4 +50,3 @@ export default class Team {
   //@Field((type) => [Tournament], { description: "An array of players" })
   //tournament!: Tournament[];
 }
-// TODO: fix team return undefined on first load

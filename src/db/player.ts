@@ -1,5 +1,5 @@
 import ms from "ms";
-import VrplPlayerDB, { VrplPlayer } from "../db/models/vrplPlayer";
+import VrplPlayerDB, { VrplRegion, VrplPlayer } from "../db/models/vrplPlayer";
 import {
   playerCreateRecord,
   playerUpdateRecord,
@@ -16,6 +16,7 @@ import {
 } from "../utils/regex/player";
 import { PlayerNicknameHistoryItem } from "../schemas/Player";
 import { BadRequestError } from "../utils/errors";
+import vrplPlayer from "../db/models/vrplPlayer";
 
 let playerCacheTimeStamp: number = 0;
 const playerCache = new Map<string, VrplPlayer>();
@@ -150,7 +151,7 @@ export async function createPlayerFromDiscordInfo(
     nicknameHistory: [],
     about: `This is the profile of ${User.username}!`,
     email: User.email,
-    region: undefined,
+    region: VrplRegion.UNKNOWN,
 
     discordId: User.id,
     discordTag: `${User.username}#${User.discriminator}`,
@@ -287,4 +288,31 @@ export async function updatePlayerName(
 export async function howManyOfThesePlayersExist(players: string[]) {
   const count = await VrplPlayerDB.count({ id: { $in: players } });
   return count;
+}
+
+export async function setPlayerRegion(
+  player: VrplPlayer,
+  newRegion: VrplRegion
+) {
+  const old = player.region;
+  player.region = newRegion;
+  const playerUpdateRecord: playerUpdateRecord = {
+    v: 1,
+    id: uuidv4(),
+    type: recordType.playerUpdate,
+    userId: player.id,
+    playerId: player.id,
+    timestamp: new Date(),
+    valueChanged: "region",
+    old: old,
+    new: player.region,
+  };
+  await Promise.all([
+    VrplPlayerDB.updateOne(
+      { id: player.id },
+      { $set: { region: player.region } }
+    ),
+    storeRecord(playerUpdateRecord),
+  ]);
+  return storePlayer(player);
 }

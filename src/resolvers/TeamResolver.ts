@@ -113,7 +113,6 @@ export default class {
     );
 
     if (makeCaptain) {
-      // TODO: Force this to happen
       await addPlayerToTeam(
         createdTeamRes,
         ownerId,
