@@ -16,6 +16,10 @@ import { recordType } from "./models/records";
 import { CompletedVrplMatch } from "./models/vrplMatch";
 import { VrplTournament } from "./models/vrplTournaments";
 import { BadRequestError, InternalServerError } from "../utils/errors";
+import { createMessages } from "./messages";
+import Player from "../schemas/Player";
+import { MessageButtonActionTypes } from "./models/vrplMessages";
+import { VrplPlayer } from "./models/vrplPlayer";
 
 // TODO: add Sentry.captureException(err) to more places!
 
@@ -102,35 +106,93 @@ export async function findTeamsOfPlayer(
 }
 
 export async function addPlayerToTeam(
-  tournamentId: string,
   team: VrplTeam,
   playerId: string,
   role: VrplTeamPlayerRole,
-  performedBy: string
+  performedBy: VrplPlayer,
+  force: boolean = false
 ): Promise<VrplTeam | undefined> {
-  if (!team?.id) return;
+  if (!team?.id) throw new BadRequestError("No team provided");
+  else if (!playerId) throw new BadRequestError("No player provided");
+  else if (!role) throw new BadRequestError("No role provided");
+  else if (role == VrplTeamPlayerRole.Pending)
+    throw new BadRequestError("Pending is not a valid role");
 
   const teamPlayer: VrplTeamPlayer = {
     playerId: playerId,
-    since: new Date(),
     role: role,
+    since: new Date(),
   };
+  let record: teamPlayerCreateRecord | teamPlayerUpdateRecord;
+
   const filteredTeamPlayers = team.teamPlayers.filter(
     (teamPlayer) => teamPlayer.playerId !== playerId
   );
-  let record: teamPlayerCreateRecord | teamPlayerUpdateRecord;
-  if (filteredTeamPlayers.length < team.teamPlayers.length) {
+  const isLengthTheSame =
+    filteredTeamPlayers.length === team.teamPlayers.length;
+  if (isLengthTheSame || force === false) {
+    teamPlayer.role = force ? role : VrplTeamPlayerRole.Pending;
+    if (!force)
+      createMessages(
+        {
+          title: `You have been invited to join '${team.name}'`,
+          senderId: performedBy.id,
+          content: `${performedBy.nickname} invited you to join their team '${team.name}'!`,
+          isPickOne: true,
+          buttons: [
+            {
+              text: "Accept",
+              colorHex: "#00FF7F",
+              action: {
+                type: MessageButtonActionTypes.AcceptTeamInvite,
+                tournamentId: team.tournamentId,
+                teamId: team.id,
+                playerId: playerId,
+                role: role,
+              },
+            },
+            {
+              text: "Decline",
+              colorHex: "#FF4040",
+              action: {
+                type: MessageButtonActionTypes.DeclineTeamInvite,
+                tournamentId: team.tournamentId,
+                teamId: team.id,
+                playerId: playerId,
+              },
+            },
+          ],
+        },
+        [playerId]
+      );
+    // TODO: broadcastInvite()
+
+    record = {
+      v: 1,
+      id: uuidv4(),
+      type: recordType.teamPlayerCreate,
+      tournamentId: team.tournamentId,
+      userId: performedBy.id,
+      teamId: team.id,
+      playerId: teamPlayer.playerId,
+      timestamp: new Date(),
+      role: teamPlayer.role,
+    };
+  } else {
     const oldPlayer = team.teamPlayers.find(
       (teamPlayer) => teamPlayer.playerId === playerId
     );
     if (!oldPlayer)
       throw new Error("Could not find old version of updating team player!");
+
+    teamPlayer.role = role;
+    teamPlayer.since = oldPlayer.since;
     record = {
       v: 1,
       id: uuidv4(),
       type: recordType.teamPlayerUpdate,
       tournamentId: team.tournamentId,
-      userId: performedBy,
+      userId: performedBy.id,
       teamId: team.id,
       playerId: teamPlayer.playerId,
       timestamp: new Date(),
@@ -138,19 +200,6 @@ export async function addPlayerToTeam(
       valueChanged: "role",
       old: oldPlayer.role,
       new: teamPlayer.role,
-    };
-  } else {
-    record = {
-      v: 1,
-      id: uuidv4(),
-      type: recordType.teamPlayerCreate,
-      tournamentId: team.tournamentId,
-      userId: performedBy,
-      teamId: team.id,
-      playerId: teamPlayer.playerId,
-      timestamp: new Date(),
-
-      role: teamPlayer.role,
     };
   }
   team.teamPlayers = filteredTeamPlayers;

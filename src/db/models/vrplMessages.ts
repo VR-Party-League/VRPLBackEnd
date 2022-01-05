@@ -1,4 +1,5 @@
 import { Schema, model, Document } from "mongoose";
+import { VrplTeamPlayerRole } from "./vrplTeam";
 
 export enum MessageButtonActionTypes {
   AcceptTeamInvite = "AcceptTeamInvite",
@@ -14,6 +15,7 @@ export interface JoinTeamAction extends vrplBaseMessageButtonActions {
   type: MessageButtonActionTypes.AcceptTeamInvite;
   teamId: string;
   tournamentId: string;
+  role: VrplTeamPlayerRole;
 }
 
 export interface DeclineTeamAction extends vrplBaseMessageButtonActions {
@@ -45,6 +47,7 @@ export interface vrplMessage {
   recipientId: string;
   title: string;
   content: string;
+  isPickOne?: boolean;
   senderId?: string; // If this is not a string it has been sent by "SYSTEM" :ooo
   // thumbnailData?:
   //   | {
@@ -66,7 +69,6 @@ const MessageSchema = new Schema<vrplMessage & Document>(
     recipientId: { type: String, required: true },
     title: { type: String, required: true },
     content: { type: String, required: true },
-
     // thumbnailData: {
     //   type: [String],
     //   required: false,
@@ -85,6 +87,7 @@ const MessageSchema = new Schema<vrplMessage & Document>(
       required: false,
     },
 
+    isPickOne: Boolean,
     createdAt: Date,
     readAt: Date,
     hiddenAt: Date,

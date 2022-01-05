@@ -55,8 +55,11 @@ export default class {
     if (!messageButton) throw new BadRequestError("Message button not found");
     if (messageButton.clickedAt)
       throw new BadRequestError("Button already clicked");
-
-    const res = await performButtonAction(messageButton, messageId, playerId);
+    else if (message.isPickOne && message.buttons.some((b) => !!b.clickedAt))
+      throw new BadRequestError(
+        "A button has already been clicked for this pickOne message."
+      );
+    const res = await performButtonAction(messageButton, message, player);
     if (!res) throw new InternalServerError("Button action failed");
     return res;
   }

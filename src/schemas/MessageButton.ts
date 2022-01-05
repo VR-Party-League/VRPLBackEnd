@@ -1,4 +1,5 @@
 import { Authorized, Field, InputType, ObjectType } from "type-graphql";
+import { VrplTeamPlayerRole } from "../db/models/vrplTeam";
 import { Permissions } from "../utils/permissions";
 
 @ObjectType()
@@ -50,19 +51,24 @@ export class MessageButtonActionInput {
     description: "Team id for if the action requires that",
     nullable: true,
   })
-  teamId: string;
+  teamId?: string;
   @Field({
     description:
       "Tournament id for if the action requires that (this is always required if the teamId is required)",
     nullable: true,
   })
-  tournamentId: string;
+  tournamentId?: string;
+  @Field((_type) => String, {
+    description: "The role the player will get when joining a team",
+    nullable: true,
+  })
+  role?: VrplTeamPlayerRole;
   @Field({
     description:
       "Player id (currently not used for anything so dont use it dum dum)",
     nullable: true,
   })
-  playerId: string;
+  playerId?: string;
 }
 
 @InputType()
@@ -73,12 +79,12 @@ export class MessageButtonInput {
     description: "The color of the button as a hex string",
     nullable: true,
   })
-  colorHex: string;
+  colorHex?: string;
   @Field({
     description: "The icon of the button, a link to an svg",
     nullable: true,
   })
-  icon: string;
+  icon?: string;
 
   @Field({
     description: "The action the button will perform when pressed",

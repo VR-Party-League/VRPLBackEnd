@@ -10,6 +10,8 @@ import { getPlayerFromId, howManyOfThesePlayersExist } from "./player";
 import { addPlayerToTeam, getTeamFromId } from "./team";
 import { v4 as uuidv4 } from "uuid";
 import { BadRequestError, InternalServerError } from "../utils/errors";
+import Player from "../schemas/Player";
+import { VrplPlayer } from "./models/vrplPlayer";
 
 async function getMessageFromId(
   messageId: string
@@ -30,37 +32,47 @@ export async function getButtonFromId(buttonId: string, messageId: string) {
 
 export async function performButtonAction(
   button: vrplMessageButton,
-  messageId: string,
-  performedBy: string
+  message: vrplMessage,
+  performedBy: VrplPlayer
 ): Promise<vrplMessage | undefined> {
+  const messageId = message.id;
   const action = button.action;
+  if (message.isPickOne && message.buttons.some((b) => !!b.clickedAt))
+    throw new BadRequestError(
+      "A button has already been clicked for this pickOne message"
+    );
   const newMessage = await storeClickedButton(button, messageId);
   if (action.type === MessageButtonActionTypes.AcceptTeamInvite) {
     const { teamId, tournamentId } = action;
     // Check if the user has an invite to the team
     const [team, player] = await Promise.all([
       getTeamFromId(tournamentId, teamId),
-      getPlayerFromId(performedBy),
+      getPlayerFromId(performedBy.id),
     ]);
 
     if (!team) throw new Error("Team not found");
     else if (!player) throw new Error("Player not found");
     const teamPlayer = team.teamPlayers.find(
-      (teamPlayer) => teamPlayer.playerId === player.id
+      (teamPlayer) =>
+        teamPlayer.playerId === player.id &&
+        teamPlayer.role === VrplTeamPlayerRole.Pending
     );
-    if (!teamPlayer) throw new Error("Player not found in team");
+    if (!teamPlayer)
+      throw new BadRequestError("Player not found in team or not pending");
     else if (teamPlayer.role === VrplTeamPlayerRole.Pending) {
       const res = await addPlayerToTeam(
-        tournamentId,
         team,
         player.id,
         VrplTeamPlayerRole.Player,
-        performedBy
+        performedBy,
+        true
       );
       if (!res) throw new InternalServerError("Player not added to team");
     } else {
       throw new BadRequestError("Player is not a pending player for that team");
     }
+  } else if (action.type === MessageButtonActionTypes.DeclineTeamInvite) {
+    // TODO: Make the decline func, it should remove the pending status
   } else if (action.type === MessageButtonActionTypes.Debug) {
     console.log("HEYO DEBUG BUTTON CLICKED!!!!");
 
@@ -102,6 +114,7 @@ export async function createMessages(
       ({
         id: uuidv4(),
         title: messageInput.title,
+        isPickOne: messageInput.isPickOne,
         content: messageInput.content,
         senderId: messageInput.senderId,
         recipientId: recipient,
@@ -128,6 +141,8 @@ export async function createMessages(
               type: actionType,
               teamId: actionInput.teamId,
               tournamentId: actionInput.tournamentId,
+              role: actionInput.role!,
+              // FIXME: fix this    ^
             };
           } else if (actionType === MessageButtonActionTypes.Debug) {
             action = {

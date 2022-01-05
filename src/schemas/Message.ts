@@ -33,6 +33,13 @@ export default class Message {
   buttons: MessageButton[];
 
   @Field({
+    description:
+      "If the user has to pick one of the buttons, or click multiple",
+    nullable: true,
+  })
+  isPickOne?: boolean;
+
+  @Field({
     description: "When the message was created / sent",
     nullable: false,
   })
@@ -65,4 +72,11 @@ export class MessageInput {
     description: "These are the clickable buttons of the message",
   })
   buttons: MessageButtonInput[];
+
+  @Field({
+    description:
+      "If the user has to pick one of the buttons, or click multiple",
+    nullable: true,
+  })
+  isPickOne?: boolean;
 }

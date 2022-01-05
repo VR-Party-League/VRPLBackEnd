@@ -127,6 +127,9 @@ type Message {
   """The message id"""
   id: String!
 
+  """If the user has to pick one of the buttons, or click multiple"""
+  isPickOne: Boolean
+
   """When the message was first shown to the user"""
   readAt: Timestamp
 
@@ -170,6 +173,9 @@ input MessageButtonActionInput {
   """Player id (currently not used for anything so dont use it dum dum)"""
   playerId: String
 
+  """The role the player will get when joining a team"""
+  role: String
+
   """Team id for if the action requires that"""
   teamId: String
 
@@ -205,6 +211,9 @@ input MessageInput {
   """The main content of the message"""
   content: String!
 
+  """If the user has to pick one of the buttons, or click multiple"""
+  isPickOne: Boolean
+
   """
   If this is set it wil send as a user, if it isnt it will be sent from [SYSTEM]
   """
@@ -216,8 +225,6 @@ input MessageInput {
 
 type Mutation {
   addBadgeToPlayer(bitPosition: Int!, playerId: String!): Player!
-  addPlayerToTeamAsPlayer(playerId: String!, teamId: String!, tournamentId: String!): Team!
-  addPlayerToTeamAsSub(playerId: String!, teamId: String!, tournamentId: String!): Team!
   changePlayerName(newName: String!, playerId: String!): Player!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
   changeTeamName(newName: String!, teamId: String!, tournamentId: String!): Team!
@@ -226,6 +233,7 @@ type Mutation {
   createMessages(message: MessageInput!, recipientIds: [String!]!): [Message!]!
   createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
   hideMessage(messageId: String!, playerId: String!): Message!
+  invitePlayerToTeam(playerId: String!, teamId: String!, tournamentId: String!): Team!
   performMessageButtonAction(buttonId: String!, messageId: String!, playerId: String!): Message!
   readAllUnreadMessages(limit: Float, messageIds: [String!], playerId: String!, reverse: Boolean): Int!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
