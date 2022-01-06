@@ -8,6 +8,7 @@ import {
   Query,
   Resolver,
   Root,
+  UnauthorizedError,
 } from "type-graphql";
 import { Context } from "..";
 import {
@@ -25,6 +26,7 @@ import { VrplBadge } from "../db/models/vrplBadge";
 import { VrplPlayer, VrplRegion } from "../db/models/vrplPlayer";
 import { VrplTeam } from "../db/models/vrplTeam";
 import {
+  findPlayerBroadly,
   getAllPlayerIds,
   getPlayerFromDiscordId,
   getPlayerFromId,
@@ -87,6 +89,18 @@ export default class {
   @FieldResolver()
   avatar(@Root() vrplPlayer: VrplPlayer): Promise<string | undefined> {
     return getAvatar("player", vrplPlayer.id);
+  }
+
+  @Authorized()
+  @Query((_returns) => Player, { nullable: true })
+  async findPlayer(
+    @Arg("search") search: string,
+    @Ctx() ctx: Context
+  ): Promise<VrplPlayer | null> {
+    const user = ctx.user;
+    if (!user) throw new UnauthorizedError();
+
+    return await findPlayerBroadly(search);
   }
 
   @Authorized([Permissions.ManageBadges])

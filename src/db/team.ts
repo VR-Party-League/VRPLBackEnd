@@ -5,7 +5,7 @@ import VrplTeamDB, {
 } from "../db/models/vrplTeam";
 import * as Sentry from "@sentry/node";
 import { v4 as uuidv4 } from "uuid";
-import { storeRecord } from "./logs";
+import { storeRecord, storeRecords } from "./logs";
 import {
   teamCreateRecord,
   teamPlayerCreateRecord,
@@ -20,6 +20,7 @@ import { createMessages } from "./messages";
 import Player from "../schemas/Player";
 import { MessageButtonActionTypes } from "./models/vrplMessages";
 import { VrplPlayer } from "./models/vrplPlayer";
+import { getAllPlayerIds, getPlayersFromIds } from "./player";
 
 // TODO: add Sentry.captureException(err) to more places!
 
@@ -105,69 +106,49 @@ export async function findTeamsOfPlayer(
   });
 }
 
-export async function addPlayerToTeam(
+export async function invitePlayersToTeam(
   team: VrplTeam,
-  playerId: string,
-  role: VrplTeamPlayerRole,
-  performedBy: VrplPlayer,
-  force: boolean = false
+  playerIds: string[],
+  newPlayerRole: VrplTeamPlayerRole,
+  performedBy: VrplPlayer
 ): Promise<VrplTeam | undefined> {
   if (!team?.id) throw new BadRequestError("No team provided");
-  else if (!playerId) throw new BadRequestError("No player provided");
-  else if (!role) throw new BadRequestError("No role provided");
-  else if (role == VrplTeamPlayerRole.Pending)
+  else if (!playerIds) throw new BadRequestError("No player provided");
+  else if (!newPlayerRole) throw new BadRequestError("No role provided");
+  else if (newPlayerRole == VrplTeamPlayerRole.Pending)
     throw new BadRequestError("Pending is not a valid role");
-
-  const teamPlayer: VrplTeamPlayer = {
+  console.log("newPlayerRole", newPlayerRole);
+  const teamPlayers: VrplTeamPlayer[] = playerIds.map((playerId) => ({
     playerId: playerId,
-    role: role,
+    role: VrplTeamPlayerRole.Pending,
     since: new Date(),
-  };
-  let record: teamPlayerCreateRecord | teamPlayerUpdateRecord;
-
-  const filteredTeamPlayers = team.teamPlayers.filter(
-    (teamPlayer) => teamPlayer.playerId !== playerId
-  );
-  const isLengthTheSame =
-    filteredTeamPlayers.length === team.teamPlayers.length;
-  if (isLengthTheSame || force === false) {
-    teamPlayer.role = force ? role : VrplTeamPlayerRole.Pending;
-    if (!force)
-      createMessages(
-        {
-          title: `You have been invited to join '${team.name}'`,
-          senderId: performedBy.id,
-          content: `${performedBy.nickname} invited you to join their team '${team.name}'!`,
-          isPickOne: true,
-          buttons: [
-            {
-              text: "Accept",
-              colorHex: "#00FF7F",
-              action: {
-                type: MessageButtonActionTypes.AcceptTeamInvite,
-                tournamentId: team.tournamentId,
-                teamId: team.id,
-                playerId: playerId,
-                role: role,
-              },
-            },
-            {
-              text: "Decline",
-              colorHex: "#FF4040",
-              action: {
-                type: MessageButtonActionTypes.DeclineTeamInvite,
-                tournamentId: team.tournamentId,
-                teamId: team.id,
-                playerId: playerId,
-              },
-            },
-          ],
-        },
-        [playerId]
+  }));
+  const players = await getPlayersFromIds(playerIds);
+  if (!players) throw new InternalServerError("Could not get players");
+  else if (players.length != playerIds.length)
+    throw new InternalServerError("Could not get all players");
+  const records: teamPlayerCreateRecord[] = [];
+  for (const teamPlayer of teamPlayers) {
+    const player = players.find((p) => p.id == teamPlayer.playerId);
+    const oldTeamPlayer = team.teamPlayers.find(
+      (tp) => tp.playerId == teamPlayer.playerId
+    );
+    if (!player)
+      throw new InternalServerError(
+        `Could not get player ${teamPlayer.playerId}`
       );
-    // TODO: broadcastInvite()
-
-    record = {
+    else if (oldTeamPlayer) {
+      if (oldTeamPlayer.role == VrplTeamPlayerRole.Pending)
+        throw new BadRequestError(
+          `Player ${player.nickname} already invited to this team`
+        );
+      else
+        throw new BadRequestError(
+          `Player ${player.nickname} already a member of this team`
+        );
+    }
+    team.teamPlayers.push(teamPlayer);
+    const record: teamPlayerCreateRecord = {
       v: 1,
       id: uuidv4(),
       type: recordType.teamPlayerCreate,
@@ -178,41 +159,86 @@ export async function addPlayerToTeam(
       timestamp: new Date(),
       role: teamPlayer.role,
     };
-  } else {
-    const oldPlayer = team.teamPlayers.find(
-      (teamPlayer) => teamPlayer.playerId === playerId
-    );
-    if (!oldPlayer)
-      throw new Error("Could not find old version of updating team player!");
-
-    teamPlayer.role = role;
-    teamPlayer.since = oldPlayer.since;
-    record = {
-      v: 1,
-      id: uuidv4(),
-      type: recordType.teamPlayerUpdate,
-      tournamentId: team.tournamentId,
-      userId: performedBy.id,
-      teamId: team.id,
-      playerId: teamPlayer.playerId,
-      timestamp: new Date(),
-
-      valueChanged: "role",
-      old: oldPlayer.role,
-      new: teamPlayer.role,
-    };
+    records.push(record);
   }
-  team.teamPlayers = filteredTeamPlayers;
-  team.teamPlayers.push(teamPlayer);
 
   await Promise.all([
     VrplTeamDB.updateOne(
-      { id: team.id },
+      { id: team.id, tournamentId: team.tournamentId },
       { $set: { teamPlayers: team.teamPlayers } }
     ),
-    storeRecord(record),
+    storeRecords(records),
+    createMessages(
+      {
+        title: `You have been invited to join '${team.name}'`,
+        senderId: performedBy.id,
+        content: `${performedBy.nickname} invited you to join their team '${team.name}'!`,
+        isPickOne: true,
+        buttons: [
+          {
+            text: "Accept",
+            colorHex: "#00FF7F",
+            action: {
+              type: MessageButtonActionTypes.AcceptTeamInvite,
+              tournamentId: team.tournamentId,
+              teamId: team.id,
+              role: newPlayerRole,
+            },
+          },
+          {
+            text: "Decline",
+            colorHex: "#FF4040",
+            action: {
+              type: MessageButtonActionTypes.DeclineTeamInvite,
+              tournamentId: team.tournamentId,
+              teamId: team.id,
+            },
+          },
+        ],
+      },
+      playerIds
+    ),
   ]);
   return team;
+}
+
+export async function addPlayerToTeam(
+  team: VrplTeam,
+  playerId: string,
+  role: VrplTeamPlayerRole
+) {
+  console.log;
+  if (role === VrplTeamPlayerRole.Pending)
+    throw new BadRequestError("Pending is not a valid role");
+
+  const teamPlayer: VrplTeamPlayer = {
+    playerId: playerId,
+    role: role,
+    since: new Date(),
+  };
+  const oldTeamPlayer = team.teamPlayers.find(
+    (tp) =>
+      tp.playerId == teamPlayer.playerId &&
+      tp.role == VrplTeamPlayerRole.Pending
+  );
+  if (oldTeamPlayer)
+    if (oldTeamPlayer.role !== VrplTeamPlayerRole.Pending)
+      throw new InternalServerError(
+        `Player ${playerId} already in team ${team.id} tournament ${team.tournamentId}`
+      );
+    else {
+      team.teamPlayers = team.teamPlayers.filter(
+        (tp) => tp.playerId !== teamPlayer.playerId
+      );
+    }
+
+  console.log("newTeamplayer", teamPlayer);
+  team.teamPlayers.push(teamPlayer);
+  console.log("setting stuff rn", team.teamPlayers);
+  await VrplTeamDB.updateOne(
+    { id: team.id, tournamentId: team.tournamentId },
+    { $set: { teamPlayers: team.teamPlayers } }
+  );
 }
 
 // This function makes a new player the owner of a team.
@@ -292,7 +318,7 @@ export async function transferTeam(
 
   await Promise.all([
     VrplTeamDB.updateOne(
-      { id: team.id },
+      { id: team.id, tournamentId: team.tournamentId },
       { $set: { ownerId: team.ownerId, teamPlayers: team.teamPlayers } }
     ),
     storeRecord(TeamUpdateRecord),
@@ -360,7 +386,7 @@ export async function changeTeamPlayerRole(
 
   await Promise.all([
     VrplTeamDB.updateOne(
-      { id: team.id },
+      { id: team.id, tournamentId: team.tournamentId },
       { $set: { teamPlayers: team.teamPlayers } }
     ),
     storeRecord(record),

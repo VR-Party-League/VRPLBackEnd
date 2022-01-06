@@ -38,6 +38,7 @@ import {
   OculusTokens,
   OculusUser,
 } from "../../utils/authentication/oculus";
+import { VrplPlayer } from "../../db/models/vrplPlayer";
 const router = Router();
 
 const cookieName = "refresh_token";
@@ -79,7 +80,7 @@ router.get("/discord/callback", async (req, res) => {
 
     const oauthData: RESTPostOAuth2AccessTokenResult = oauthResult.data;
     const user = await getUserFromOAuthData(oauthData);
-    let player = await getPlayerFromDiscordId(user.id);
+    let player: VrplPlayer | null = await getPlayerFromDiscordId(user.id);
     if (player) {
       if (player.discordId !== user.id) {
         return res.status(400).send({
@@ -256,7 +257,7 @@ router.get("/", async (req, res) => {
           player: player,
           decoded: decoded,
         });
-      const userData: any = player;
+      const userData: any = player.toObject();
       userData.accessToken = data.accessToken;
       userData.expiresAt = Date.now() + ms(accessTokenExpireIn);
       return res

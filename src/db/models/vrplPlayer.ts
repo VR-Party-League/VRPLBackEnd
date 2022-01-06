@@ -37,8 +37,8 @@ export interface VrplPlayer {
 
 const PlayerSchema = new Schema<VrplPlayer & Document>(
   {
-    id: { type: String, required: true, unique: true },
-    nickname: { type: String, require: true },
+    id: { type: String, required: true, unique: true, index: true },
+    nickname: { type: String, require: true, text: true },
     nicknameHistory: {
       type: [
         {
@@ -53,8 +53,8 @@ const PlayerSchema = new Schema<VrplPlayer & Document>(
     email: { type: String, require: true },
     region: { type: String, require: true, default: VrplRegion.UNKNOWN },
 
-    discordId: { type: String, required: true, unique: true },
-    discordTag: { type: String, required: true },
+    discordId: { type: String, required: true, unique: true, index: true },
+    discordTag: { type: String, required: true, index: true },
     discordAvatar: { type: String, require: true },
 
     badgeField: { type: Number, required: true, default: 0 },

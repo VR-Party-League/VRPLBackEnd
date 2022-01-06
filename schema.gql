@@ -233,7 +233,7 @@ type Mutation {
   createMessages(message: MessageInput!, recipientIds: [String!]!): [Message!]!
   createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
   hideMessage(messageId: String!, playerId: String!): Message!
-  invitePlayerToTeam(playerId: String!, teamId: String!, tournamentId: String!): Team!
+  invitePlayersToTeam(playerIds: [String!]!, teamId: String!, tournamentId: String!): Team!
   performMessageButtonAction(buttonId: String!, messageId: String!, playerId: String!): Message!
   readAllUnreadMessages(limit: Float, messageIds: [String!], playerId: String!, reverse: Boolean): Int!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
@@ -320,6 +320,7 @@ type Query {
   badgeFromBitPosition(bitPosition: Int!): Badge
   badgeFromName(name: String): Badge
   badgesFromBitField(bitField: Int!): [Badge!]!
+  findPlayer(search: String!): Player
   gameFromId(gameId: String!): Game
   gameFromName(gameName: String!): Game
   getMessagesForPlayer(limit: Int, playerId: String!, showHidden: Boolean, skip: Int): [Message!]!

@@ -11,13 +11,14 @@ import {
 import { Context } from "..";
 import vrplPlayer, { VrplPlayer } from "../db/models/vrplPlayer";
 import { VrplTeam, VrplTeamPlayerRole } from "../db/models/vrplTeam";
-import { getPlayerFromId } from "../db/player";
+import { getPlayerFromId, getPlayersFromIds } from "../db/player";
 import {
   addPlayerToTeam,
   changeTeamPlayerRole,
   createTeam,
   getTeamFromId,
   getTeamFromName,
+  invitePlayersToTeam,
   transferTeam,
   updateTeamName,
 } from "../db/team";
@@ -104,6 +105,11 @@ export default class {
     // TODO: Improve this
     const user = ctx.user;
     if (!user) throw new UnauthorizedError();
+    else if (
+      user.id !== ownerId &&
+      !userHasPermission(user, Permissions.ManageTeams)
+    )
+      throw new ForbiddenError();
 
     const createdTeamRes = await createTeam(
       tournamentId,
@@ -116,9 +122,7 @@ export default class {
       await addPlayerToTeam(
         createdTeamRes,
         ownerId,
-        VrplTeamPlayerRole.Captain,
-        user,
-        true
+        VrplTeamPlayerRole.Captain
       );
     }
 
@@ -128,10 +132,10 @@ export default class {
   // TODO: Untested
   @Authorized()
   @Mutation((_returns) => Team)
-  async invitePlayerToTeam(
+  async invitePlayersToTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
-    @Arg("playerId") playerId: string,
+    @Arg("playerIds", (_type) => [String]) playerIds: string[],
     @Ctx() ctx: Context
   ) {
     const user = ctx.user;
@@ -143,15 +147,18 @@ export default class {
       !userHasPermission(user, Permissions.ManageTeams)
     )
       throw new ForbiddenError();
-    const player = await getPlayerFromId(playerId);
-    if (!player) throw new BadRequestError("Player not found");
-    const newTeam = await addPlayerToTeam(
+    const players = await getPlayersFromIds(playerIds);
+    if (!players?.[0]) throw new BadRequestError("No players found");
+    else if (players.length !== playerIds.length)
+      throw new BadRequestError("Some players not found");
+
+    const newTeam = invitePlayersToTeam(
       originalTeam,
-      playerId,
+      playerIds,
       VrplTeamPlayerRole.Player,
-      user,
-      false
+      user
     );
+
     if (!newTeam) throw new InternalServerError(`Failed to add player to team`);
     return newTeam;
   }
@@ -163,7 +170,7 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("playerId") playerId: string,
-    @Arg("role", (type) => Number) role: VrplTeamPlayerRole,
+    @Arg("role", (_type) => Number) role: VrplTeamPlayerRole,
     @Ctx() ctx: Context
   ) {
     if (!ctx.user) throw new BadRequestError("Not logged in");
