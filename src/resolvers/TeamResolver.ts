@@ -93,41 +93,6 @@ export default class {
     );
     return matches;
   }
-  @Authorized()
-  @Mutation((_returns) => Team)
-  async createTeam(
-    @Arg("tournamentId") tournamentId: string,
-    @Arg("teamName") teamName: string,
-    @Arg("ownerId") ownerId: string,
-    @Arg("makeCaptain", { nullable: true }) makeCaptain: boolean,
-    @Ctx() ctx: Context
-  ): Promise<Team> {
-    // TODO: Improve this
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
-    else if (
-      user.id !== ownerId &&
-      !userHasPermission(user, Permissions.ManageTeams)
-    )
-      throw new ForbiddenError();
-
-    const createdTeamRes = await createTeam(
-      tournamentId,
-      teamName,
-      ownerId,
-      user.id
-    );
-
-    if (makeCaptain) {
-      await addPlayerToTeam(
-        createdTeamRes,
-        ownerId,
-        VrplTeamPlayerRole.Captain
-      );
-    }
-
-    return Object.assign(new Team(), createdTeamRes);
-  }
 
   // TODO: Untested
   @Authorized()

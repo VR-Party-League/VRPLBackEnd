@@ -21,6 +21,7 @@ const containerName = "pictures";
 export const containerClient =
   blobServiceClient.getContainerClient(containerName);
 
+// TODO: Does this need to cache everything? or was i being dummy again
 export let allBlobs = new Set<string>();
 let lastAvatarRefresh = 0;
 export async function refreshAllAvatars() {
