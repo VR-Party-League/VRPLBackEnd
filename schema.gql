@@ -231,7 +231,7 @@ type Mutation {
   confirmMatch(matchId: String!, teamId: String!, tournamentId: String!): Match!
   createBadge(bitPosition: Int, description: String!, icon: String!, name: String!): Badge!
   createMessages(message: MessageInput!, recipientIds: [String!]!): [Message!]!
-  createTeam(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
+  createTeamForTournament(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
   hideMessage(messageId: String!, playerId: String!): Message!
   invitePlayersToTeam(playerIds: [String!]!, teamId: String!, tournamentId: String!): Team!
   performMessageButtonAction(buttonId: String!, messageId: String!, playerId: String!): Message!

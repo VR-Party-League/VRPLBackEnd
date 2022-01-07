@@ -73,7 +73,7 @@ export async function getTeamFromName(
 ): Promise<VrplTeam | null> {
   return VrplTeamDB.findOne({
     tournamentId: tournamentId,
-    name: { $regex: new RegExp(`${TeamName}`, "i") },
+    name: { $regex: new RegExp(`${TeamName}`, "gi") },
   });
 }
 
