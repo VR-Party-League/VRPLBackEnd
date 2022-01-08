@@ -5,10 +5,6 @@ import {
   BlockBlobUploadResponse,
 } from "@azure/storage-blob";
 import ms from "ms";
-import { Readable } from "stream";
-import { v4 as uuidv4 } from "uuid";
-import fs from "fs/promises";
-import path from "path/posix";
 
 const AZURE_STORAGE_CONNECTION_STRING = process.env
   .AZURE_STORAGE_CONNECTION_STRING as string;
@@ -22,11 +18,11 @@ export const containerClient =
   blobServiceClient.getContainerClient(containerName);
 
 // TODO: Does this need to cache everything? or was i being dummy again
-export let allBlobs = new Set<string>();
-let lastAvatarRefresh = 0;
+let allBlobs = new Set<string>();
+let lastBlobRefresh = 0;
 export async function refreshAllAvatars() {
-  if (lastAvatarRefresh + ms("6h") < Date.now()) {
-    lastAvatarRefresh = Date.now();
+  if (lastBlobRefresh + ms("6h") < Date.now()) {
+    lastBlobRefresh = Date.now();
     const newSet = new Set<string>();
     for await (const blob of containerClient.listBlobsFlat()) {
       if (!blob.deleted) {
@@ -65,7 +61,7 @@ async function fetchAvatar(blobName: string): Promise<string> {
   perms.read = true;
   const blockBlobClient = containerClient.getBlobClient(blobName);
   const url = await blockBlobClient.generateSasUrl({
-    expiresOn: new Date(Date.now() + ms("30m")),
+    expiresOn: new Date(Date.now() + ms("2h")),
     permissions: perms,
   });
   return url;
@@ -93,7 +89,7 @@ export async function getAvatar(
   if (!allBlobs.has(blobName)) return undefined;
 
   const foundItem = avatarCache.get(blobName);
-  if (!foundItem || foundItem.createdAt + ms("20m") < Date.now()) {
+  if (!foundItem || foundItem.createdAt + ms("1h") < Date.now()) {
     const url = await fetchAvatar(blobName);
     avatarCache.set(blobName, { createdAt: Date.now(), url: url });
     console.log("Fetched item", url);
