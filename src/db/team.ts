@@ -21,6 +21,7 @@ import Player from "../schemas/Player";
 import { MessageButtonActionTypes } from "./models/vrplMessages";
 import { VrplPlayer } from "./models/vrplPlayer";
 import { getAllPlayerIds, getPlayersFromIds } from "./player";
+import _ from "lodash";
 
 // TODO: add Sentry.captureException(err) to more places!
 
@@ -67,14 +68,11 @@ export async function getTeamsFromIds(tournamentId: string, teamIds: string[]) {
 //   }
 //   return response;
 // }
-export async function getTeamFromName(
-  tournamentId: string,
-  TeamName: string
-): Promise<VrplTeam | null> {
-  return VrplTeamDB.findOne({
+export async function getTeamFromName(tournamentId: string, TeamName: string) {
+  return await VrplTeamDB.findOne({
     tournamentId: tournamentId,
-    name: { $regex: new RegExp(`${TeamName}`, "gi") },
-  });
+    name: { $regex: new RegExp(`${_.escapeRegExp(TeamName)}`, "gi") },
+  }).maxTimeMS(1000);
 }
 
 export async function destroyTeam(
