@@ -15,6 +15,7 @@ import { VrplGame } from "../db/models/vrplGame";
 import { VrplMatch } from "../db/models/vrplMatch";
 import { VrplTeam, VrplTeamPlayerRole } from "../db/models/vrplTeam";
 import { VrplTournament } from "../db/models/vrplTournaments";
+import { getPlayerFromId } from "../db/player";
 import {
   addPlayerToTeam,
   createTeam,
@@ -105,7 +106,7 @@ export default class {
     const user = ctx.user;
     const [tournament, owner, team] = await Promise.all([
       getTournamentFromId(tournamentId),
-      getTournamentFromId(ownerId),
+      getPlayerFromId(ownerId),
       getTeamFromName(tournamentId, teamName),
     ]);
 
