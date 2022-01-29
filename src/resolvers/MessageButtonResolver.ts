@@ -30,13 +30,13 @@ export default class {
   }
 
   @Authorized()
-  @Mutation((_returns) => Message)
+  @Mutation((_returns) => String)
   async performMessageButtonAction(
     @Arg("playerId") playerId: string,
     @Arg("buttonId") buttonId: string,
     @Arg("messageId") messageId: string,
     @Ctx() ctx: any
-  ) {
+  ): Promise<string> {
     const user = ctx.user;
     if (!user) throw new UnauthorizedError();
     const player = await getPlayerFromId(playerId);

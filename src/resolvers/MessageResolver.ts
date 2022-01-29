@@ -1,12 +1,8 @@
-import MessageButton from "../schemas/MessageButton";
 import {
   Arg,
   Authorized,
-  createUnionType,
   Ctx,
-  Field,
   FieldResolver,
-  InputType,
   Int,
   Mutation,
   Query,
@@ -15,9 +11,8 @@ import {
 } from "type-graphql";
 import { Permissions, userHasPermission } from "../utils/permissions";
 import Message, { MessageInput } from "../schemas/Message";
-import MessageModel, { vrplMessage } from "../db/models/vrplMessages";
+import { vrplMessage } from "../db/models/vrplMessages";
 import { getPlayerFromId } from "../db/player";
-import { getAvatar } from "../utils/storage";
 import { Context } from "..";
 import {
   BadRequestError,

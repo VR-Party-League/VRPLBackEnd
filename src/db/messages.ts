@@ -34,9 +34,10 @@ export async function performButtonAction(
   button: vrplMessageButton,
   message: vrplMessage,
   performedBy: VrplPlayer
-): Promise<vrplMessage | undefined> {
+): Promise<string | undefined> {
   const messageId = message.id;
   const action = button.action;
+  let responseText: string | undefined = undefined;
   if (message.isPickOne && message.buttons.some((b) => !!b.clickedAt))
     throw new BadRequestError(
       "A button has already been clicked for this pickOne message"
@@ -62,17 +63,18 @@ export async function performButtonAction(
     else if (teamPlayer.role === VrplTeamPlayerRole.Pending) {
       const res = addPlayerToTeam(team, player.id, action.role);
       if (!res) throw new InternalServerError("Player not added to team");
+      responseText = `You have been successfully added to the team '${team.name}'!`;
     } else {
       throw new BadRequestError("Player is not a pending player for that team");
     }
   } else if (action.type === MessageButtonActionTypes.DeclineTeamInvite) {
     // TODO: Make the decline func, it should remove the pending status
+    responseText = `This still needs to be made`;
   } else if (action.type === MessageButtonActionTypes.Debug) {
     console.log("HEYO DEBUG BUTTON CLICKED!!!!");
-
-    // TODO: Send a message bek or something
+    responseText = `<DEBUG_ROBOT_ACTIVATED>\n<SEARCHING_TARGET>\n<TARGET_FOUND>\n<ELIMINATING_TARGET>\n<AAAAAAAAAAAA>`;
   }
-  return newMessage;
+  return responseText;
 }
 
 async function storeClickedButton(
