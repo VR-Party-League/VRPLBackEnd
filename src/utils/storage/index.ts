@@ -61,7 +61,7 @@ async function fetchAvatar(blobName: string): Promise<string> {
   perms.read = true;
   const blockBlobClient = containerClient.getBlobClient(blobName);
   const url = await blockBlobClient.generateSasUrl({
-    expiresOn: new Date(Date.now() + ms("2h")),
+    expiresOn: new Date(Date.now() + ms("7d")),
     permissions: perms,
   });
   return url;
@@ -89,7 +89,7 @@ export async function getAvatar(
   if (!allBlobs.has(blobName)) return undefined;
 
   const foundItem = avatarCache.get(blobName);
-  if (!foundItem || foundItem.createdAt + ms("1h") < Date.now()) {
+  if (!foundItem || foundItem.createdAt + ms("1d") < Date.now()) {
     const url = await fetchAvatar(blobName);
     avatarCache.set(blobName, { createdAt: Date.now(), url: url });
     console.log("Fetched item", url);
