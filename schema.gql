@@ -234,7 +234,7 @@ type Mutation {
   createTeamForTournament(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
   hideMessage(messageId: String!, playerId: String!): Message!
   invitePlayersToTeam(playerIds: [String!]!, teamId: String!, tournamentId: String!): Team!
-  performMessageButtonAction(buttonId: String!, messageId: String!, playerId: String!): String!
+  performMessageButtonAction(buttonId: String!, messageId: String!, playerId: String!): PerformMessageButtonActionResponse!
   readAllUnreadMessages(limit: Float, messageIds: [String!], playerId: String!, reverse: Boolean): Int!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
   setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
@@ -242,6 +242,11 @@ type Mutation {
   submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
   transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
   updateSettingValue(key: String!, value: String!): SiteSettings!
+}
+
+type PerformMessageButtonActionResponse {
+  message: Message!
+  text: String!
 }
 
 type Player {

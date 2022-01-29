@@ -3,14 +3,16 @@ import {
   Arg,
   Authorized,
   Ctx,
+  Field,
   FieldResolver,
   Int,
   Mutation,
+  ObjectType,
   Query,
   Resolver,
   Root,
 } from "type-graphql";
-import { vrplMessageButton } from "../db/models/vrplMessages";
+import { vrplMessage, vrplMessageButton } from "../db/models/vrplMessages";
 import { Permissions, userHasPermission } from "../utils/permissions";
 import {
   BadRequestError,
@@ -30,13 +32,13 @@ export default class {
   }
 
   @Authorized()
-  @Mutation((_returns) => String)
+  @Mutation((_returns) => PerformMessageButtonActionResponse)
   async performMessageButtonAction(
     @Arg("playerId") playerId: string,
     @Arg("buttonId") buttonId: string,
     @Arg("messageId") messageId: string,
     @Ctx() ctx: any
-  ): Promise<string> {
+  ): Promise<{ text: string; message: vrplMessage }> {
     const user = ctx.user;
     if (!user) throw new UnauthorizedError();
     const player = await getPlayerFromId(playerId);
@@ -59,8 +61,20 @@ export default class {
       throw new BadRequestError(
         "A button has already been clicked for this pickOne message."
       );
-    const res = await performButtonAction(messageButton, message, player);
-    if (!res) throw new InternalServerError("Button action failed");
-    return res;
+    const { text, message: newMessage } = await performButtonAction(
+      messageButton,
+      message,
+      player
+    );
+    if (!text) throw new InternalServerError("Button action failed");
+    return { text, message: newMessage };
   }
+}
+
+@ObjectType()
+class PerformMessageButtonActionResponse {
+  @Field()
+  text: string;
+  @Field()
+  message: Message;
 }

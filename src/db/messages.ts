@@ -34,7 +34,7 @@ export async function performButtonAction(
   button: vrplMessageButton,
   message: vrplMessage,
   performedBy: VrplPlayer
-): Promise<string | undefined> {
+): Promise<{ text: string | undefined; message: vrplMessage }> {
   const messageId = message.id;
   const action = button.action;
   let responseText: string | undefined = undefined;
@@ -74,7 +74,7 @@ export async function performButtonAction(
     console.log("HEYO DEBUG BUTTON CLICKED!!!!");
     responseText = `<DEBUG_ROBOT_ACTIVATED>\n<SEARCHING_TARGET>\n<TARGET_FOUND>\n<ELIMINATING_TARGET>\n<AAAAAAAAAAAA>`;
   }
-  return responseText;
+  return { text: responseText, message: newMessage };
 }
 
 async function storeClickedButton(
