@@ -237,6 +237,7 @@ type Mutation {
   performMessageButtonAction(buttonId: String!, messageId: String!, playerId: String!): PerformMessageButtonActionResponse!
   readAllUnreadMessages(limit: Float, messageIds: [String!], playerId: String!, reverse: Boolean): Int!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
+  removePlayersFromTeam(playerIds: [String!]!, teamId: String!, tournamentId: String!): Team!
   setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
   setPlayerRegion(playerId: String!, region: String!): Player!
   submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!

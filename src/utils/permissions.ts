@@ -4,7 +4,7 @@ import { VrplPlayer } from "../db/models/vrplPlayer";
 export enum Permissions {
   None = 0,
   Admin = 1 << 0, // 0001 -- the bitshift is unnecessary, but done for consistency
-  Server = 1 << 1,
+  Server = 1 << 1, // 0010
   ManageTournaments = 1 << 2, // 0100
   ManageMatches = 1 << 3, // 1000
   ManagePlayers = 1 << 4,

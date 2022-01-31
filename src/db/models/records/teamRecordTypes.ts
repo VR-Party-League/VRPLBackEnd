@@ -1,5 +1,5 @@
-import { baseRecord, recordType } from ".";
-import { VrplTeam, VrplTeamPlayer, VrplTeamPlayerRole } from "../vrplTeam";
+import {baseRecord, recordType} from ".";
+import {VrplTeam, VrplTeamPlayer, VrplTeamPlayerRole} from "../vrplTeam";
 
 export interface teamCreateRecord extends baseRecord {
   v: 1;
@@ -49,9 +49,18 @@ export interface teamPlayerUpdateRecord extends baseRecord {
   new: any;
 }
 
+export interface teamPlayerRemoveRecord extends baseRecord {
+  v: 1;
+  type: recordType.teamPlayerRemove;
+  tournamentId: string;
+  teamId: string;
+  playerId: string;
+}
+
 export type teamRecords =
   | teamCreateRecord
   | teamUpdateRecord
   | teamDeleteRecord
   | teamPlayerCreateRecord
-  | teamPlayerUpdateRecord;
+  | teamPlayerUpdateRecord
+  | teamPlayerRemoveRecord;

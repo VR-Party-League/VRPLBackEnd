@@ -7,8 +7,6 @@ export enum VrplTeamPlayerRole {
   Player = 2,
   Sub = 3,
   Pending = 4,
-
-  Left = 5,
 }
 
 export interface VrplTeamPlayer {
