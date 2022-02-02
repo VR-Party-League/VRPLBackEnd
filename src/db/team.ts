@@ -1,14 +1,12 @@
-import VrplTeamDB, {
-  VrplTeam,
-  VrplTeamPlayer,
-  VrplTeamPlayerRole,
-} from "../db/models/vrplTeam";
+import VrplTeamDB, {VrplTeam, VrplTeamPlayer, VrplTeamPlayerRole,} from "../db/models/vrplTeam";
 import * as Sentry from "@sentry/node";
 import {v4 as uuidv4} from "uuid";
 import {storeRecord, storeRecords} from "./logs";
 import {
   teamCreateRecord,
-  teamPlayerCreateRecord, teamPlayerRemoveRecord,
+  teamDeleteRecord,
+  teamPlayerCreateRecord,
+  teamPlayerRemoveRecord,
   teamPlayerUpdateRecord,
   teamUpdateRecord,
 } from "./models/records/teamRecordTypes";
@@ -17,10 +15,9 @@ import {CompletedVrplMatch} from "./models/vrplMatch";
 import {VrplTournament} from "./models/vrplTournaments";
 import {BadRequestError, InternalServerError} from "../utils/errors";
 import {createMessages} from "./messages";
-import Player from "../schemas/Player";
 import {MessageButtonActionTypes} from "./models/vrplMessages";
 import {VrplPlayer} from "./models/vrplPlayer";
-import {getAllPlayerIds, getPlayersFromIds} from "./player";
+import {getPlayersFromIds} from "./player";
 import _ from "lodash";
 
 // TODO: add Sentry.captureException(err) to more places!
@@ -76,16 +73,31 @@ export async function getTeamFromName(tournamentId: string, TeamName: string) {
   }).maxTimeMS(1000);
 }
 
-export async function destroyTeam(
+export async function deleteTeam(
   tournamentId: string,
-  TeamID: string
-): Promise<void> {
+  teamId: string,
+  performedById: string
+) {
   try {
-    const deleted = await VrplTeamDB.deleteOne({
-      id: TeamID,
+    const deleted = await VrplTeamDB.findOneAndDelete({
+      id: teamId,
       tournamentId: tournamentId,
-    });
-    if (deleted.deletedCount < 1) throw new Error("Did not delete document");
+    }).exec();
+    // TODO: Remove avatars!!!!
+    if (!deleted?.ownerId) throw new InternalServerError("Did not delete team");
+    await storeRecord(
+      {
+        v: 1,
+        id: uuidv4(),
+        userId: performedById,
+        type: recordType.teamDelete,
+        tournamentId: tournamentId,
+        teamId: teamId,
+        team: deleted.toObject(),
+        timestamp: new Date(),
+      } as teamDeleteRecord
+    );
+    return deleted.toObject();
   } catch (err) {
     console.trace();
     console.error(err);

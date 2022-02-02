@@ -1,21 +1,11 @@
-import {
-  Arg,
-  Authorized,
-  Ctx,
-  FieldResolver,
-  Mutation,
-  Query,
-  Resolver,
-  Root,
-} from "type-graphql";
+import {Arg, Authorized, Ctx, FieldResolver, Mutation, Query, Resolver, Root,} from "type-graphql";
 import {Context} from "..";
-import vrplPlayer, {VrplPlayer} from "../db/models/vrplPlayer";
+import {VrplPlayer} from "../db/models/vrplPlayer";
 import {VrplTeam, VrplTeamPlayerRole} from "../db/models/vrplTeam";
 import {getPlayerFromId, getPlayersFromIds} from "../db/player";
 import {
-  addPlayerToTeam,
   changeTeamPlayerRole,
-  createTeam,
+  deleteTeam,
   getTeamFromId,
   getTeamFromName,
   invitePlayersToTeam,
@@ -23,19 +13,11 @@ import {
   transferTeam,
   updateTeamName,
 } from "../db/team";
-import {
-  BadRequestError,
-  ForbiddenError,
-  InternalServerError,
-  UnauthorizedError,
-} from "../utils/errors";
+import {BadRequestError, ForbiddenError, InternalServerError, UnauthorizedError,} from "../utils/errors";
 import {Permissions, userHasPermission} from "../utils/permissions";
 import Team from "../schemas/Team";
 import {VrplTournament} from "../db/models/vrplTournaments";
-import {
-  getTournamentFromId,
-  getTournamentIdFromName,
-} from "../db/tournaments";
+import {getTournamentFromId, getTournamentIdFromName,} from "../db/tournaments";
 import {getAvatar} from "../utils/storage";
 import {getMatchesForTeam} from "../db/match";
 import Match from "../schemas/Match";
@@ -252,6 +234,29 @@ export default class {
       user.id
     );
     if (!res) throw new InternalServerError("Failed to remove players from team");
+    return res;
+  }
+  
+  @Authorized()
+  @Mutation((_returns) => Team)
+  async deleteTeam(
+    @Arg("tournamentId") tournamentId: string,
+    @Arg("teamId") teamId: string,
+    @Ctx() ctx: Context
+  ) {
+    const user = ctx.user;
+    if (!user) throw new UnauthorizedError();
+    const [team, tournament] = await Promise.all([getTeamFromId(tournamentId, teamId), getTournamentFromId(tournamentId)]);
+    if (!tournament) throw new BadRequestError("Tournament not found");
+    else if (!team) throw new BadRequestError("Team not found");
+    else if (team.ownerId !== user.id && !userHasPermission(user, Permissions.ManageTeams))
+      throw new ForbiddenError();
+    else if (tournament.registrationStart > new Date())
+      throw new BadRequestError("Cannot delete team before registration start");
+    else if (tournament.registrationEnd < new Date())
+      throw new BadRequestError("Cannot delete team after registration end");
+    const res = await deleteTeam(tournamentId, team.id, user.id);
+    if (!res) throw new InternalServerError("Failed to remove team");
     return res;
   }
   

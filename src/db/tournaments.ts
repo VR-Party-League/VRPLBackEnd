@@ -1,6 +1,6 @@
 import ms from "ms";
-import { convertSiteInput } from "../utils/regex/general";
-import { TournamentModel, VrplTournament } from "./models/vrplTournaments";
+import {convertSiteInput} from "../utils/regex/general";
+import {TournamentModel, VrplTournament} from "./models/vrplTournaments";
 //import { getTeamsOfTournament } from "./team";
 const tournamentCache = new Map<string, VrplTournament>();
 let cacheTimestamp: number = 0;
@@ -8,6 +8,7 @@ let cacheTimestamp: number = 0;
 let fetchingTournaments: undefined | Promise<any> | PromiseLike<any> =
   undefined;
 
+// TODO: Rethink the caching of tournaments
 function storeTournament(tournament: VrplTournament) {
   const data: VrplTournament = {
     id: tournament.id,
@@ -18,28 +19,29 @@ function storeTournament(tournament: VrplTournament) {
     banner: tournament.banner,
     icon: tournament.icon,
     gameId: tournament.gameId,
-
+    
     matchIds: new Array(...tournament.matchIds),
     currentMatchIds: tournament.currentMatchIds
       ? new Array(...tournament.currentMatchIds)
       : [],
-
+    
     matchRounds: tournament.matchRounds,
     matchMaxScore: tournament.matchMaxScore,
     rules: tournament.rules,
-
+    
     eligibilityCheck: tournament.eligibilityCheck,
     region: tournament.region,
-
+    
     start: new Date(tournament.start),
     end: new Date(tournament.end),
     registrationStart: new Date(tournament.registrationStart),
     registrationEnd: new Date(tournament.registrationEnd),
   };
-
+  
   tournamentCache.set(data.id, data);
   return data;
 }
+
 async function reCacheTournaments(): Promise<void> {
   cacheTimestamp = Date.now();
   const tournaments = await TournamentModel.find({});
@@ -47,9 +49,10 @@ async function reCacheTournaments(): Promise<void> {
   for (let tournament of tournaments) {
     //const Teams = await getTeamsOfTournament(tournament.id);
     // Make sure the teams in the tournament are correct!
-    storeTournament(tournament);
+    storeTournament(tournament.toObject());
   }
 }
+
 export async function refreshTournaments(opts?: {
   force: boolean;
 }): Promise<void> {
@@ -62,9 +65,11 @@ export async function refreshTournaments(opts?: {
     });
     await fetchingTournaments;
   } else if (cacheTimestamp + ms("1min") < Date.now()) {
-    Promise.resolve(reCacheTournaments());
+    Promise.resolve(reCacheTournaments()).then(() => {
+    });
   }
 }
+
 // export async function addTeamToTournamentCache(team: VrplTeam) {
 //   if (!team) throw new Error("No team entered");
 //   let cachedTournament = tournamentCache.get(team.Tournament);
@@ -107,6 +112,7 @@ export async function getTournamentIdFromName(
   if (tournament) return tournament.id;
   return null;
 }
+
 export async function getTournamentsOfGame(gameId: string) {
   await refreshTournaments();
   const res: VrplTournament[] = [];
