@@ -1,26 +1,22 @@
-import ms from "ms";
-import VrplPlayerDB, { VrplRegion, VrplPlayer } from "../db/models/vrplPlayer";
+import VrplPlayerDB, { VrplPlayer, VrplRegion } from "../db/models/vrplPlayer";
 import {
   playerCreateRecord,
   playerUpdateRecord,
 } from "./models/records/playerRecords";
-import * as Sentry from "@sentry/node";
 import { v4 as uuidv4 } from "uuid";
 import { recordType } from "./models/records";
 import { storeRecord } from "./logs";
 
 import { APIUser } from "discord-api-types/v9";
-import {
-  cleanNameForChecking,
-  cleanNameFromInput,
-} from "../utils/regex/player";
+import { cleanNameFromInput, isValidEmailRegex } from "../utils/regex/player";
 import { PlayerNicknameHistoryItem } from "../schemas/Player";
-import { BadRequestError } from "../utils/errors";
-import vrplPlayer from "../db/models/vrplPlayer";
+import { BadRequestError, InternalServerError } from "../utils/errors";
+import discord from "../utils/discord";
 
 export async function getPlayerFromId(PlayerId: string) {
   return await VrplPlayerDB.findOne({ id: PlayerId });
 }
+
 export async function getPlayersFromIds(playerIds: string[]) {
   return await VrplPlayerDB.find({ id: { $in: playerIds } });
 }
@@ -73,6 +69,7 @@ export async function updatePlayerDiscordInfo(
   ]);
   return Player;
 }
+
 export async function createPlayerFromDiscordInfo(
   User: APIUser
 ): Promise<VrplPlayer> {
@@ -89,7 +86,7 @@ export async function createPlayerFromDiscordInfo(
     nickname: userName,
     nicknameHistory: [],
     about: `This is the profile of ${User.username}!`,
-    email: User.email,
+    email: User.email.trim().toLowerCase(),
     region: VrplRegion.UNKNOWN,
 
     discordId: User.id,
@@ -179,6 +176,7 @@ export async function updatePlayerBadges(
   ]);
   return player;
 }
+
 export async function updatePlayerName(
   player: VrplPlayer,
   newPlayerName: string,
@@ -232,7 +230,7 @@ export async function setPlayerRegion(
 }
 
 export async function findPlayerBroadly(search: string) {
-  return await VrplPlayerDB.findOne({
+  return VrplPlayerDB.findOne({
     $or: [
       { id: search },
       { discordId: search },
@@ -246,4 +244,62 @@ export async function findPlayerBroadly(search: string) {
       },
     ],
   });
+}
+
+export async function validateEmail(rawEmail: string): Promise<string> {
+  if (!isValidEmailRegex(rawEmail)) throw new BadRequestError("Invalid email");
+  let email = rawEmail.toLowerCase().trim();
+  const foundPlayer = await VrplPlayerDB.findOne({ email: email });
+  if (foundPlayer) throw new BadRequestError("That email is already in use");
+  return email;
+}
+
+export async function updatePlayerEmail(
+  player: VrplPlayer,
+  newEmail: string,
+  performedById: string
+) {
+  const old = player.email;
+  player.email = newEmail;
+  const [updateRes] = await Promise.all([
+    VrplPlayerDB.updateOne(
+      { id: player.id },
+      { $set: { email: newEmail } }
+    ).exec(),
+    storeRecord({
+      v: 1,
+      id: uuidv4(),
+      type: recordType.playerUpdate,
+      userId: performedById,
+      playerId: player.id,
+      timestamp: new Date(),
+      valueChanged: "email",
+      old: old,
+      new: newEmail,
+    }),
+  ]);
+  if (updateRes.matchedCount === 0)
+    throw new InternalServerError("Failed to find player to update");
+  else if (updateRes.modifiedCount === 0)
+    throw new InternalServerError("Failed to update player");
+  return player;
+}
+
+export async function refreshDiscordData(player: VrplPlayer) {
+  const discordUser = await discord.users.fetch(player.discordId);
+  if (!discordUser) throw new BadRequestError("User not found");
+  player.discordTag = discordUser.tag;
+  player.discordAvatar = discordUser.avatar || undefined;
+  player.discordTag = discordUser.tag;
+  await VrplPlayerDB.updateOne(
+    { id: player.id },
+    {
+      $set: {
+        discordTag: player.discordTag,
+        discordAvatar: player.discordAvatar,
+        discordName: player.discordTag,
+      },
+    }
+  );
+  return player;
 }

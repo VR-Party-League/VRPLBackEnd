@@ -1,6 +1,7 @@
 import { AuthChecker } from "type-graphql";
 import { Context } from "..";
 import { VrplPlayer } from "../db/models/vrplPlayer";
+
 export enum Permissions {
   None = 0,
   Admin = 1 << 0, // 0001 -- the bitshift is unnecessary, but done for consistency
@@ -27,6 +28,17 @@ export const userHasPermission = (
 ): boolean => {
   if (bitFieldHas(user.permissions, Permissions.Admin)) return true;
   else if (bitFieldHas(user.permissions, permission)) return true;
+  return false;
+};
+
+export const userHasOneOfPermissions = (
+  user: VrplPlayer,
+  permissions: Permissions[]
+): boolean => {
+  if (bitFieldHas(user.permissions, Permissions.Admin)) return true;
+  for (const permission of permissions) {
+    if (bitFieldHas(user.permissions, permission)) return true;
+  }
   return false;
 };
 export const authChecker: AuthChecker<any, any> = (

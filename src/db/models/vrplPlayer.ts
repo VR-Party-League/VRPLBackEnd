@@ -1,10 +1,12 @@
-import { Schema, model, Document, SchemaTypes } from "mongoose";
+import {Document, model, Schema} from "mongoose";
+import {registerEnumType} from "type-graphql";
 
 // Nickname history
 export interface VrplPlayerNickname {
   nickname: string;
   replacedAt: Date;
 }
+
 // const VrplPlayerNicknameSchema = new Schema<VrplPlayerNickname & Document>({
 //   nickname: String,
 //   replacedAt: Date,
@@ -18,6 +20,11 @@ export enum VrplRegion {
   OCEANIA = "OCEANIA",
   UNKNOWN = "UNKNOWN",
 }
+
+registerEnumType(VrplRegion, {
+  name: "VrplRegion", // this one is mandatory
+});
+
 export interface VrplPlayer {
   id: string;
   nickname: string;

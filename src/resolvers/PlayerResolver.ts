@@ -31,9 +31,12 @@ import {
   getPlayerFromDiscordId,
   getPlayerFromId,
   getPlayerFromNickname,
+  refreshDiscordData,
   setPlayerRegion,
   updatePlayerBadges,
+  updatePlayerEmail,
   updatePlayerName,
+  validateEmail,
 } from "../db/player";
 import { getAllTeamsOfPlayer } from "../db/team";
 import Player from "../schemas/Player";
@@ -43,7 +46,11 @@ import {
   ForbiddenError,
   InternalServerError,
 } from "../utils/errors";
-import { Permissions, userHasPermission } from "../utils/permissions";
+import {
+  Permissions,
+  userHasOneOfPermissions,
+  userHasPermission,
+} from "../utils/permissions";
 import { getAvatar } from "../utils/storage";
 
 @Resolver((_of) => Player)
@@ -60,12 +67,14 @@ export default class {
   async allPlayerIds(): Promise<string[]> {
     return await getAllPlayerIds();
   }
+
   @Query((_returns) => Player, { nullable: true })
   playerFromDiscordId(
     @Arg("discordId") discordId: string
   ): Promise<VrplPlayer | null> {
     return getPlayerFromDiscordId(discordId);
   }
+
   @FieldResolver()
   nicknameHistory(
     @Root() vrplPlayer: VrplPlayer
@@ -77,32 +86,65 @@ export default class {
   teams(@Root() vrplPlayer: VrplPlayer): Promise<VrplTeam[]> {
     return getAllTeamsOfPlayer(vrplPlayer.id);
   }
+  
   @FieldResolver()
   badges(@Root() vrplPlayer: VrplPlayer): Promise<VrplBadge[]> {
     return getBadgesFromBitField(vrplPlayer.badgeField);
   }
-
+  
   @FieldResolver()
   cooldowns(@Root() vrplPlayer: VrplPlayer): Promise<VrplPlayerCooldown[]> {
     return getPlayerCooldowns(vrplPlayer.id);
   }
+  
   @FieldResolver()
   avatar(@Root() vrplPlayer: VrplPlayer): Promise<string | undefined> {
     return getAvatar("player", vrplPlayer.id);
   }
-
+  
   @Authorized()
-  @Query((_returns) => Player, { nullable: true })
+  @FieldResolver()
+  discordId(@Root() vrplPlayer: VrplPlayer, @Ctx() ctx: Context) {
+    const user = ctx.user;
+    if (!user) throw new UnauthorizedError();
+    else if (
+      user.id !== vrplPlayer.id &&
+      !userHasOneOfPermissions(user, [
+        Permissions.ManagePlayers,
+        Permissions.AccessDiscordId,
+      ])
+    )
+      throw new ForbiddenError();
+    return vrplPlayer.discordId;
+  }
+  
+  @Authorized()
+  @Query((_returns) => Player, {nullable: true})
   async findPlayer(
     @Arg("search") search: string,
     @Ctx() ctx: Context
   ): Promise<VrplPlayer | null> {
     const user = ctx.user;
     if (!user) throw new UnauthorizedError();
-
+    
     return await findPlayerBroadly(search);
   }
-
+  
+  @Authorized()
+  @FieldResolver()
+  email(
+    @Root() vrplPlayer: VrplPlayer,
+    @Ctx() ctx: Context
+  ): VrplPlayer["email"] {
+    if (!ctx.user) throw new UnauthorizedError();
+    else if (
+      ctx.user.id !== vrplPlayer.id &&
+      !userHasPermission(ctx.user, Permissions.Admin)
+    )
+      throw new ForbiddenError();
+    return vrplPlayer.email;
+  }
+  
   @Authorized([Permissions.ManageBadges])
   @Mutation((_returns) => Player)
   async addBadgeToPlayer(
@@ -211,11 +253,45 @@ export default class {
     const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
     if (player.id !== user.id && !userHasPerms)
       throw new ForbiddenError("You can't change other players' regions");
-
+  
     if (!Object.keys(VrplRegion).includes(region))
       throw new BadRequestError(
         `Invalid region, options are: ${Object.keys(VrplRegion).join(", ")} `
       );
     return await setPlayerRegion(player, region as VrplRegion);
+  }
+  
+  @Authorized()
+  @Mutation((_returns) => Player)
+  async updateEmail(
+    @Arg("playerId") playerId: string,
+    @Arg("email") email: string,
+    @Ctx() ctx: Context
+  ) {
+    const user = ctx.user;
+    if (!user) throw new UnauthorizedError();
+    const player = await getPlayerFromId(playerId);
+    if (!player) throw new BadRequestError("Player not found");
+    const userHasPerms = userHasPermission(user, Permissions.Admin);
+    if (player.id !== user.id && !userHasPerms)
+      throw new ForbiddenError("You can't change other players' regions");
+    const validEmail = await validateEmail(email);
+    if (!validEmail) throw new BadRequestError("Invalid email address");
+    return await updatePlayerEmail(player, email, user.id);
+  }
+  
+  @Authorized()
+  @Mutation((_returns) => Player)
+  async refreshDiscordData(
+    @Arg("playerId") playerId: string,
+    @Ctx() ctx: Context
+  ): Promise<VrplPlayer> {
+    const user = ctx.user;
+    if (!user) throw new UnauthorizedError();
+    const player = await getPlayerFromId(playerId);
+    if (!player) throw new BadRequestError("Player not found");
+    const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
+    if (player.id !== user.id && !userHasPerms) throw new ForbiddenError();
+    return await refreshDiscordData(player);
   }
 }

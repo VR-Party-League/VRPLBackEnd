@@ -1,5 +1,6 @@
 export const MAX_PLAYER_NAME_LENGTH = 18;
 export const MIN_PLAYER_NAME_LENGTH = 4;
+
 export function cleanNameForChecking(name: string) {
   const newName = name
     .trim()
@@ -21,4 +22,10 @@ export function cleanNameFromInput(name: string) {
     return newName.substring(0, MAX_PLAYER_NAME_LENGTH);
   }
   return newName;
+}
+
+export function isValidEmailRegex(email: string): boolean {
+  const emailRegex =
+    /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return emailRegex.test(email);
 }
