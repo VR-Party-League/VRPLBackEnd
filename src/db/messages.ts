@@ -1,16 +1,15 @@
 import { MessageInput } from "../schemas/Message";
 import MessageModel, {
+  MessageButtonActions,
+  MessageButtonActionTypes,
   vrplMessage,
   vrplMessageButton,
-  MessageButtonActionTypes,
-  MessageButtonActions,
 } from "./models/vrplMessages";
 import { VrplTeamPlayerRole } from "./models/vrplTeam";
 import { getPlayerFromId, howManyOfThesePlayersExist } from "./player";
 import { addPlayerToTeam, getTeamFromId } from "./team";
 import { v4 as uuidv4 } from "uuid";
 import { BadRequestError, InternalServerError } from "../utils/errors";
-import Player from "../schemas/Player";
 import { VrplPlayer } from "./models/vrplPlayer";
 
 async function getMessageFromId(
@@ -209,7 +208,6 @@ export async function readMessagesOfPlayer(
         .limit(limit)
     ).map((message) => message.id);
 
-  console.log("toUpdateIds", toUpdateIds);
   const res = await MessageModel.updateMany(
     {
       id: { $in: toUpdateIds },
@@ -220,7 +218,6 @@ export async function readMessagesOfPlayer(
       $set: { readAt: new Date() },
     }
   );
-  console.log("res", res);
   return res;
 }
 

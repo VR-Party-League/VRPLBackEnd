@@ -8,7 +8,7 @@ import {
 } from "../../utils/authentication/discord";
 import { newApiToken } from "../../db/apiKeys";
 import axios from "axios";
-import { APIUser, RESTPostOAuth2AccessTokenResult } from "discord-api-types/v9";
+import { RESTPostOAuth2AccessTokenResult } from "discord-api-types/v9";
 import {
   createPlayerFromDiscordInfo,
   getPlayerFromDiscordId,
@@ -39,6 +39,7 @@ import {
   OculusUser,
 } from "../../utils/authentication/oculus";
 import { VrplPlayer } from "../../db/models/vrplPlayer";
+
 const router = Router();
 
 const cookieName = "refresh_token";
@@ -98,7 +99,6 @@ router.get("/discord/callback", async (req, res) => {
       player = await createPlayerFromDiscordInfo(user);
     }
     const data = await generateNewRefreshToken(player, req.ip);
-    if (!data.success) throw new Error(data.error);
     res
       .cookie(cookieName, data.refreshToken, cookieSettings)
       .redirect(frontEndUrl);
@@ -106,12 +106,12 @@ router.get("/discord/callback", async (req, res) => {
     // NOTE: An unauthorized token will not throw an error;
     // it will return a 401 Unauthorized response in the try block above
     const time = new Date().toISOString();
-    console.log(time);
+    console.error(time);
     console.trace();
     console.error(error);
     Sentry.captureException(error);
     res.status(500).send({
-      message: `Error, PLEASE contact Fish#2455 if you see this and give him the time`,
+      message: `Error, PLEASE contact Fish#2455 if you see this and give him the time! Love you!`,
       time: time,
     });
   }
@@ -136,9 +136,11 @@ router.get("/logout", async (req, res) => {
   res.status(200);
   res.send({ message: "Cleared cookie!" });
 });
+
 router.get("/oculus", async (req, res) => {
   res.redirect(getOculusAuthUrl());
 });
+
 router.get("/oculus/callback", async (req, res) => {
   res.status(200).send(`
 <h1 id="waiting">Please wait a sec, <3</h1>
@@ -155,6 +157,7 @@ el.innerHTML = '<a href=\"${getBaseRedirect()}/api/auth/oculus/callback/'+hash.s
 }</script>
 `);
 });
+
 router.get("/oculus/callback/:data", async (req, res) => {
   let data: OculusRawData;
   try {
@@ -205,13 +208,9 @@ router.get("/", async (req, res) => {
         getPlayerFromId(decoded.sub),
       ]);
       if (!token)
-        return res.status(500).send({
-          message: "Refresh token doesn't exist!? pls send to Fish#2455",
-          token: token,
-          refreshToken: req.cookies[cookieName],
-          player: player,
-          decoded: decoded,
-        });
+        return res
+          .status(400)
+          .send({ message: "Invalid or expired refresh token" });
       else if (token.userId !== decoded.sub)
         return res.status(500).send({
           message: "Refresh token has invalid user id!? pls send to Fish#2455",

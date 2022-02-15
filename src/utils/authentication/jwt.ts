@@ -1,4 +1,4 @@
-import { NextFunction, RequestHandler, response, request } from "express";
+import { NextFunction, request, response } from "express";
 import { getUserFromKey } from "../../db/apiKeys";
 import { getPlayerFromId } from "../../db/player";
 import jwt from "jsonwebtoken";
@@ -77,6 +77,7 @@ export const Authenticate: (
 };
 
 export const refreshTokenExpireIn: string = "60d";
+
 export function createRefreshToken(player: VrplPlayer) {
   return jwt.sign(
     { sub: player.id },
@@ -86,7 +87,9 @@ export function createRefreshToken(player: VrplPlayer) {
     }
   );
 }
+
 export const accessTokenExpireIn: string = "30m";
+
 export function createAccessToken(player: VrplPlayer) {
   return jwt.sign(
     { sub: player.id },

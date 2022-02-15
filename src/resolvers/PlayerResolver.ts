@@ -86,22 +86,22 @@ export default class {
   teams(@Root() vrplPlayer: VrplPlayer): Promise<VrplTeam[]> {
     return getAllTeamsOfPlayer(vrplPlayer.id);
   }
-  
+
   @FieldResolver()
   badges(@Root() vrplPlayer: VrplPlayer): Promise<VrplBadge[]> {
     return getBadgesFromBitField(vrplPlayer.badgeField);
   }
-  
+
   @FieldResolver()
   cooldowns(@Root() vrplPlayer: VrplPlayer): Promise<VrplPlayerCooldown[]> {
     return getPlayerCooldowns(vrplPlayer.id);
   }
-  
+
   @FieldResolver()
   avatar(@Root() vrplPlayer: VrplPlayer): Promise<string | undefined> {
     return getAvatar("player", vrplPlayer.id);
   }
-  
+
   @Authorized()
   @FieldResolver()
   discordId(@Root() vrplPlayer: VrplPlayer, @Ctx() ctx: Context) {
@@ -117,19 +117,19 @@ export default class {
       throw new ForbiddenError();
     return vrplPlayer.discordId;
   }
-  
+
   @Authorized()
-  @Query((_returns) => Player, {nullable: true})
+  @Query((_returns) => Player, { nullable: true })
   async findPlayer(
     @Arg("search") search: string,
     @Ctx() ctx: Context
   ): Promise<VrplPlayer | null> {
     const user = ctx.user;
     if (!user) throw new UnauthorizedError();
-    
+
     return await findPlayerBroadly(search);
   }
-  
+
   @Authorized()
   @FieldResolver()
   email(
@@ -144,7 +144,7 @@ export default class {
       throw new ForbiddenError();
     return vrplPlayer.email;
   }
-  
+
   @Authorized([Permissions.ManageBadges])
   @Mutation((_returns) => Player)
   async addBadgeToPlayer(
@@ -253,14 +253,14 @@ export default class {
     const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
     if (player.id !== user.id && !userHasPerms)
       throw new ForbiddenError("You can't change other players' regions");
-  
+
     if (!Object.keys(VrplRegion).includes(region))
       throw new BadRequestError(
         `Invalid region, options are: ${Object.keys(VrplRegion).join(", ")} `
       );
     return await setPlayerRegion(player, region as VrplRegion);
   }
-  
+
   @Authorized()
   @Mutation((_returns) => Player)
   async updateEmail(
@@ -279,7 +279,7 @@ export default class {
     if (!validEmail) throw new BadRequestError("Invalid email address");
     return await updatePlayerEmail(player, email, user.id);
   }
-  
+
   @Authorized()
   @Mutation((_returns) => Player)
   async refreshDiscordData(
