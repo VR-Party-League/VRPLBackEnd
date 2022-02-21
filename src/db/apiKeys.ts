@@ -95,7 +95,7 @@ export async function newApiToken(user: VrplPlayer) {
     }
   }
   apiKeyCache.set(token.apiToken, token);
-  return apiKeyCache.get(token.apiToken);
+  return token;
 }
 
 // Function that removes a users api key from the database and cache
