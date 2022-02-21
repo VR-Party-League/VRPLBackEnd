@@ -116,13 +116,15 @@ router.get("/discord/callback", async (req, res) => {
     });
   }
 });
-router.get("/botToken", async (req, res) => {
+router.post("/botToken", async (req, res) => {
   if (!req.user) return res.status(401).send({ message: "Unauthorized" });
   const user = req.user;
   const apiKey = await newApiToken(user);
   res.status(201).send({
     key: apiKey,
-    message: `Treat this key with care ${user.discordTag}, anyone that has it can access your whole account!\nWhen you generate a new key by going to this url again, the old key will be deleted.`,
+    message: `Treat this key with care, ${user.nickname}, anyone that has it can access your whole account!
+When you generate a new key this one key will be deactivated.
+To use it set the 'Authorization' header to 'Token ${apiKey.apiToken}' on any request.`,
   });
 });
 

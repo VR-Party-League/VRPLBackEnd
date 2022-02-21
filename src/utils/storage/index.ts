@@ -20,6 +20,7 @@ export const containerClient =
 // TODO: Does this need to cache everything? or was i being dummy again
 let allBlobs = new Set<string>();
 let lastBlobRefresh = 0;
+
 export async function refreshAllAvatars() {
   if (lastBlobRefresh + ms("6h") < Date.now()) {
     lastBlobRefresh = Date.now();
@@ -37,14 +38,17 @@ export interface avatarData {
   createdAt: number;
   url: string;
 }
+
 const avatarCache = new Map<string, avatarData>();
 
 function createPlayerBlobName(userId: string): string {
   return `players/${userId}.png`;
 }
+
 function createTeamBlobName(tournamentId: string, teamId: string): string {
   return `tournaments/${tournamentId}/teams/${teamId}.png`;
 }
+
 function createBlobName(forWho: "team", id: string, tourneyId: string): string;
 function createBlobName(forWho: "player", id: string): string;
 function createBlobName(
@@ -92,10 +96,8 @@ export async function getAvatar(
   if (!foundItem || foundItem.createdAt + ms("1d") < Date.now()) {
     const url = await fetchAvatar(blobName);
     avatarCache.set(blobName, { createdAt: Date.now(), url: url });
-    console.log("Fetched item", url);
     return url;
   }
-  console.log("Cached item", foundItem.url, foundItem);
   return foundItem.url;
 }
 

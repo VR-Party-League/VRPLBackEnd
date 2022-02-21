@@ -1,8 +1,9 @@
-import { Field, InputType, Int, ObjectType } from "type-graphql";
+import { Field, ObjectType } from "type-graphql";
 import Match from "./Match";
 import Player from "./Player";
 import { TeamPlayer } from "./TeamPlayer";
 import Tournament from "./Tournament";
+import { VrplTeam } from "../db/models/vrplTeam";
 
 @ObjectType("Team")
 export default class Team {
@@ -47,6 +48,28 @@ export default class Team {
       "The matches of the team that should be displayed on their profile",
   })
   matches: Match[];
-  //@Field((type) => [Tournament], { description: "An array of players" })
-  //tournament!: Tournament[];
+
+  @Field((_type) => Socials, { description: "An array of team socials" })
+  socials: VrplTeam["socials"];
+}
+
+@ObjectType("Socials")
+export class Socials {
+  @Field({ nullable: true })
+  discord?: string;
+
+  @Field({ nullable: true })
+  twitter?: string;
+
+  @Field({ nullable: true })
+  youtube?: string;
+
+  // @Field({ nullable: true })
+  // instagram?: string;
+
+  @Field({ nullable: true })
+  twitch?: string;
+
+  // @Field({ nullable: true })
+  // facebook?: string;
 }

@@ -1,5 +1,4 @@
-import { Schema, model, Document } from "mongoose";
-import { VrplPlayer } from "./vrplPlayer";
+import { Document, model, Schema } from "mongoose";
 
 export enum VrplTeamPlayerRole {
   Captain = 0,
@@ -27,8 +26,27 @@ export interface VrplTeam {
   wins: number;
   losses: number;
   ties: number;
+
+  socials: {
+    discord?: string;
+    twitter?: string;
+    youtube?: string;
+    // instagram?: string;
+    twitch?: string;
+    // facebook?: string;
+  };
 }
 
+export const supportedSocialPlatforms = [
+  "discord",
+  "twitter",
+  "youtube",
+  "instagram",
+  "twitch",
+  "facebook",
+];
+
+export type SocialPlatform = keyof VrplTeam["socials"];
 // TODO: team socials
 
 // TODO: Whats text indexing, is it useful?
@@ -54,6 +72,7 @@ const TeamSchema = new Schema<VrplTeam & Document>(
     wins: Number,
     losses: Number,
     ties: Number,
+    socials: Object,
   },
   { collection: "teams" }
 );

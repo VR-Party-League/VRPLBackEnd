@@ -55,9 +55,8 @@ export default class Player {
   })
   discordId: string;
 
-  @Authorized()
   @Field({
-    description: "The player's discord Tag, needs authorization",
+    description: "The player's discord Tag",
     nullable: false,
   })
   discordTag: string;
