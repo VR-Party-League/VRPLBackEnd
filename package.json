@@ -15,7 +15,7 @@
     "@types/jsonwebtoken": "^8.5.4",
     "@types/lodash": "^4.14.179",
     "@types/multer": "^1.4.7",
-    "@types/sharp": "^0.29.1",
+    "@types/sharp": "^0.29.5",
     "apollo-server": "^3.6.3",
     "axios": "^0.21.1",
     "body-parser": "^1.19.2",
