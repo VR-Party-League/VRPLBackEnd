@@ -982,10 +982,10 @@ dicer@0.2.5:
     readable-stream "1.1.x"
     streamsearch "0.1.2"
 
-discord-api-types@^0.22.0:
-  version "0.22.0"
-  resolved "https://registry.yarnpkg.com/discord-api-types/-/discord-api-types-0.22.0.tgz#34dc57fe8e016e5eaac5e393646cd42a7e1ccc2a"
-  integrity sha512-l8yD/2zRbZItUQpy7ZxBJwaLX/Bs2TGaCthRppk8Sw24LOIWg12t9JEreezPoYD0SQcC2htNNo27kYEpYW/Srg==
+discord-api-types@^0.28.0:
+  version "0.28.0"
+  resolved "https://registry.yarnpkg.com/discord-api-types/-/discord-api-types-0.28.0.tgz#59c4a3649d5bad0d3dd4684f595dc5ade79c30a5"
+  integrity sha512-Gi36pbzV+2j0q/XPlDJEgX/R+wogLxU2BZFvfTMUHHAQYXqwvqj4iZP5YUGOfKimmJc79rDRrtSPUGz2t4S4GQ==
 
 discord.js@^12.5.3:
   version "12.5.3"
