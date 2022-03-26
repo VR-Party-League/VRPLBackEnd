@@ -8,7 +8,9 @@ import ms from "ms";
 
 const AZURE_STORAGE_CONNECTION_STRING = process.env
   .AZURE_STORAGE_CONNECTION_STRING as string;
-
+if (!AZURE_STORAGE_CONNECTION_STRING) {
+  throw new Error("AZURE_STORAGE_CONNECTION_STRING is not set");
+}
 const blobServiceClient = BlobServiceClient.fromConnectionString(
   AZURE_STORAGE_CONNECTION_STRING
 );

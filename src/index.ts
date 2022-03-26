@@ -38,6 +38,7 @@ import MessageResolver from "./resolvers/MessageResolver";
 import MessageButtonResolver from "./resolvers/MessageButtonResolver";
 
 dotenv.config({});
+
 // import fs from "fs";
 // import https from "https";
 // const key = fs.readFileSync(
@@ -172,7 +173,7 @@ async function bootstrap() {
     }
     next();
   });
-  
+
   app.use(Authenticate);
 
   server.applyMiddleware({ app, cors: corsOptions });
