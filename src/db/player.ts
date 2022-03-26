@@ -303,3 +303,33 @@ export async function refreshDiscordData(player: VrplPlayer) {
   );
   return player;
 }
+
+export async function updatePlayerAbout(
+  player: VrplPlayer,
+  newAbout: string,
+  performedById: string
+) {
+  const old = player.about;
+  player.about = newAbout;
+  const updatePromise = VrplPlayerDB.updateOne(
+    { id: player.id },
+    { $set: { about: player.about } }
+  );
+  const recPromise = storeRecord({
+    v: 1,
+    id: uuidv4(),
+    type: recordType.playerUpdate,
+    userId: performedById,
+    playerId: player.id,
+    timestamp: new Date(),
+    valueChanged: "about",
+    old: old,
+    new: newAbout,
+  });
+  const [updateRes, recRes] = await Promise.all([updatePromise, recPromise]);
+  if (updateRes.matchedCount === 0)
+    throw new InternalServerError("Failed to find player to update");
+  else if (updateRes.modifiedCount === 0)
+    throw new InternalServerError("Failed to update player");
+  return player;
+}

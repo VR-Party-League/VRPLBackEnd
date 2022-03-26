@@ -225,6 +225,7 @@ input MessageInput {
 
 type Mutation {
   addBadgeToPlayer(bitPosition: Int!, playerId: String!): Player!
+  changePlayerAbout(about: String!, playerId: String!): Player!
   changePlayerName(newName: String!, playerId: String!): Player!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
   changeTeamName(newName: String!, teamId: String!, tournamentId: String!): Team!

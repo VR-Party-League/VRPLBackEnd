@@ -33,6 +33,7 @@ import {
   getPlayerFromNickname,
   refreshDiscordData,
   setPlayerRegion,
+  updatePlayerAbout,
   updatePlayerBadges,
   updatePlayerEmail,
   updatePlayerName,
@@ -293,5 +294,26 @@ export default class {
     const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
     if (player.id !== user.id && !userHasPerms) throw new ForbiddenError();
     return await refreshDiscordData(player);
+  }
+
+  @Authorized()
+  @Mutation((_returns) => Player)
+  async changePlayerAbout(
+    @Arg("playerId") playerId: string,
+    @Arg("about") about: string,
+    @Ctx() ctx: Context
+  ) {
+    const user = ctx.user;
+    if (!user) throw new UnauthorizedError();
+    const player = await getPlayerFromId(playerId);
+    if (!player) throw new BadRequestError("Player not found");
+    const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
+    if (player.id !== user.id && !userHasPerms) throw new ForbiddenError();
+    else if (about.length > 4000)
+      throw new BadRequestError(
+        "About text can't be longer than 4000 characters"
+      );
+
+    return await updatePlayerAbout(player, about, user.id);
   }
 }
