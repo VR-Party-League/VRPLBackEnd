@@ -1,4 +1,7 @@
 import dotenv from "dotenv";
+
+dotenv.config({});
+
 import "reflect-metadata";
 // Graphql/Express
 import express from "express";
@@ -36,8 +39,6 @@ import { PlayerCooldownResolver } from "./resolvers/CooldownResolver";
 import SiteSettingsResolver from "./resolvers/SiteSettingsResolver";
 import MessageResolver from "./resolvers/MessageResolver";
 import MessageButtonResolver from "./resolvers/MessageButtonResolver";
-
-dotenv.config({});
 
 // import fs from "fs";
 // import https from "https";
