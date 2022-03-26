@@ -41,9 +41,9 @@ export const supportedSocialPlatforms = [
   "discord",
   "twitter",
   "youtube",
-  "instagram",
+  // "instagram",
   "twitch",
-  "facebook",
+  // "facebook",
 ];
 
 export type SocialPlatform = keyof VrplTeam["socials"];
@@ -72,7 +72,18 @@ const TeamSchema = new Schema<VrplTeam & Document>(
     wins: Number,
     losses: Number,
     ties: Number,
-    socials: Object,
+    socials: {
+      type: {
+        discord: String,
+        twitter: String,
+        youtube: String,
+        // instagram?: String,
+        twitch: String,
+        // facebook?: String,
+      },
+      required: true,
+      default: {},
+    },
   },
   { collection: "teams" }
 );

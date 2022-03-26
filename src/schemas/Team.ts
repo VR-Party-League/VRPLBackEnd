@@ -1,4 +1,4 @@
-import { Field, ObjectType } from "type-graphql";
+import { Field, Int, ObjectType } from "type-graphql";
 import Match from "./Match";
 import Player from "./Player";
 import { TeamPlayer } from "./TeamPlayer";
@@ -29,18 +29,18 @@ export default class Team {
   @Field((_type) => Date, { description: "The date this team was created" })
   createdAt: Date;
 
-  @Field({ description: "The amount of games played" })
+  @Field((_type) => Int, { description: "The amount of games played" })
   gp: number;
 
-  @Field({ description: "The amount of games won" })
+  @Field((_type) => Int, { description: "The amount of games won" })
   wins: number;
 
-  @Field({
+  @Field((_type) => Int, {
     description: "The amount of games [insert a form of 'losing' here]",
   })
   losses: number;
 
-  @Field({ description: "The amount of games tied" })
+  @Field((_type) => Int, { description: "The amount of games tied" })
   ties: number;
 
   @Field((_type) => [Match], {

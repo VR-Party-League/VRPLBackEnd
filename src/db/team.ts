@@ -20,8 +20,8 @@ import {CompletedVrplMatch} from "./models/vrplMatch";
 import {VrplTournament} from "./models/vrplTournaments";
 import {BadRequestError, InternalServerError} from "../utils/errors";
 import {createMessages} from "./messages";
-import {MessageButtonActionTypes} from "./models/vrplMessages";
-import {VrplPlayer} from "./models/vrplPlayer";
+import { MessageButtonActionTypes } from "./models/vrplMessages";
+import { VrplPlayer } from "./models/vrplPlayer";
 import { getPlayersFromIds } from "./player";
 import _ from "lodash";
 import {
@@ -35,7 +35,7 @@ import {
 
 // TODO: Test this really does return an array, and not a cursor or whatever
 export async function getTeamsOfTournament(tournamentId: string) {
-  return VrplTeamDB.find({tournamentId: tournamentId}).exec();
+  return VrplTeamDB.find({ tournamentId: tournamentId }).exec();
 }
 
 export async function getTeamFromId(tournamentId: string, teamId: string) {
@@ -76,10 +76,12 @@ export async function getTeamsFromIds(tournamentId: string, teamIds: string[]) {
 //   return response;
 // }
 export async function getTeamFromName(tournamentId: string, TeamName: string) {
-  return await VrplTeamDB.findOne({
+  return VrplTeamDB.findOne({
     tournamentId: tournamentId,
     name: { $regex: new RegExp(`${_.escapeRegExp(TeamName)}`, "gi") },
-  }).maxTimeMS(1000);
+  })
+    .maxTimeMS(500)
+    .exec();
 }
 
 export async function deleteTeam(

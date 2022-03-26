@@ -1,22 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config({});
-// import fs from "fs";
-// import https from "https";
-// const key = fs.readFileSync(
-//   "/home/fish/code/cert/CA/localhost/localhost.decrypted.key"
-// );
-// const cert = fs.readFileSync("/home/fish/code/cert/CA/localhost/localhost.crt");
-
 import "reflect-metadata";
-
-const PORT = process.env.PORT || 3001;
-export const frontEndUrl =
-  process.env.NODE_ENV === "production"
-    ? "https://vrpl.vercel.app"
-    : "http://localhost:3000";
-export const frontEndDomain =
-  process.env.NODE_ENV === "production" ? "vrpl.vercel.app" : "localhost";
-
 // Graphql/Express
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
@@ -24,17 +7,6 @@ import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-co
 import { buildSchema } from "type-graphql";
 import { CustomError } from "./utils/errors";
 import { VrplPlayer } from "./db/models/vrplPlayer";
-declare global {
-  namespace Express {
-    export interface Request {
-      user: VrplPlayer | undefined;
-    }
-  }
-}
-export interface Context {
-  user?: VrplPlayer;
-}
-
 //Sentry
 import * as Sentry from "@sentry/node";
 import * as Tracing from "@sentry/tracing";
@@ -64,6 +36,34 @@ import { PlayerCooldownResolver } from "./resolvers/CooldownResolver";
 import SiteSettingsResolver from "./resolvers/SiteSettingsResolver";
 import MessageResolver from "./resolvers/MessageResolver";
 import MessageButtonResolver from "./resolvers/MessageButtonResolver";
+
+dotenv.config({});
+// import fs from "fs";
+// import https from "https";
+// const key = fs.readFileSync(
+//   "/home/fish/code/cert/CA/localhost/localhost.decrypted.key"
+// );
+// const cert = fs.readFileSync("/home/fish/code/cert/CA/localhost/localhost.crt");
+
+const PORT = process.env.PORT || 3001;
+export const frontEndUrl =
+  process.env.NODE_ENV === "production"
+    ? "https://vrpl.vercel.app"
+    : "http://localhost:3000";
+export const frontEndDomain =
+  process.env.NODE_ENV === "production" ? "vrpl.vercel.app" : "localhost";
+
+declare global {
+  namespace Express {
+    export interface Request {
+      user: VrplPlayer | undefined;
+    }
+  }
+}
+
+export interface Context {
+  user?: VrplPlayer;
+}
 
 async function bootstrap() {
   try {
@@ -172,6 +172,7 @@ async function bootstrap() {
     }
     next();
   });
+  
   app.use(Authenticate);
 
   server.applyMiddleware({ app, cors: corsOptions });

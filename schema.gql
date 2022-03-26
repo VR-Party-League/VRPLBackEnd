@@ -240,11 +240,11 @@ type Mutation {
   refreshDiscordData(playerId: String!): Player!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
   removePlayersFromTeam(playerIds: [String!]!, teamId: String!, tournamentId: String!): Team!
-    removeSocialAccountFromTeam(platform: String!, teamId: String!, tournamentId: String!): Team!
-    setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
-    setPlayerRegion(playerId: String!, region: String!): Player!
-    setSocialAccountForTeam(code: String!, platform: String!, teamId: String!, tournamentId: String!): Team!
-    submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
+  removeSocialAccountFromTeam(platform: String!, teamId: String!, tournamentId: String!): Team!
+  setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
+  setPlayerRegion(playerId: String!, region: String!): Player!
+  setSocialAccountForTeam(code: String!, platform: String!, teamId: String!, tournamentId: String!): Team!
+  submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
   transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
   updateEmail(email: String!, playerId: String!): Player!
   updateSettingValue(key: String!, value: String!): SiteSettings!
@@ -276,7 +276,7 @@ type Player {
   """The player's discord ID, only accessible to admins and mods"""
   discordId: String!
 
-    """The player's discord Tag"""
+  """The player's discord Tag"""
   discordTag: String!
 
   """The player's email"""
@@ -367,61 +367,61 @@ type SiteSettings {
   """
   type: String!
 
-    """The settings value (as a string)"""
-    value: String!
+  """The settings value (as a string)"""
+  value: String!
 
-    """
-    If anyone has one of the permissions in this bitfield they are able to view it (defaults to allowing)
-    """
-    viewPerms: Float
+  """
+  If anyone has one of the permissions in this bitfield they are able to view it (defaults to allowing)
+  """
+  viewPerms: Float
 }
 
 type Socials {
-    discord: String
-    twitch: String
-    twitter: String
-    youtube: String
+  discord: String
+  twitch: String
+  twitter: String
+  youtube: String
 }
 
 type Team {
-    """The team avatar"""
-    avatar: String
+  """The team avatar"""
+  avatar: String
 
-    """The date this team was created"""
-    createdAt: Timestamp!
+  """The date this team was created"""
+  createdAt: Timestamp!
 
-    """The amount of games played"""
-    gp: Float!
+  """The amount of games played"""
+  gp: Int!
 
   """The unique team id"""
   id: String!
 
   """The amount of games [insert a form of 'losing' here]"""
-  losses: Float!
+  losses: Int!
 
-    """The matches of the team that should be displayed on their profile"""
-    matches: [Match!]!
+  """The matches of the team that should be displayed on their profile"""
+  matches: [Match!]!
 
-    """The unique team name"""
-    name: String!
+  """The unique team name"""
+  name: String!
 
-    """The owner of the team, this player holds the permissions"""
-    owner: Player!
+  """The owner of the team, this player holds the permissions"""
+  owner: Player!
 
-    """An array of team socials"""
-    socials: Socials!
+  """An array of team socials"""
+  socials: Socials!
 
-    """An array of team players"""
-    teamPlayers: [TeamPlayer!]!
+  """An array of team players"""
+  teamPlayers: [TeamPlayer!]!
 
-    """The amount of games tied"""
-    ties: Float!
+  """The amount of games tied"""
+  ties: Int!
 
-    """The unique team name"""
-    tournament: Tournament!
+  """The unique team name"""
+  tournament: Tournament!
 
   """The amount of games won"""
-  wins: Float!
+  wins: Int!
 }
 
 type TeamPlayer {
