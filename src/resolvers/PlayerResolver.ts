@@ -309,9 +309,9 @@ export default class {
     if (!player) throw new BadRequestError("Player not found");
     const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
     if (player.id !== user.id && !userHasPerms) throw new ForbiddenError();
-    else if (about.length > 4000)
+    else if (about.length > 1500)
       throw new BadRequestError(
-        "About text can't be longer than 4000 characters"
+        "About text can't be longer than 1500 characters"
       );
 
     return await updatePlayerAbout(player, about, user.id);
