@@ -1,5 +1,4 @@
 import { Field, InputType, Int, ObjectType } from "type-graphql";
-import Player from "./Player";
 import Team from "./Team";
 import Tournament from "./Tournament";
 
@@ -12,6 +11,11 @@ export default class Match {
   @Field({ description: "The tournament" })
   tournament: Tournament;
 
+  @Field((_type) => [Int], {
+    description: "The seeds of the teams that will be playing in this match",
+  })
+  seeds: number[];
+
   @Field((_type) => [Team], { description: "The teams playing the match" })
   teams: [Team];
 
@@ -22,6 +26,12 @@ export default class Match {
   timeDeadline: Date;
 
   // Submitted match information
+  @Field((_type) => [Int], {
+    description: "The seeds of the teams that have confirmed the scores",
+    nullable: true,
+  })
+  seedsConfirmed: number[];
+
   @Field((_type) => [Team], {
     description: "The teams that have confirmed the scores",
     nullable: true,
@@ -36,6 +46,18 @@ export default class Match {
 
   @Field({ description: "The time the score was submitted", nullable: true })
   timeSubmitted: Date;
+
+  @Field((_type) => Team, {
+    description: "The team who submitted the match",
+    nullable: true,
+  })
+  submitter: Team;
+
+  @Field((_type) => Int, {
+    description: "The seed of the team who submitted the match",
+    nullable: true,
+  })
+  submitterSeed: number;
 
   @Field({
     description: "If set to true the match is a forfeit",
@@ -64,13 +86,6 @@ export default class Match {
     nullable: true,
   })
   losers: [Team];
-
-  @Field((_type) => Team, {
-    description: "The team who submitted the match",
-    nullable: true,
-  })
-  submitter: Team
-  
 }
 
 @InputType()

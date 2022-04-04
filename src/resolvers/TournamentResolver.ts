@@ -2,15 +2,21 @@ import {
   Arg,
   Authorized,
   Ctx,
+  Field,
   FieldResolver,
+  Int,
   Mutation,
+  ObjectType,
   Query,
   Resolver,
   Root,
 } from "type-graphql";
 import { Context } from "..";
 import { getGameById } from "../db/game";
-import { getMatchFromId } from "../db/match";
+import {
+  getCurrentMatchesOfTournament,
+  getMatchesOfTournament,
+} from "../db/match";
 import { VrplGame } from "../db/models/vrplGame";
 import { VrplMatch } from "../db/models/vrplMatch";
 import { VrplTeam, VrplTeamPlayerRole } from "../db/models/vrplTeam";
@@ -19,11 +25,13 @@ import { getPlayerFromId } from "../db/player";
 import {
   addPlayerToTeam,
   createTeam,
-  getTeamFromId,
   getTeamFromName,
   getTeamsOfTournament,
+  seedAllTeams,
+  unSeedAllTeams,
 } from "../db/team";
 import {
+  generateRoundRobinForTournament,
   getAllTournaments,
   getTournamentFromId,
   getTournamentFromName,
@@ -40,45 +48,33 @@ import { Permissions, userHasPermission } from "../utils/permissions";
 @Resolver((_of) => Tournament)
 export default class {
   @Query((_returns) => Tournament, { nullable: true })
-  async tournamentFromId(@Arg("id") id: string): Promise<Tournament | null> {
+  async tournamentFromId(@Arg("id") id: string) {
     const rawTournament = await getTournamentFromId(id);
-    if (rawTournament) return Object.assign(new Tournament(), rawTournament);
-    return null;
+    return rawTournament;
   }
+
   @Query((_returns) => Tournament, { nullable: true })
-  async tournamentFromName(
-    @Arg("name") name: string
-  ): Promise<Tournament | null> {
+  async tournamentFromName(@Arg("name") name: string) {
     const rawTournament = await getTournamentFromName(name);
-    if (rawTournament) return Object.assign(new Tournament(), rawTournament);
-    return null;
+    return rawTournament;
   }
+
   @Query((_returns) => [Tournament], { nullable: false })
-  async allTournaments(): Promise<Tournament[]> {
+  async allTournaments() {
     const rawTournaments = await getAllTournaments();
-    return rawTournaments.map((rawTournament) =>
-      Object.assign(new Tournament(), rawTournament)
-    );
+    return rawTournaments;
   }
 
   @FieldResolver()
   async matches(@Root() vrplTournament: VrplTournament): Promise<VrplMatch[]> {
-    return Promise.all(
-      vrplTournament.matchIds.map(
-        async (id) => (await getMatchFromId(vrplTournament.id, id))!
-      )
-    );
+    return getMatchesOfTournament(vrplTournament.id);
   }
+
   @FieldResolver()
   async currentMatches(
     @Root() vrplTournament: VrplTournament
   ): Promise<VrplMatch[] | undefined> {
-    if (!vrplTournament.currentMatchIds) return undefined;
-    return Promise.all(
-      vrplTournament.currentMatchIds?.map(
-        async (id) => (await getMatchFromId(vrplTournament.id, id))!
-      )
-    );
+    return getCurrentMatchesOfTournament(vrplTournament.id);
   }
 
   @FieldResolver()
@@ -137,7 +133,60 @@ export default class {
         VrplTeamPlayerRole.Captain
       );
     }
-
     return createdTeamRes;
   }
+
+  @Authorized([Permissions.ManageTournaments])
+  @Query((_returns) => draftRoundRobin, { nullable: false })
+  async getDraftRoundRobin(
+    @Arg("tournamentId") tournamentId: string,
+    @Arg("rounds", (_type) => Int) rounds: number,
+    @Arg("offset", (_type) => Int, { nullable: true }) offset?: number
+  ) {
+    const tournament = await getTournamentFromId(tournamentId);
+    if (!tournament) throw new BadRequestError("Tournament not found");
+    const draft = await generateRoundRobinForTournament(
+      tournament,
+      rounds,
+      offset
+    );
+    return draft;
+  }
+
+  @Authorized([Permissions.ManageTournaments])
+  @Mutation((_returns) => [Team])
+  async seedsTeamsForTournament(
+    @Arg("tournamentId") tournamentId: string,
+    @Ctx() ctx: Context
+  ) {
+    const { user } = ctx;
+    if (!user) throw new UnauthorizedError();
+    const tournament = await getTournamentFromId(tournamentId);
+    if (!tournament) throw new BadRequestError("Tournament not found");
+    const teams = await seedAllTeams(tournament, user.id);
+    return teams;
+  }
+
+  @Authorized([Permissions.ManageTournaments])
+  @Mutation((_returns) => [Team])
+  async unSeedTeamsForTournament(
+    @Arg("tournamentId") tournamentId: string,
+    @Ctx() ctx: Context
+  ) {
+    const { user } = ctx;
+    if (!user) throw new UnauthorizedError();
+    const tournament = await getTournamentFromId(tournamentId);
+    if (!tournament) throw new BadRequestError("Tournament not found");
+    const teams = await unSeedAllTeams(tournament, user.id);
+    return teams;
+  }
+}
+
+@ObjectType()
+class draftRoundRobin {
+  @Field((_type) => [[[Team]]])
+  matchups: VrplTeam[][][];
+
+  @Field((_type) => [[[Int]]])
+  seeds: number[][][];
 }

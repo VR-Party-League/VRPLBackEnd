@@ -17,24 +17,28 @@ import {
   submitMatch,
 } from "../db/match";
 import {
+  isCompleted,
+  isSubmitted,
   SubmittedVrplMatch,
   VrplMatch,
-  isSubmitted,
 } from "../db/models/vrplMatch";
-import { VrplTeam } from "../db/models/vrplTeam";
+import { isSeededVrplTeam, VrplTeam } from "../db/models/vrplTeam";
 import { VrplTournament } from "../db/models/vrplTournaments";
-import { getTeamFromId, getTeamFromName } from "../db/team";
+import {
+  getTeamFromId,
+  getTeamFromSeed,
+  getTeamsFromIds,
+  getTeamsFromSeeds,
+} from "../db/team";
 import { getTournamentFromId } from "../db/tournaments";
 import {
   BadRequestError,
   ForbiddenError,
   InternalServerError,
 } from "../utils/errors";
-import { userHasPermission } from "../utils/permissions";
+import { Permissions, userHasPermission } from "../utils/permissions";
 import Match, { MatchScoreInput } from "../schemas/Match";
-import { Permissions } from "../utils/permissions";
 import { Context } from "..";
-import Team from "../schemas/Team";
 import ms from "ms";
 
 @Resolver((_of) => Match)
@@ -53,7 +57,6 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("matchId") matchId: string
   ): Promise<VrplMatch | null> {
-    tournamentId;
     return getMatchFromId(tournamentId, matchId);
   }
 
@@ -64,10 +67,19 @@ export default class {
 
   @FieldResolver()
   teams(@Root() vrplMatch: VrplMatch): Promise<VrplTeam[]> {
-    return Promise.all(
-      vrplMatch.teamIds.map(
-        async (id) => (await getTeamFromId(vrplMatch.tournamentId, id))!
-      )
+    const seeds = vrplMatch.teamSeeds;
+    return getTeamsFromSeeds(vrplMatch.tournamentId, seeds);
+  }
+
+  @FieldResolver()
+  async submitter(
+    @Root() vrplMatch: SubmittedVrplMatch
+  ): Promise<VrplTeam | null> {
+    if (!isSubmitted(vrplMatch)) return null;
+
+    return await getTeamFromSeed(
+      vrplMatch.tournamentId,
+      vrplMatch.submitterSeed
     );
   }
 
@@ -75,19 +87,18 @@ export default class {
   async teamsConfirmed(
     @Root() vrplMatch: SubmittedVrplMatch
   ): Promise<VrplTeam[] | null> {
-    return vrplMatch.teamIdsConfirmed
-      ? await Promise.all(
-          vrplMatch.teamIdsConfirmed.map(
-            async (id) => (await getTeamFromId(vrplMatch.tournamentId, id))!
-          )
-        )
-      : null;
+    if (!isSubmitted(vrplMatch)) return null;
+    return await getTeamsFromSeeds(
+      vrplMatch.tournamentId,
+      vrplMatch.seedsConfirmed
+    );
   }
 
   @FieldResolver()
   async winner(
     @Root() vrplMatch: SubmittedVrplMatch
   ): Promise<VrplTeam | null> {
+    if (!isCompleted(vrplMatch)) return null;
     return vrplMatch.winnerId
       ? await getTeamFromId(vrplMatch.tournamentId, vrplMatch.winnerId)
       : null;
@@ -97,35 +108,16 @@ export default class {
   async losers(
     @Root() vrplMatch: SubmittedVrplMatch
   ): Promise<VrplTeam[] | null> {
-    if (!vrplMatch.loserIds) return null;
-    return Promise.all(
-      vrplMatch.loserIds.map(
-        async (id) => (await getTeamFromId(vrplMatch.tournamentId, id))!
-      )
-    );
+    if (!isCompleted(vrplMatch)) return null;
+    return getTeamsFromIds(vrplMatch.tournamentId, vrplMatch.loserIds);
   }
 
   @FieldResolver()
   async tied(
     @Root() vrplMatch: SubmittedVrplMatch
   ): Promise<VrplTeam[] | null> {
-    if (!vrplMatch.tiedIds) return null;
-    return Promise.all(
-      vrplMatch.tiedIds.map(
-        async (id) => (await getTeamFromId(vrplMatch.tournamentId, id))!
-      )
-    );
-  }
-
-  @FieldResolver()
-  async submitter(
-    @Root() vrplMatch: SubmittedVrplMatch
-  ): Promise<VrplTeam | null> {
-    if (!vrplMatch.submitterTeamId) return null;
-    return await getTeamFromId(
-      vrplMatch.tournamentId,
-      vrplMatch.submitterTeamId
-    );
+    if (!isCompleted(vrplMatch)) return null;
+    return getTeamsFromIds(vrplMatch.tournamentId, vrplMatch.tiedIds);
   }
 
   @Authorized()
@@ -134,9 +126,12 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("matchId") matchId: string,
     @Arg("teamId") teamId: string,
+    @Arg("force", { nullable: true }) force: boolean,
     @Ctx() ctx: Context
   ) {
     if (!ctx.user) throw new UnauthorizedError();
+    else if (!force && !userHasPermission(ctx.user, Permissions.Admin))
+      throw new ForbiddenError("Only admins can use force");
     const [team, tournament, match] = await Promise.all([
       getTeamFromId(tournamentId, teamId),
       getTournamentFromId(tournamentId),
@@ -145,54 +140,73 @@ export default class {
 
     if (!team) throw new BadRequestError("Team not found");
     else if (!tournament) throw new BadRequestError("Tournament not found");
+    else if (tournament.id !== team.tournamentId)
+      throw new BadRequestError("This team is not in this tournament");
     else if (!match) throw new BadRequestError("Match not found");
     else if (!isSubmitted(match))
-      throw new BadRequestError("Match had not been submitted");
+      throw new BadRequestError("Match has not been submitted");
+    else if (!isSeededVrplTeam(team))
+      throw new BadRequestError("Team is not seeded");
+
+    const isAdmin = !userHasPermission(ctx.user, Permissions.ManageMatches);
+
     const isUserOnTeam = team.teamPlayers.some(
       (member) => member.playerId === ctx.user!.id
     );
-    if (!isUserOnTeam) throw new ForbiddenError("You are not on this team");
-    const isTeamPlayingInMatch = match.teamIds.includes(team.id);
-    const isTeamSubmitterTeam = match.submitterTeamId === team.id;
-    const hasTeamConfirmedAlready = match.teamIdsConfirmed.includes(team.id);
-    const isNotAdmin = !userHasPermission(ctx.user, Permissions.ManageMatches);
-    if (
-      // TODO: Work this out more
-      (!isTeamPlayingInMatch ||
-        isTeamSubmitterTeam ||
-        hasTeamConfirmedAlready) &&
-      isNotAdmin
-    )
-      throw new ForbiddenError();
-    else if (match.timeDeadline.getTime() + ms("24h") < Date.now())
+    if (!isAdmin && !isUserOnTeam)
+      throw new ForbiddenError("You are not on this team");
+    const isTeamPlayingInMatch = match.teamSeeds.includes(team.seed);
+    const isTeamSubmitterTeam = match.submitterSeed === team.seed;
+    const hasTeamConfirmedAlready = match.seedsConfirmed.includes(team.seed);
+
+    if (!force && !isTeamPlayingInMatch) throw new ForbiddenError();
+    else if (!force && !isTeamSubmitterTeam)
+      throw new ForbiddenError("You are not the submitter");
+    else if (!force && hasTeamConfirmedAlready)
+      throw new ForbiddenError("You have already confirmed this team");
+    else if (!force && match.timeDeadline.getTime() + ms("24h") < Date.now())
       throw new BadRequestError("Match expired");
-    else if (match.timeStart.getTime() > Date.now())
+    else if (!force && match.timeStart.getTime() > Date.now())
       throw new BadRequestError("Match not yet started");
 
     // Confirm match
-    const res = await confirmMatch(tournament, team.id, match, ctx.user!.id);
+    const res = await confirmMatch(
+      tournament,
+      team.id,
+      match,
+      ctx.user!.id,
+      force
+    );
     return res;
   }
 
   // TODO: Create match edit mutation
 
   @Authorized()
-  @Mutation((returns) => Match)
+  @Mutation((_returns) => Match)
   async submitMatch(
     @Arg("tournamentId") tournamentId: string,
     @Arg("matchId") matchId: string,
     @Arg("teamId") teamId: string,
     @Arg("scores", (_type) => MatchScoreInput) scores: MatchScoreInput,
+    @Arg("force", { nullable: true }) force: boolean,
     @Ctx() ctx: Context
   ): Promise<SubmittedVrplMatch> {
     if (!ctx.user) throw new UnauthorizedError();
+    else if (!force && !userHasPermission(ctx.user, Permissions.Admin))
+      throw new ForbiddenError("Only admins can use force");
     const [team, tournament, match] = await Promise.all([
       getTeamFromId(tournamentId, teamId),
       getTournamentFromId(tournamentId),
       getMatchFromId(tournamentId, matchId),
     ]);
+
     if (!team) throw new BadRequestError("Team not found");
+    else if (!isSeededVrplTeam(team))
+      throw new BadRequestError("This team doesn't have a seed");
     else if (!tournament) throw new BadRequestError("Tournament not found");
+    else if (tournament.id !== team.tournamentId)
+      throw new BadRequestError("This team is not in this tournament");
     else if (!match) throw new BadRequestError("Match not found");
 
     const isUserOnTeam = team.teamPlayers.some(
@@ -201,7 +215,7 @@ export default class {
     if (!isUserOnTeam) throw new ForbiddenError("You are not on this team");
 
     if (
-      !match.teamIds.includes(team.id) &&
+      !match.teamSeeds.includes(team.seed) &&
       !userHasPermission(ctx.user, Permissions.ManageMatches)
     )
       throw new ForbiddenError();
@@ -216,7 +230,7 @@ export default class {
     const res = await submitMatch(
       tournament,
       match,
-      teamId,
+      team,
       scores.rounds,
       ctx.user.id
     );

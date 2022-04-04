@@ -15,11 +15,11 @@ import {
   teamPlayerUpdateRecord,
   teamUpdateRecord,
 } from "./models/records/teamRecordTypes";
-import {recordType} from "./models/records";
-import {CompletedVrplMatch} from "./models/vrplMatch";
-import {VrplTournament} from "./models/vrplTournaments";
-import {BadRequestError, InternalServerError} from "../utils/errors";
-import {createMessages} from "./messages";
+import { recordType } from "./models/records";
+import { CompletedVrplMatch } from "./models/vrplMatch";
+import { VrplTournament } from "./models/vrplTournaments";
+import { BadRequestError, InternalServerError } from "../utils/errors";
+import { createMessages } from "./messages";
 import { MessageButtonActionTypes } from "./models/vrplMessages";
 import { VrplPlayer } from "./models/vrplPlayer";
 import { getPlayersFromIds } from "./player";
@@ -30,6 +30,8 @@ import {
   twitterRegex,
   youtubeChannelRegex,
 } from "../utils/regex/team";
+import { AnyBulkWriteOperation } from "mongodb";
+import { SeededVrplTeam } from "./models/vrplTeam";
 
 // TODO: add Sentry.captureException(err) to more places!
 
@@ -54,27 +56,27 @@ export async function getTeamsFromIds(tournamentId: string, teamIds: string[]) {
   );
 }
 
-// export async function findTeam(tournamentId: string, findFunc: findFunc) {
-//   await refreshTeams();
-//   const teamIterable = Object.values(teamCache);
-//   for (const teams of teamIterable) {
-//     const team = teams?.[tournamentId];
-//     if (!team) continue;
-//     else if (findFunc(team)) return team;
-//   }
-//   return null;
-// }
-// export async function filterTeams(tournamentId: string, filterFunc: findFunc) {
-//   await refreshTeams();
-//   const teamIterable = Object.values(teamCache);
-//   const response = [];
-//   for (const teams of teamIterable) {
-//     const team = teams?.[tournamentId];
-//     if (!team) continue;
-//     else if (filterFunc(team)) response.push(team);
-//   }
-//   return response;
-// }
+export async function getTeamFromSeed(tournamentId: string, seed: number) {
+  return VrplTeamDB.findOne({
+    tournamentId: tournamentId,
+    seed: seed,
+  });
+}
+
+export async function getTeamsFromSeeds(tournamentId: string, seeds: number[]) {
+  return (await VrplTeamDB.find({
+    tournamentId: tournamentId,
+    seed: { $in: seeds.filter((seed) => typeof seed === "number") },
+  }).exec()) as SeededVrplTeam[];
+}
+
+export async function getAllSeededTeams(tournamentId: string) {
+  return (await VrplTeamDB.find({
+    tournamentId: tournamentId,
+    seed: { $exists: true },
+  }).exec()) as SeededVrplTeam[];
+}
+
 export async function getTeamFromName(tournamentId: string, TeamName: string) {
   return VrplTeamDB.findOne({
     tournamentId: tournamentId,
@@ -403,7 +405,7 @@ export async function changeTeamPlayerRole(
   }
   team.teamPlayers = filteredTeamPlayers;
   team.teamPlayers.push(teamPlayer);
-  
+
   await Promise.all([
     VrplTeamDB.updateOne(
       { id: team.id, tournamentId: team.tournamentId },
@@ -413,62 +415,6 @@ export async function changeTeamPlayerRole(
   ]);
   return team;
 }
-
-// export async function removePlayerFromTeam(
-//   tournamentId: string,
-//   teamId: string,
-//   playerId: string,
-//   performedBy: string
-// ): Promise<VrplTeam | undefined> {
-//   const team = await getTeamFromId(tournamentId, teamId);
-//   if (!team) return;
-
-//   const filteredTeamPlayers = team.teamPlayers.filter(
-//     (teamPlayer) => teamPlayer.playerId !== playerId
-//   );
-//   const removedTeamPlayer = team.teamPlayers.find(
-//     (player) => player.playerId === playerId
-//   );
-//   if (filteredTeamPlayers.length === team.teamPlayers.length)
-//     throw new Error(
-//       "Team player doesn't exist, and can therefore not be removed!"
-//     );
-//   else if (!removedTeamPlayer)
-//     throw new Error(
-//       "Blah blah error yippie, removePlayerFromTea me rr rrrr rrrrr cou ld nt find player to remove, but does exist? idk anymore"
-//     );
-//   const teamPlayer: VrplTeamPlayer = {
-//     playerId: playerId,
-//     role: VrplTeamPlayerRole.None,
-//     since: new Date(),
-//   };
-//   const TeamPlayerUpdate: teamPlayerUpdateRecord = {
-//     v: 1,
-//     id: uuidv4(),
-//     type: recordType.teamPlayerUpdate,
-//     tournamentId: team.tournamentId,
-//     userId: performedBy,
-//     teamId: team.id,
-//     playerId: teamPlayer.playerId,
-//     timestamp: new Date(),
-
-//     valueChanged: "role",
-//     old: removedTeamPlayer.role,
-//     new: teamPlayer.role,
-//   };
-
-//   team.teamPlayers = filteredTeamPlayers;
-//   team.teamPlayers.push(teamPlayer);
-
-//   await Promise.all([
-//     VrplTeamDB.updateOne(
-//       { id: team.id },
-//       { $set: { teamPlayers: team.teamPlayers } }
-//     ),
-//     storeRecord(TeamPlayerUpdate),
-//   ]);
-//   return team;
-// }
 
 export async function createTeam(
   tournamentId: string,
@@ -509,7 +455,7 @@ export async function createTeam(
       v: 1,
     };
     await Promise.all([storeRecord(TeamCreateRecord), TeamModel.save()]);
-  
+
     return teamData;
   } catch (err) {
     if (err instanceof invalidTeamNameError) throw err;
@@ -590,14 +536,12 @@ export async function getAllTeamsFromId(teamId: string): Promise<VrplTeam[]> {
 }
 
 // Update team stats after match, stuff like wins and losses and stuff
-export async function updateTeamsAfterMatch(
-  match: CompletedVrplMatch
-): Promise<void> {
-  const teamsIds = match.teamIds;
+export async function updateTeamsAfterMatch(match: CompletedVrplMatch): Promise<void> {
+  const teamSeeds = match.teamSeeds;
   const gamesPlayed = VrplTeamDB.updateMany(
     {
-      id: { $in: teamsIds },
       tournamentId: match.tournamentId,
+      seed: { $in: teamSeeds },
     },
     {
       $inc: {
@@ -605,7 +549,7 @@ export async function updateTeamsAfterMatch(
       },
     }
   );
-  
+
   let gamesWon: any = undefined;
   if (match.winnerId) {
     gamesWon = VrplTeamDB.updateMany(
@@ -620,7 +564,7 @@ export async function updateTeamsAfterMatch(
       }
     );
   }
-  
+
   let gamesTied: any = undefined;
   if (match.tiedIds) {
     gamesTied = VrplTeamDB.updateMany(
@@ -635,7 +579,7 @@ export async function updateTeamsAfterMatch(
       }
     );
   }
-  
+
   let gamesLost: any = undefined;
   if (match.loserIds) {
     gamesLost = VrplTeamDB.updateMany(
@@ -650,7 +594,7 @@ export async function updateTeamsAfterMatch(
       }
     );
   }
-  
+
   await Promise.all([gamesPlayed, gamesWon, gamesTied, gamesLost]);
 }
 
@@ -847,5 +791,190 @@ export async function removeSocialAccountFromTeam(
     throw new InternalServerError("No team matched when removing socials");
   else if (updateRes.modifiedCount === 0)
     throw new InternalServerError("No team modified when removing socials");
+  return team;
+}
+
+export async function seedAllTeams(
+  tournament: VrplTournament,
+  performedById: string
+  // random?: boolean
+  // clearPrevious?: boolean
+): Promise<SeededVrplTeam[]> {
+  const teams = await getTeamsOfTournament(tournament.id);
+  const notSeededTeams = teams.filter((team) => team.seed === undefined);
+  const seededTeams = teams.filter((team) => team.seed !== undefined);
+  if (notSeededTeams.length === 0) return teams as SeededVrplTeam[];
+  const notSeededTeamsAmount = notSeededTeams.length;
+  const seedsUsed = seededTeams.map((team) => team.seed) as number[];
+  let seed = 0;
+
+  const bulkWrites: AnyBulkWriteOperation<VrplTeam>[] = [];
+  const records: teamUpdateRecord[] = [];
+
+  while (true) {
+    if (seedsUsed.includes(seed)) {
+      seed++;
+      continue;
+    }
+    const team = notSeededTeams.shift();
+    seedsUsed.push(seed);
+    if (!team) break;
+    team.seed = seed;
+    bulkWrites.push({
+      updateOne: {
+        filter: {
+          id: team.id,
+          tournamentId: team.tournamentId,
+        },
+        update: {
+          $set: {
+            seed: seed,
+          },
+        },
+      },
+    });
+    records.push({
+      id: uuidv4(),
+      tournamentId: team.tournamentId,
+      teamId: team.id,
+      timestamp: new Date(),
+      type: recordType.teamUpdate,
+      userId: performedById,
+      valueChanged: `seed`,
+      new: seed,
+      old: undefined,
+      v: 1,
+    });
+  }
+
+  const [res] = await Promise.all([
+    VrplTeamDB.bulkWrite(bulkWrites),
+    storeRecords(records),
+  ]);
+  if (res.modifiedCount !== notSeededTeamsAmount)
+    throw new InternalServerError(
+      `Failed to seed teams, seeded ${res.modifiedCount} teams out of ${notSeededTeamsAmount} (${res.matchedCount} teams matched)`
+    );
+  return teams as SeededVrplTeam[];
+}
+
+export async function unSeedAllTeams(
+  tournament: VrplTournament,
+  performedById: string
+) {
+  const teams = await getTeamsOfTournament(tournament.id);
+  const seededTeams = teams.filter((team) => team.seed !== undefined);
+  const bulkWrites: AnyBulkWriteOperation<VrplTeam>[] = [];
+  const records: teamUpdateRecord[] = [];
+  seededTeams.forEach((team) => {
+    records.push({
+      id: uuidv4(),
+      tournamentId: team.tournamentId,
+      teamId: team.id,
+      timestamp: new Date(),
+      type: recordType.teamUpdate,
+      userId: performedById,
+      valueChanged: `seed`,
+      new: undefined,
+      old: team.seed,
+      v: 1,
+    });
+    team.seed = undefined;
+    bulkWrites.push({
+      updateOne: {
+        filter: {
+          id: team.id,
+          tournamentId: team.tournamentId,
+        },
+        update: {
+          $unset: {
+            seed: "",
+          },
+        },
+      },
+    });
+  });
+
+  const [res] = await Promise.all([
+    VrplTeamDB.bulkWrite(bulkWrites),
+    storeRecords(records),
+  ]);
+  if (res.modifiedCount !== seededTeams.length)
+    throw new InternalServerError(
+      `Failed to unseed all teams, unseeded ${res.modifiedCount} teams out of ${seededTeams.length} (${res.matchedCount} teams matched)`
+    );
+  return teams as VrplTeam[];
+}
+
+export async function setTeamSeed(
+  team: VrplTeam,
+  seed: number,
+  performedById: string
+) {
+  const [res] = await Promise.all([
+    VrplTeamDB.updateOne(
+      {
+        id: team.id,
+        tournamentId: team.tournamentId,
+      },
+      {
+        $set: {
+          seed: seed,
+        },
+      }
+    ),
+    storeRecord({
+      id: uuidv4(),
+      tournamentId: team.tournamentId,
+      teamId: team.id,
+      timestamp: new Date(),
+      type: recordType.teamUpdate,
+      userId: performedById,
+      valueChanged: `seed`,
+      new: seed,
+      old: team.seed,
+      v: 1,
+    }),
+  ]);
+  if (res.modifiedCount !== 1)
+    throw new InternalServerError(
+      `Failed to set seed of team ${team.id} ${team.tournamentId}, (${res.matchedCount} teams matched, ${res.modifiedCount} modified)`
+    );
+  team.seed = seed;
+  return team;
+}
+
+export async function clearTeamSeed(team: VrplTeam, performedById: string) {
+  const [res] = await Promise.all([
+    VrplTeamDB.updateOne(
+      {
+        id: team.id,
+        tournamentId: team.tournamentId,
+      },
+      {
+        $unset: {
+          seed: "",
+        },
+      }
+    ),
+    storeRecord({
+      id: uuidv4(),
+      tournamentId: team.tournamentId,
+      teamId: team.id,
+      timestamp: new Date(),
+      type: recordType.teamUpdate,
+      userId: performedById,
+      valueChanged: `seed`,
+      new: undefined,
+      old: team.seed,
+      v: 1,
+    }),
+  ]);
+  if (res.modifiedCount !== 1)
+    throw new InternalServerError(
+      `Failed to clear seed of team ${team.id} ${team.tournamentId}, (${res.matchedCount} teams matched, ${res.modifiedCount} modified)`
+    );
+
+  team.seed = undefined;
   return team;
 }

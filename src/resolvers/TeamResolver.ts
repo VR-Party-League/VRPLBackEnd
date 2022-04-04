@@ -3,6 +3,7 @@ import {
   Authorized,
   Ctx,
   FieldResolver,
+  Int,
   Mutation,
   Query,
   Resolver,
@@ -20,12 +21,14 @@ import { getPlayerFromId, getPlayersFromIds } from "../db/player";
 import {
   addSocialAccountToTeam,
   changeTeamPlayerRole,
+  clearTeamSeed,
   deleteTeam,
   getTeamFromId,
   getTeamFromName,
   invitePlayersToTeam,
   removePlayersFromTeam,
   removeSocialAccountFromTeam,
+  setTeamSeed,
   transferTeam,
   updateTeamName,
 } from "../db/team";
@@ -354,5 +357,34 @@ export default class {
         "Failed to remove social account from team"
       );
     return res;
+  }
+
+  @Authorized([Permissions.ManageTournaments])
+  @Mutation((_returns) => Team)
+  async setTeamSeed(
+    @Arg("tournamentId") tournamentId: string,
+    @Arg("teamId") teamId: string,
+    @Arg("seed", (_type) => Int) seed: number,
+    @Ctx() ctx: Context
+  ) {
+    const { user } = ctx;
+    if (!user) throw new UnauthorizedError();
+    const team = await getTeamFromId(tournamentId, teamId);
+    if (!team) throw new BadRequestError("Team not found");
+    return setTeamSeed(team, seed, user.id);
+  }
+
+  @Authorized([Permissions.ManageTournaments])
+  @Mutation((_returns) => Team)
+  async clearTeamSeed(
+    @Arg("tournamentId") tournamentId: string,
+    @Arg("teamId") teamId: string,
+    @Ctx() ctx: Context
+  ) {
+    const { user } = ctx;
+    if (!user) throw new UnauthorizedError();
+    const team = await getTeamFromId(tournamentId, teamId);
+    if (!team) throw new BadRequestError("Team not found");
+    return clearTeamSeed(team, user.id);
   }
 }

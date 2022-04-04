@@ -1,4 +1,3 @@
-import ms from "ms";
 import VrplMatchDB, {
   CompletedVrplMatch,
   isSubmitted,
@@ -7,27 +6,26 @@ import VrplMatchDB, {
   VrplMatch,
 } from "../db/models/vrplMatch";
 import { v4 as uuidv4 } from "uuid";
-import Match from "../schemas/Match";
 import { VrplTournament } from "./models/vrplTournaments";
-import { getTournamentFromId } from "./tournaments";
 import {
   matchCompleteRecord,
   matchConfirmRecord,
-  matchCreateRecord,
-  matchForfeitRecord,
   matchSubmitRecord,
 } from "./models/records/matchRecords";
 import { recordType } from "./models/records";
 import { storeRecord, storeRecords } from "./logs";
-import { getTeamsOfTournament, updateTeamsAfterMatch } from "./team";
-import _ from "lodash";
+import { getTeamsFromSeeds, updateTeamsAfterMatch } from "./team";
+import { SeededVrplTeam } from "./models/vrplTeam";
+import { BadRequestError, InternalServerError } from "../utils/errors";
 
-export async function getMatchFromId(tournamentId: string, matchId: string) {
+export async function getMatchFromId(
+  tournamentId: string,
+  matchId: string
+): Promise<null | VrplMatch> {
   const match = await VrplMatchDB.findOne({
     tournamentId: tournamentId,
     id: matchId,
   });
-  if (!match || match.tournamentId !== tournamentId) return null;
   return match;
 }
 
@@ -40,7 +38,7 @@ export async function getMatchesForTeam(
   aWeekLater.setDate(aWeekLater.getDate() + 7);
   const aWeekAgo = new Date();
   aWeekAgo.setDate(aWeekAgo.getDate() - 7);
-  return await VrplMatchDB.find({
+  return VrplMatchDB.find({
     tournamentId: tournamentId,
     teamIds: teamId,
     $or: [
@@ -50,12 +48,29 @@ export async function getMatchesForTeam(
   });
 }
 
+export async function getMatchesOfTournament(
+  tournamentId: string
+): Promise<VrplMatch[]> {
+  return VrplMatchDB.find({ tournamentId: tournamentId });
+}
+
+export async function getCurrentMatchesOfTournament(
+  tournamentId: string
+): Promise<VrplMatch[]> {
+  const now = new Date();
+  return VrplMatchDB.find({
+    tournamentId: tournamentId,
+    timeDeadline: { $lt: now },
+    timeStart: { $gt: now },
+  });
+}
+
 // Function that submits scores for a match
 // TODO: Untested
 export async function submitMatch(
   tournament: VrplTournament,
   match: SubmittedVrplMatch | VrplMatch,
-  teamId: string,
+  team: SeededVrplTeam,
   scores: number[][],
   performedBy: string,
   isForfeit?: boolean,
@@ -63,56 +78,74 @@ export async function submitMatch(
 ): Promise<SubmittedVrplMatch | null> {
   if (!match || !tournament) return null;
   else if (!force && isMatchSubmitted(match, tournament))
-    throw new Error("Match submitted already");
+    throw new BadRequestError("Match submitted already");
   else if (areScoresInvalid(scores, match, tournament))
-    throw new Error("Invalid match scores");
+    throw new BadRequestError("Invalid match scores");
   else if (!force && Date.now() < match.timeStart.getTime())
-    throw new Error("Match not started yet");
+    throw new BadRequestError("Match not started yet");
   else if (!force && Date.now() > match.timeDeadline.getTime())
-    throw new Error("Deadline for match reached");
+    throw new BadRequestError("Deadline for match reached");
   const timeSubmitted = new Date();
 
-  const winData = getWinnerFromMatch(match, scores);
-  let winner: string | undefined;
-  let tied: string[] = [];
-  let lost: string[] = [];
-  if (winData.length > 1) tied = winData;
-  else if (winData.length === 1) winner = winData[0];
-  else if (winData.length === 0) lost = match.teamIds;
-  for (const teamId of match.teamIds) {
-    let isTeamWinner = teamId === winner;
-    let hasTeamTied = tied.includes(teamId);
-    let hasTeamLost = lost.includes(teamId);
+  const submitterTeamSeed = team.seed;
+
+  const winData = getWinningSeedsForMatch(match, scores);
+  let winnerSeed: number | undefined;
+  let tiedSeeds: number[] = [];
+  let lostSeeds: number[] = [];
+  if (winData.length > 1) tiedSeeds = winData;
+  else if (winData.length === 1) winnerSeed = winData[0];
+  else if (winData.length === 0) lostSeeds = match.teamSeeds;
+  for (const seed of match.teamSeeds) {
+    let isTeamWinner = submitterTeamSeed === winnerSeed;
+    let hasTeamTied = tiedSeeds.includes(submitterTeamSeed);
+    let hasTeamLost = lostSeeds.includes(submitterTeamSeed);
     if (isTeamWinner || hasTeamTied || hasTeamLost) continue;
-    lost.push(teamId);
+    lostSeeds.push(seed);
   }
+
+  const teams = await getTeamsFromSeeds(tournament.id, match.teamSeeds);
+
+  const winner =
+    winnerSeed !== undefined
+      ? teams.find((team) => team.seed === winnerSeed)
+      : undefined;
+  const tiedTeams = teams.filter((team) => tiedSeeds.includes(team.seed));
+  const lostTeams = teams.filter((team) => lostSeeds.includes(team.seed));
+
+  if (tiedTeams.length !== tiedSeeds.length)
+    throw new InternalServerError("Tied teams are not equal to tied seeds");
+  else if (lostTeams.length !== lostSeeds.length)
+    throw new InternalServerError("Lost teams are not equal to lost seeds");
+  else if (winner && winner.seed !== winnerSeed)
+    throw new InternalServerError("Winner is not equal to winner seed");
 
   const submittedMatch: SubmittedVrplMatch = {
     ...match,
-    submitterTeamId: teamId,
-    teamIdsConfirmed: [],
+    submitterSeed: team.seed,
+    seedsConfirmed: [],
     scores: scores,
     timeSubmitted: timeSubmitted,
     isForfeit: isForfeit || false,
 
-    winnerId: winner,
-    tiedIds: tied,
-    loserIds: lost,
+    winnerId: winner?.id,
+    tiedIds: tiedTeams.map((team) => team.id),
+    loserIds: lostTeams.map((team) => team.id),
   };
 
   const resultPromise = VrplMatchDB.findOneAndUpdate(
     { id: match.id },
     {
       $set: {
-        submitterTeamId: teamId,
-        teamIdsConfirmed: [],
-        scores: scores,
-        timeSubmitted: timeSubmitted,
-        isForfeit: isForfeit || false,
+        submitterSeed: submittedMatch.submitterSeed,
+        seedsConfirmed: submittedMatch.seedsConfirmed,
+        scores: submittedMatch.scores,
+        timeSubmitted: submittedMatch.timeSubmitted,
+        isForfeit: submittedMatch.isForfeit,
 
-        winnerId: winner,
-        tiedIds: tied,
-        loserIds: lost,
+        winnerId: submittedMatch.winnerId,
+        tiedIds: submittedMatch.tiedIds,
+        loserIds: submittedMatch.loserIds,
       },
     },
     {
@@ -126,7 +159,8 @@ export async function submitMatch(
     timestamp: timeSubmitted,
     tournamentId: tournament.id,
     matchId: match.id,
-    teamId: teamId,
+    teamId: team.id,
+    teamSeed: team.seed,
     userId: performedBy,
     scores: scores,
   };
@@ -136,32 +170,33 @@ export async function submitMatch(
 
 /**
  * This function is used to complete a match once it has been confirmed enough times
- * This also confirms that the match is complete
+ * This also confirms the match that it completes
  * @param {SubmittedVrplMatch} match the match to confirm and complete
- * @param {string} teamId the team that will be the final team to confirm the match
+ * @param {string} team the team that will be the final team to confirm the match
  * @param {string} performedBy the user that confirmed the match
+ * @param {boolean} force ignore any checks
  * @returns CompletedVrplMatch | null
  */
 export async function completeMatch(
   match: SubmittedVrplMatch,
-  teamId: string,
+  team: SeededVrplTeam,
   performedBy: string,
   force?: boolean
 ): Promise<CompletedVrplMatch> {
-  if (!match.teamIdsConfirmed.includes(teamId))
-    match.teamIdsConfirmed.push(teamId);
-  if (match.teamIdsConfirmed.length < match.teamIds.length / 2 && !force)
+  if (!match.seedsConfirmed.includes(team.seed))
+    match.seedsConfirmed.push(team.seed);
+  if (match.seedsConfirmed.length < match.teamSeeds.length / 2 && !force)
     throw new Error("This match hasn't been confirmed yet");
 
   const completedMatch: CompletedVrplMatch = {
     id: match.id,
-    submitterTeamId: match.submitterTeamId,
+    submitterSeed: match.submitterSeed,
     winnerId: match.winnerId,
     tiedIds: match.tiedIds,
     loserIds: match.loserIds,
 
-    teamIds: match.teamIds,
-    teamIdsConfirmed: match.teamIdsConfirmed,
+    teamSeeds: match.teamSeeds,
+    seedsConfirmed: match.seedsConfirmed,
     tournamentId: match.tournamentId,
     isForfeit: match.isForfeit,
 
@@ -175,7 +210,7 @@ export async function completeMatch(
     { id: match.id },
     {
       $set: {
-        teamIdsConfirmed: completedMatch.teamIdsConfirmed,
+        seedsConfirmed: completedMatch.seedsConfirmed,
         timeConfirmed: completedMatch.timeConfirmed,
       },
     }
@@ -189,7 +224,8 @@ export async function completeMatch(
     matchId: completedMatch.id,
 
     scores: match.scores,
-    teamId: teamId,
+    teamId: team.id,
+    teamSeed: team.seed,
     userId: performedBy,
   };
   const recordComplete: matchCompleteRecord = {
@@ -200,7 +236,8 @@ export async function completeMatch(
     tournamentId: completedMatch.tournamentId,
     matchId: completedMatch.id,
 
-    teamId: teamId,
+    teamId: team.id,
+    teamSeed: team.seed,
     scores: match.scores,
 
     userId: performedBy,
@@ -210,7 +247,7 @@ export async function completeMatch(
   };
   const [result] = await Promise.all([
     resultPromise,
-    storeRecords([recordComplete, recordConfirm]),
+    storeRecords([recordConfirm, recordComplete]),
     updateTeamsAfterMatch(completedMatch),
   ]);
   if (result.modifiedCount === 0) throw new Error("Failed to complete match");
@@ -218,24 +255,26 @@ export async function completeMatch(
 }
 
 // TODO: Untested
+/*
+ * All teams need to confirm match (except the team that submitted the scores)
+ */
 export async function confirmMatch(
   tournament: VrplTournament,
-  teamId: string,
+  team: SeededVrplTeam,
   match: SubmittedVrplMatch,
-  performedBy: string
-): Promise<SubmittedVrplMatch | CompletedVrplMatch> {
-  if (!match || !tournament) throw new Error("Invalid match or tournament");
-  else if (match.teamIdsConfirmed.includes(teamId))
-    throw new Error("Already confirmed");
-  else if (!match.teamIds.includes(teamId))
-    throw new Error("Not a team in this match");
-  // TODO: is this line needed?
-  else if (!isMatchSubmitted(match, tournament))
-    throw new Error("Match not submitted");
+  performedById: string,
+  force?: boolean
+): Promise<SubmittedVrplMatch> {
+  if (!match || !tournament)
+    throw new InternalServerError("Invalid match or tournament");
+  else if (match.seedsConfirmed.includes(team.seed))
+    throw new BadRequestError("This team has already confirmed this match");
+  else if (!force && !match.teamSeeds.includes(team.seed))
+    throw new BadRequestError("This team is not playing in this match");
 
-  match.teamIdsConfirmed.push(teamId);
-  if (match.teamIdsConfirmed.length + 1 === match.teamIds.length) {
-    return completeMatch(match, teamId, performedBy);
+  match.seedsConfirmed.push(team.seed);
+  if (match.seedsConfirmed.length === match.seedsConfirmed.length - 1) {
+    return completeMatch(match, team, performedById, force);
   }
 
   const record: matchConfirmRecord = {
@@ -243,36 +282,40 @@ export async function confirmMatch(
     id: uuidv4(),
     timestamp: new Date(),
     type: recordType.matchConfirm,
-    userId: performedBy,
+    userId: performedById,
     tournamentId: tournament.id,
     matchId: match.id,
-    teamId: teamId,
+    teamId: team.id,
+    teamSeed: team.seed,
     scores: match.scores,
   };
   const resultPromise = VrplMatchDB.updateOne(
     { id: match.id },
     {
       $set: {
-        teamIdsConfirmed: match.teamIdsConfirmed,
+        seedsConfirmed: match.seedsConfirmed,
       },
     }
   );
   const [result] = await Promise.all([resultPromise, storeRecord(record)]);
-  if (result.modifiedCount === 0) throw new Error("Failed to confirm match");
-  return match;
+  if (result.modifiedCount !== 1)
+    throw new InternalServerError(
+      `Failed to confirm match ${match.id} (modified: ${result.modifiedCount}, matched: ${result.matchedCount})`
+    );
+  else return match;
 }
 
 // Get the winner of a vrpl match
-export function getWinnerFromMatch(
+export function getWinningSeedsForMatch(
   match: PlainVrplMatch,
   scores: number[][]
-): string[];
-export function getWinnerFromMatch(match: SubmittedVrplMatch): string[];
-export function getWinnerFromMatch(
+): number[];
+export function getWinningSeedsForMatch(match: SubmittedVrplMatch): number[];
+export function getWinningSeedsForMatch(
   match: SubmittedVrplMatch | PlainVrplMatch,
   scores?: number[][]
-): string[] {
-  const teams = match.teamIds;
+): number[] {
+  const teamSeeds = match.teamSeeds;
   // TODO: FIX THIS SO IT WORKS
   // This is an array of rounds, with each rounds having the
   // points in it a team scored
@@ -288,7 +331,7 @@ export function getWinnerFromMatch(
 
   // An Array with each value representing the final points
   // a team has scored
-  const finalScores = teams.map(() => 0);
+  const finalScores = teamSeeds.map(() => 0);
 
   // Go through all the rounds
   for (let roundI = 0; roundI < rounds.length; roundI++) {
@@ -297,7 +340,7 @@ export function getWinnerFromMatch(
     const maxRoundScore = Math.max(...round);
     // These are the winners of the round
     const roundWinners: number[] = [];
-    for (let teamI = 0; teamI < teams.length; teamI++) {
+    for (let teamI = 0; teamI < teamSeeds.length; teamI++) {
       // If the score is the max score, add the team as a
       // winner (using their index)
       if (round[teamI] >= maxRoundScore) roundWinners.push(teamI);
@@ -316,11 +359,12 @@ export function getWinnerFromMatch(
   const maxFinalScore = Math.max(...finalScores);
 
   // An array of id's of the teams that won
-  const finalWinners: string[] = [];
-  for (let teamI = 0; teamI < teams.length; teamI++) {
+  const finalWinners: number[] = [];
+  for (let teamI = 0; teamI < teamSeeds.length; teamI++) {
     // If the team has achieved the max final score
     // add them to the array
-    if (finalScores[teamI] >= maxFinalScore) finalWinners.push(teams[teamI]);
+    if (finalScores[teamI] >= maxFinalScore)
+      finalWinners.push(teamSeeds[teamI]);
   }
   return finalWinners;
 }
@@ -356,7 +400,7 @@ export function areScoresInvalid(
   if (!rounds) return true;
   else if (rounds.length !== tournament.matchRounds)
     return `Wrong amount of rounds submitted for match`;
-  else if (rounds.some((round) => round.length !== match.teamIds.length))
+  else if (rounds.some((round) => round.length !== match.teamSeeds.length))
     return `Wrong amount of teams in round`;
   // else if (rounds.some((round) => round.some((score) => score < 0)))
   //   throw `Wrong scores submitted, `;

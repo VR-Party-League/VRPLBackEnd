@@ -1,19 +1,18 @@
-import { Schema, model, Document } from "mongoose";
+import { Document, model, Schema } from "mongoose";
 
-export type VrplMatch =
-  | PlainVrplMatch
-  | SubmittedVrplMatch
-  | CompletedVrplMatch;
+export type VrplMatch = PlainVrplMatch | SubmittedVrplMatch | CompletedVrplMatch;
+
 export interface PlainVrplMatch {
   id: string;
   tournamentId: string;
-  teamIds: string[];
+  teamSeeds: number[];
   timeStart: Date;
   timeDeadline: Date;
 }
+
 export interface SubmittedVrplMatch extends PlainVrplMatch {
-  teamIdsConfirmed: string[];
-  submitterTeamId: string;
+  seedsConfirmed: number[];
+  submitterSeed: number;
   /**
    * An array of rounds, which contain scores of teams
    */
@@ -22,15 +21,14 @@ export interface SubmittedVrplMatch extends PlainVrplMatch {
   isForfeit: boolean;
 
   winnerId?: string;
-  tiedIds?: string[];
-  loserIds?: string[];
+  tiedIds: string[];
+  loserIds: string[];
 }
 
 export interface CompletedVrplMatch extends SubmittedVrplMatch {
   timeConfirmed: Date;
-
-
 }
+
 // TODO: Do they need to be optional?
 
 // make function to check if the type of the match is submitted
@@ -38,8 +36,7 @@ export function isSubmitted(match: VrplMatch): match is SubmittedVrplMatch {
   // Check if teamIdsConfirmed isnt undefined or null
   const subMatch = match as SubmittedVrplMatch;
   return (
-    subMatch.timeSubmitted !== undefined &&
-    subMatch.timeSubmitted !== null
+    subMatch.timeSubmitted !== undefined && subMatch.timeSubmitted !== null
   );
 }
 
@@ -55,12 +52,11 @@ const MatchSchema = new Schema<VrplMatch & Document>(
   {
     id: { type: String, required: true, unique: true },
     tournamentId: String,
-    teamIds: [String],
+    teamSeeds: [Number],
     timeStart: Date,
     timeDeadline: Date,
-
-    teamIdsConfirmed: { type: [String], required: false },
-    submitterTeamId: { type: String, required: false },
+    seedsConfirmed: { type: [Number], required: false },
+    submitterSeed: { type: Number, required: false },
     /**
      * An array of rounds, which contain scores of teams
      */
@@ -71,7 +67,7 @@ const MatchSchema = new Schema<VrplMatch & Document>(
     tiedIds: { type: [String], required: false },
     loserIds: { type: [String], required: false },
     timeConfirmed: { type: Date, required: false },
-},
+  },
   { collection: "matches" }
 );
 

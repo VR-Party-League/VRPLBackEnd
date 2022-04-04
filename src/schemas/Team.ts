@@ -10,8 +10,12 @@ export default class Team {
   @Field({ description: "The unique team id", nullable: false })
   id: string;
 
+  @Field({ description: "The team seed", nullable: true })
+  seed: number;
+
   @Field({ description: "The unique team name" })
   name: string;
+
   @Field({ description: "The team avatar", nullable: true })
   avatar: string;
 

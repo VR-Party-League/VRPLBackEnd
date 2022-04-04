@@ -1,93 +1,12 @@
-import ms from "ms";
-import {convertSiteInput} from "../utils/regex/general";
-import {TournamentModel, VrplTournament} from "./models/vrplTournaments";
-//import { getTeamsOfTournament } from "./team";
-const tournamentCache = new Map<string, VrplTournament>();
-let cacheTimestamp: number = 0;
+import { convertSiteInput } from "../utils/regex/general";
+import VrplTournamentDB, { VrplTournament } from "./models/vrplTournaments";
+import { getAllSeededTeams } from "./team";
+import { range } from "lodash";
+import { BadRequestError, InternalServerError } from "../utils/errors";
+import { SeededVrplTeam } from "./models/vrplTeam";
 
-let fetchingTournaments: undefined | Promise<any> | PromiseLike<any> =
-  undefined;
-
-// TODO: Rethink the caching of tournaments
-function storeTournament(tournament: VrplTournament) {
-  const data: VrplTournament = {
-    id: tournament.id,
-    type: tournament.type,
-    name: tournament.name,
-    description: tournament.description,
-    summary: tournament.summary,
-    banner: tournament.banner,
-    icon: tournament.icon,
-    gameId: tournament.gameId,
-    
-    matchIds: new Array(...tournament.matchIds),
-    currentMatchIds: tournament.currentMatchIds
-      ? new Array(...tournament.currentMatchIds)
-      : [],
-    
-    matchRounds: tournament.matchRounds,
-    matchMaxScore: tournament.matchMaxScore,
-    rules: tournament.rules,
-    
-    eligibilityCheck: tournament.eligibilityCheck,
-    region: tournament.region,
-    
-    start: new Date(tournament.start),
-    end: new Date(tournament.end),
-    registrationStart: new Date(tournament.registrationStart),
-    registrationEnd: new Date(tournament.registrationEnd),
-  };
-  
-  tournamentCache.set(data.id, data);
-  return data;
-}
-
-async function reCacheTournaments(): Promise<void> {
-  cacheTimestamp = Date.now();
-  const tournaments = await TournamentModel.find({});
-  tournamentCache.clear();
-  for (let tournament of tournaments) {
-    //const Teams = await getTeamsOfTournament(tournament.id);
-    // Make sure the teams in the tournament are correct!
-    storeTournament(tournament.toObject());
-  }
-}
-
-export async function refreshTournaments(opts?: {
-  force: boolean;
-}): Promise<void> {
-  if (fetchingTournaments) await fetchingTournaments;
-  if (cacheTimestamp + ms("60min") < Date.now() || opts?.force) {
-    fetchingTournaments = new Promise<void>(async (resolve, reject) => {
-      await reCacheTournaments();
-      resolve();
-      fetchingTournaments = undefined;
-    });
-    await fetchingTournaments;
-  } else if (cacheTimestamp + ms("1min") < Date.now()) {
-    Promise.resolve(reCacheTournaments()).then(() => {
-    });
-  }
-}
-
-// export async function addTeamToTournamentCache(team: VrplTeam) {
-//   if (!team) throw new Error("No team entered");
-//   let cachedTournament = tournamentCache.get(team.Tournament);
-//   if (!cachedTournament) {
-//     await refreshTournaments({ force: true });
-//     cachedTournament = tournamentCache.get(team.Tournament);
-//   }
-//   if (!cachedTournament)
-//     throw new Error(
-//       `Tournament '${team.Tournament}' not found, teamID: '${team.TeamID}'`
-//     );
-//   cachedTournament.Teams.push(team.TeamID);
-// }
-export async function getAllTournaments(): Promise<VrplTournament[]> {
-  await refreshTournaments();
-  const response = [];
-  for (const tournament of tournamentCache.values()) response.push(tournament);
-  return response;
+export async function getAllTournaments() {
+  return VrplTournamentDB.find().exec();
 }
 
 export async function getTournamentFromName(tournamentName: string) {
@@ -101,8 +20,9 @@ export async function getTournamentFromName(tournamentName: string) {
 }
 
 export async function getTournamentFromId(tournamentId: string) {
-  await refreshTournaments();
-  return tournamentCache.get(tournamentId) || null;
+  return VrplTournamentDB.findOne({
+    id: tournamentId,
+  }).exec();
 }
 
 export async function getTournamentIdFromName(
@@ -114,10 +34,94 @@ export async function getTournamentIdFromName(
 }
 
 export async function getTournamentsOfGame(gameId: string) {
-  await refreshTournaments();
-  const res: VrplTournament[] = [];
-  for (let tournament of tournamentCache.values()) {
-    if (tournament.gameId === gameId) res.push(tournament);
+  return VrplTournamentDB.find({
+    gameId: gameId,
+  }).exec();
+}
+
+export async function generateRoundRobinForTournament(
+  tournament: VrplTournament,
+  rounds: number,
+  offset: number = 0
+) {
+  const seededTeams = await getAllSeededTeams(tournament.id);
+  const seeds = seededTeams.map((team) => team.seed).sort((a, b) => a - b);
+  const matchesPerRound = Math.floor(seeds.length / 2);
+
+  type round = [number, number][];
+  const matches: round[] = [];
+
+  for (let i of range(offset)) {
+    const lastSeed = seeds.pop();
+    const firstSeed = seeds.shift();
+    if (lastSeed === undefined || firstSeed === undefined)
+      throw new BadRequestError(
+        "Not enough seeded teams to generate a round robin"
+      );
+    seeds.unshift(lastSeed);
+    seeds.unshift(firstSeed);
   }
-  return res;
+
+  for (let roundIndex of range(rounds)) {
+    const round: round = [];
+    // Rotate the seeds
+    const lastSeed = seeds.pop();
+    const firstSeed = seeds.shift();
+    if (lastSeed === undefined || firstSeed === undefined)
+      throw new BadRequestError(
+        "Not enough seeded teams to generate a round robin"
+      );
+    seeds.unshift(lastSeed);
+    seeds.unshift(firstSeed);
+    for (let mathOfRound of range(matchesPerRound)) {
+      const match: [number, number] = [
+        seeds[mathOfRound * 2],
+        seeds[mathOfRound * 2 + 1],
+      ];
+      round.push(match);
+    }
+    matches.push(round);
+  }
+  return {
+    seeds: matches,
+    matchups: assignTeamsToMatches(matches, seededTeams),
+  };
+}
+
+// export async function generateSingleEliminationRound(
+//   tournament: VrplTournament,
+//   previousRounds: CompletedVrplMatch[][]
+// ) {
+//   const seededTeams = await getAllSeededTeams(tournament.id);
+//   const seeds = seededTeams.map((team) => team.seed).sort((a, b) => a - b);
+//   const matchesPerRound = Math.floor(seeds.length / 2);
+//
+//   type round = [number, number][];
+//   const matches: round[] = [];
+// }
+
+function assignTeamsToMatches(
+  matches: [number, number][][],
+  teams: SeededVrplTeam[]
+) {
+  type newRound = [SeededVrplTeam, SeededVrplTeam][];
+  const newMatches: newRound[] = [];
+  for (let round of matches) {
+    const newRound: newRound = [];
+    for (let match of round) {
+      const team1 = teams.find((team) => team.seed === match[0]);
+      const team2 = teams.find((team) => team.seed === match[1]);
+      if (team1 === undefined)
+        throw new InternalServerError(
+          `Could not find a team with the seed ${match[0]} `
+        );
+      else if (team2 === undefined)
+        throw new InternalServerError(
+          `Could not find a team with the seed ${match[1]} `
+        );
+      newRound.push([team1, team2]);
+    }
+    newMatches.push(newRound);
+  }
+  return newMatches;
 }

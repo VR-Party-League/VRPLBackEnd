@@ -6,6 +6,7 @@ export interface matchSubmitRecord extends baseRecord {
   type: recordType.matchSubmit;
   tournamentId: string;
   teamId: string;
+  teamSeed: number;
   matchId: string;
   scores: number[][];
 }
@@ -15,27 +16,33 @@ export interface matchConfirmRecord extends baseRecord {
   type: recordType.matchConfirm;
   tournamentId: string;
   teamId: string;
+  teamSeed: number;
   matchId: string;
   scores: number[][];
 }
+
 export interface matchCompleteRecord extends baseRecord {
   v: 1;
   type: recordType.matchComplete;
   tournamentId: string;
   teamId: string;
+  teamSeed: number;
   matchId: string;
   scores: number[][];
   winnerId?: string;
   tiedIds?: string[];
   loserIds?: string[];
 }
+
 export interface matchForfeitRecord extends baseRecord {
   v: 1;
   type: recordType.matchForfeit;
   tournamentId: string;
   teamId: string;
+  teamSeed: number;
   matchId: string;
 }
+
 export interface matchCreateRecord extends baseRecord {
   v: 1;
   type: recordType.matchCreate;

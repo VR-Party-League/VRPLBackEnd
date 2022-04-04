@@ -1,5 +1,4 @@
-import { Schema, model, Document } from "mongoose";
-import { VrplMatch } from "./vrplMatch";
+import { Document, model, Schema } from "mongoose";
 import { VrplPlayer } from "./vrplPlayer";
 
 export enum VrplTournamentType {
@@ -15,6 +14,8 @@ export enum VrplRegion {
 const eligibilityChecks: {
   [Name: string]: (Player: VrplPlayer) => boolean | undefined | null;
 } = {};
+
+// Currently, only supports matches with 2 players
 export interface VrplTournament {
   id: string;
   type: VrplTournamentType;
@@ -27,9 +28,6 @@ export interface VrplTournament {
   gameId: string;
   matchRounds: number;
   matchMaxScore: number;
-
-  matchIds: string[];
-  currentMatchIds: string[];
 
   eligibilityCheck?: string;
   region?: VrplRegion;
@@ -54,9 +52,6 @@ const TournamentSchema = new Schema<VrplTournament & Document>(
     matchRounds: Number,
     matchMaxScore: Number,
 
-    matchIds: [String],
-    currentMatchIds: [String],
-
     eligibilityCheck: { type: String, required: false },
     region: { type: String, required: false },
 
@@ -72,4 +67,4 @@ const TournamentModel = model<VrplTournament & Document>(
   "tournaments",
   TournamentSchema
 );
-export { TournamentModel };
+export default TournamentModel;

@@ -17,6 +17,7 @@ export interface VrplTeamPlayer {
 export interface VrplTeam {
   ownerId: string;
   id: string;
+  seed?: number;
   name: string;
   teamPlayers: VrplTeamPlayer[];
   tournamentId: string;
@@ -35,6 +36,14 @@ export interface VrplTeam {
     twitch?: string;
     // facebook?: string;
   };
+}
+
+export interface SeededVrplTeam extends VrplTeam {
+  seed: number;
+}
+
+export function isSeededVrplTeam(team: VrplTeam): team is SeededVrplTeam {
+  return team.seed !== undefined;
 }
 
 export const supportedSocialPlatforms = [
@@ -84,6 +93,7 @@ const TeamSchema = new Schema<VrplTeam & Document>(
       required: true,
       default: {},
     },
+    seed: Number,
   },
   { collection: "teams" }
 );

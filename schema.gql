@@ -76,8 +76,17 @@ type Match {
   """The submitted scores"""
   scores: [[Int!]!]
 
+  """The seeds of the teams that will be playing in this match"""
+  seeds: [Int!]!
+
+  """The seeds of the teams that have confirmed the scores"""
+  seedsConfirmed: [Int!]
+
   """The team who submitted the match"""
   submitter: Team
+
+  """The seed of the team who submitted the match"""
+  submitterSeed: Int
 
   """The teams playing the match"""
   teams: [Team!]!
@@ -229,7 +238,8 @@ type Mutation {
   changePlayerName(newName: String!, playerId: String!): Player!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
   changeTeamName(newName: String!, teamId: String!, tournamentId: String!): Team!
-  confirmMatch(matchId: String!, teamId: String!, tournamentId: String!): Match!
+  clearTeamSeed(teamId: String!, tournamentId: String!): Team!
+  confirmMatch(force: Boolean, matchId: String!, teamId: String!, tournamentId: String!): Match!
   createBadge(bitPosition: Int, description: String!, icon: String!, name: String!): Badge!
   createMessages(message: MessageInput!, recipientIds: [String!]!): [Message!]!
   createTeamForTournament(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
@@ -242,11 +252,14 @@ type Mutation {
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
   removePlayersFromTeam(playerIds: [String!]!, teamId: String!, tournamentId: String!): Team!
   removeSocialAccountFromTeam(platform: String!, teamId: String!, tournamentId: String!): Team!
+  seedsTeamsForTournament(tournamentId: String!): [Team!]!
   setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
   setPlayerRegion(playerId: String!, region: String!): Player!
   setSocialAccountForTeam(code: String!, platform: String!, teamId: String!, tournamentId: String!): Team!
-  submitMatch(matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
+  setTeamSeed(seed: Int!, teamId: String!, tournamentId: String!): Team!
+  submitMatch(force: Boolean, matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
   transferTeam(addAsPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
+  unSeedTeamsForTournament(tournamentId: String!): [Team!]!
   updateEmail(email: String!, playerId: String!): Player!
   updateSettingValue(key: String!, value: String!): SiteSettings!
 }
@@ -341,6 +354,7 @@ type Query {
   findPlayer(search: String!): Player
   gameFromId(gameId: String!): Game
   gameFromName(gameName: String!): Game
+  getDraftRoundRobin(offset: Int, rounds: Int!, tournamentId: String!): draftRoundRobin!
   getMessagesForPlayer(limit: Int, playerId: String!, showHidden: Boolean, skip: Int): [Message!]!
   getSettingFromKey(key: String!): SiteSettings
   matchFromId(matchId: String!, tournamentId: String!): Match
@@ -408,6 +422,9 @@ type Team {
 
   """The owner of the team, this player holds the permissions"""
   owner: Player!
+
+  """The team seed"""
+  seed: Float
 
   """An array of team socials"""
   socials: Socials!
@@ -496,4 +513,9 @@ type Tournament {
 
   """The tournament type"""
   type: String!
+}
+
+type draftRoundRobin {
+  matchups: [[[Team!]!]!]!
+  seeds: [[[Int!]!]!]!
 }

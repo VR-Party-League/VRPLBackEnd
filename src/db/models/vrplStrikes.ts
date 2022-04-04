@@ -1,4 +1,4 @@
-import { Schema, model, Document } from "mongoose";
+import { Document, model, Schema } from "mongoose";
 
 export enum VrplStrikeType {
   tempBan = "tempBan",
@@ -30,5 +30,6 @@ export default StrikeModel;
 // TODO: punishments
 // TODO: all of this really
 /*
-  
+
+
 */
