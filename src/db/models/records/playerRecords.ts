@@ -7,20 +7,23 @@ export interface playerCreateRecord extends baseRecord {
   playerId: string;
   player: VrplPlayer;
 }
+
 export interface playerUpdateRecord extends baseRecord {
   v: 1;
   type: recordType.playerUpdate;
   playerId: string;
-  valueChanged: keyof VrplPlayer;
+  valueChanged: keyof VrplPlayer | "avatar";
   old: any;
   new: any;
 }
+
 export interface playerDeleteRecord extends baseRecord {
   v: 1;
   type: recordType.playerDelete;
   playerId: string;
   player: VrplPlayer;
 }
+
 export type playerRecords =
   | playerCreateRecord
   | playerUpdateRecord

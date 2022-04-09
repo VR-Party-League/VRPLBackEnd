@@ -5,6 +5,12 @@ import { addCooldown, doesHaveCooldown } from "../../../db/cooldown";
 import { getTeamFromId } from "../../../db/team";
 import { Permissions, userHasPermission } from "../../../utils/permissions";
 import { uploadAvatar } from "../../../utils/storage";
+import { storeAndBroadcastRecord } from "../../../db/records";
+import { playerUpdateRecord } from "../../../db/models/records/playerRecords";
+import { recordType } from "../../../db/models/records";
+import { v4 as uuidv4 } from "uuid";
+import { teamUpdateRecord } from "../../../db/models/records/teamRecordTypes";
+
 const router = Router();
 const upload = multer({ limits: { fileSize: 1024 ** 2 } });
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
@@ -59,6 +65,17 @@ router.post("/user/:id", async (req, res) => {
         console.error(uploadRes, uploadRes.errorCode);
         return res.status(500).send({ message: uploadRes.errorCode });
       }
+      storeAndBroadcastRecord({
+        id: uuidv4(),
+        type: recordType.playerUpdate,
+        timestamp: new Date(),
+        playerId: req.params.id,
+        userId: req.user.id,
+        v: 1,
+        valueChanged: "avatar",
+        old: undefined,
+        new: undefined,
+      } as playerUpdateRecord);
       return res.status(201).send({ message: "Success!" });
     } catch (err) {
       console.error("Error setting player profile pic", err);
@@ -121,6 +138,18 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
         console.error(uploadRes, uploadRes.errorCode);
         return res.status(500).send({ message: uploadRes.errorCode });
       }
+      storeAndBroadcastRecord({
+        id: uuidv4(),
+        type: recordType.teamUpdate,
+        timestamp: new Date(),
+        userId: req.user.id,
+        tournamentId: team.tournamentId,
+        teamId: team.id,
+        valueChanged: "avatar",
+        old: undefined,
+        new: undefined,
+        v: 1,
+      } as teamUpdateRecord);
       return res.status(201).send({ message: "Success!" });
     } catch (err) {
       console.error("Error setting team profile pic", err);

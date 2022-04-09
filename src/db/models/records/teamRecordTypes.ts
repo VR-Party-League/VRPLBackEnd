@@ -41,7 +41,7 @@ export interface teamDeleteRecord extends baseTeamRecord {
 export interface teamUpdateRecord extends baseTeamRecord {
   v: 1;
   type: recordType.teamUpdate;
-  valueChanged: keyof VrplTeam;
+  valueChanged: keyof VrplTeam | "avatar";
   old: any;
   new: any;
 }
