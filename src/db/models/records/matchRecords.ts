@@ -1,58 +1,73 @@
-import { baseRecord, recordType } from ".";
+import { baseRecord, record, recordType } from ".";
 import { VrplMatch } from "../vrplMatch";
 
-export interface matchSubmitRecord extends baseRecord {
+export function isRecordMatchRecord(record: record): record is matchRecords {
+  switch (record.type) {
+    case recordType.matchCreate:
+      return true;
+    case recordType.matchSubmit:
+      return true;
+    case recordType.matchComplete:
+      return true;
+    case recordType.matchForfeit:
+      return true;
+    case recordType.matchConfirm:
+      return true;
+    default:
+      return false;
+  }
+}
+
+interface baseMatchRecord extends baseRecord {
+  tournamentId: string;
+  tournamentName?: string;
+  matchId: string;
+}
+
+export interface matchSubmitRecord extends baseMatchRecord {
   v: 1;
   type: recordType.matchSubmit;
-  tournamentId: string;
   teamId: string;
   teamSeed: number;
-  matchId: string;
   scores: number[][];
 }
 
-export interface matchConfirmRecord extends baseRecord {
+export interface matchConfirmRecord extends baseMatchRecord {
   v: 1;
   type: recordType.matchConfirm;
-  tournamentId: string;
   teamId: string;
   teamSeed: number;
-  matchId: string;
   scores: number[][];
 }
 
-export interface matchCompleteRecord extends baseRecord {
+export interface matchCompleteRecord extends baseMatchRecord {
   v: 1;
   type: recordType.matchComplete;
-  tournamentId: string;
+
   teamId: string;
   teamSeed: number;
-  matchId: string;
   scores: number[][];
   winnerId?: string;
   tiedIds?: string[];
   loserIds?: string[];
 }
 
-export interface matchForfeitRecord extends baseRecord {
+export interface matchForfeitRecord extends baseMatchRecord {
   v: 1;
   type: recordType.matchForfeit;
-  tournamentId: string;
   teamId: string;
   teamSeed: number;
-  matchId: string;
 }
 
-export interface matchCreateRecord extends baseRecord {
+export interface matchCreateRecord extends baseMatchRecord {
   v: 1;
   type: recordType.matchCreate;
-  tournamentId: string;
-  matchId: string;
   match: VrplMatch;
 }
 
 export type matchRecords =
   | matchConfirmRecord
   | matchSubmitRecord
+  | matchCompleteRecord
   | matchForfeitRecord
   | matchCreateRecord;

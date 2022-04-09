@@ -13,7 +13,7 @@ import {
   matchSubmitRecord,
 } from "./models/records/matchRecords";
 import { recordType } from "./models/records";
-import { storeRecord, storeRecords } from "./logs";
+import { storeAndBroadcastRecord, storeAndBroadcastRecords } from "./records";
 import { getTeamsFromSeeds, updateTeamsAfterMatch } from "./team";
 import { SeededVrplTeam } from "./models/vrplTeam";
 import { BadRequestError, InternalServerError } from "../utils/errors";
@@ -158,13 +158,17 @@ export async function submitMatch(
     type: recordType.matchSubmit,
     timestamp: timeSubmitted,
     tournamentId: tournament.id,
+    tournamentName: tournament.name,
     matchId: match.id,
     teamId: team.id,
     teamSeed: team.seed,
     userId: performedBy,
     scores: scores,
   };
-  const [result] = await Promise.all([resultPromise, storeRecord(record)]);
+  const [result] = await Promise.all([
+    resultPromise,
+    storeAndBroadcastRecord(record),
+  ]);
   return result as SubmittedVrplMatch;
 }
 
@@ -221,6 +225,7 @@ export async function completeMatch(
     type: recordType.matchConfirm,
     timestamp: completedMatch.timeConfirmed,
     tournamentId: completedMatch.tournamentId,
+
     matchId: completedMatch.id,
 
     scores: match.scores,
@@ -247,7 +252,7 @@ export async function completeMatch(
   };
   const [result] = await Promise.all([
     resultPromise,
-    storeRecords([recordConfirm, recordComplete]),
+    storeAndBroadcastRecords([recordConfirm, recordComplete]),
     updateTeamsAfterMatch(completedMatch),
   ]);
   if (result.modifiedCount === 0) throw new Error("Failed to complete match");
@@ -297,7 +302,10 @@ export async function confirmMatch(
       },
     }
   );
-  const [result] = await Promise.all([resultPromise, storeRecord(record)]);
+  const [result] = await Promise.all([
+    resultPromise,
+    storeAndBroadcastRecord(record),
+  ]);
   if (result.modifiedCount !== 1)
     throw new InternalServerError(
       `Failed to confirm match ${match.id} (modified: ${result.modifiedCount}, matched: ${result.matchedCount})`

@@ -40,9 +40,15 @@ export interface VrplTournament {
 
 const TournamentSchema = new Schema<VrplTournament & Document>(
   {
-    id: { type: String, required: true, unique: true },
+    id: { type: String, required: true, unique: true, index: true },
     type: String,
-    name: String,
+    name: {
+      type: String,
+      required: true,
+      unique: true,
+      text: true,
+      index: "text",
+    },
     summary: String,
     description: String,
     banner: String,

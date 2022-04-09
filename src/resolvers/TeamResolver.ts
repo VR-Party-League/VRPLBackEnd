@@ -41,10 +41,7 @@ import {
 import { Permissions, userHasPermission } from "../utils/permissions";
 import Team from "../schemas/Team";
 import { VrplTournament } from "../db/models/vrplTournaments";
-import {
-  getTournamentFromId,
-  getTournamentIdFromName,
-} from "../db/tournaments";
+import { getTournamentFromId, getTournamentFromName } from "../db/tournaments";
 import { getAvatar } from "../utils/storage";
 import { getMatchesForTeam } from "../db/match";
 import Match from "../schemas/Match";
@@ -61,9 +58,9 @@ export default class {
       return getTeamFromName(enteredTournamentId, name);
     } else if (!tournamentName)
       throw new BadRequestError("Must enter tournament name or id");
-    const tournamentId = await getTournamentIdFromName(tournamentName);
-    if (!tournamentId) throw new BadRequestError("Invalid tournament name");
-    return getTeamFromName(tournamentId, name);
+    const tournament = await getTournamentFromName(tournamentName);
+    if (!tournament) throw new BadRequestError("Invalid tournament name");
+    return getTeamFromName(tournament.id, name);
   }
 
   @Query((_returns) => Team, { nullable: true })
@@ -76,9 +73,9 @@ export default class {
       return getTeamFromId(enteredTournamentId, id);
     } else if (!tournamentName)
       throw new BadRequestError("Must enter tournament name or id");
-    const tournamentId = await getTournamentIdFromName(tournamentName);
-    if (!tournamentId) throw new BadRequestError("Invalid tournament name");
-    return getTeamFromId(tournamentId, id);
+    const tournament = await getTournamentFromName(tournamentName);
+    if (!tournament) throw new BadRequestError("Invalid tournament name");
+    return await getTeamFromId(tournament.id, id);
   }
 
   @FieldResolver()
@@ -92,18 +89,13 @@ export default class {
   }
 
   @FieldResolver()
-  avatar(@Root() vrplTeam: VrplTeam): Promise<string | undefined> {
-    return getAvatar("team", vrplTeam.id, vrplTeam.tournamentId);
+  async avatar(@Root() vrplTeam: VrplTeam): Promise<string | undefined> {
+    return await getAvatar("team", vrplTeam.id, vrplTeam.tournamentId);
   }
 
   @FieldResolver((_returns) => [Match])
   async matches(@Root() vrplTeam: VrplTeam) {
-    const matches = await getMatchesForTeam(
-      vrplTeam.tournamentId,
-      vrplTeam.id,
-      true
-    );
-    return matches;
+    return await getMatchesForTeam(vrplTeam.tournamentId, vrplTeam.id, true);
   }
 
   // TODO: Untested
@@ -167,7 +159,6 @@ export default class {
       );
 
     const newTeam = await changeTeamPlayerRole(
-      tournamentId,
       originalTeam,
       playerId,
       role,
@@ -184,24 +175,24 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("playerId") playerId: string,
-    @Arg("addAsPlayer", { nullable: true }) addAsPlayer: boolean,
+    @Arg("makeOldOwnerPlayer", { nullable: true }) makeOldOwnerPlayer: boolean,
     @Ctx() ctx: Context
   ) {
     if (!ctx.user) throw new UnauthorizedError("Not logged in");
     const originalTeam = await getTeamFromId(tournamentId, teamId);
     if (!originalTeam) throw new BadRequestError("Team not found");
-    else if (
+
+    if (
       originalTeam.ownerId !== ctx.user.id &&
       !userHasPermission(ctx.user, Permissions.ManageTeams)
     )
       throw new ForbiddenError();
 
     const res = transferTeam(
-      tournamentId,
       originalTeam,
       playerId,
       ctx.user.id,
-      addAsPlayer ? VrplTeamPlayerRole.Player : undefined
+      makeOldOwnerPlayer ? VrplTeamPlayerRole.Player : undefined
     );
     if (!res) throw new InternalServerError("Failed to transfer teams");
     return res;
@@ -216,26 +207,16 @@ export default class {
     @Ctx() ctx: Context
   ): Promise<VrplTeam> {
     if (!ctx.user) throw new UnauthorizedError();
-    const [team, tournament] = await Promise.all([
-      getTeamFromId(tournamentId, teamId),
-      getTournamentFromId(tournamentId),
-    ]);
+    const team = await getTeamFromId(tournamentId, teamId);
     if (!team) throw new BadRequestError("Team not found");
-    else if (!tournament) throw new BadRequestError("Tournament not found");
     else if (
       team.ownerId !== ctx.user.id &&
       !userHasPermission(ctx.user, Permissions.ManageTeams)
     )
       throw new ForbiddenError();
-    const res = await updateTeamName(
-      team.toObject(),
-      tournament,
-      newName,
-      ctx.user.id
-    );
+    const res = await updateTeamName(team.toObject(), newName, ctx.user.id);
 
     if (!res) throw new InternalServerError("Failed to change team name");
-    console.log("res", res);
     return res;
   }
 
@@ -276,10 +257,13 @@ export default class {
   async deleteTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
+    @Arg("force", { nullable: true }) force: boolean,
     @Ctx() ctx: Context
   ) {
     const user = ctx.user;
     if (!user) throw new UnauthorizedError();
+    else if (force && !userHasPermission(user, Permissions.ManageTeams))
+      throw new ForbiddenError();
     const [team, tournament] = await Promise.all([
       getTeamFromId(tournamentId, teamId),
       getTournamentFromId(tournamentId),
@@ -291,11 +275,11 @@ export default class {
       !userHasPermission(user, Permissions.ManageTeams)
     )
       throw new ForbiddenError();
-    else if (tournament.registrationStart > new Date())
+    else if (!force && tournament.registrationStart > new Date())
       throw new BadRequestError("Cannot delete team before registration start");
-    else if (tournament.registrationEnd < new Date())
+    else if (!force && tournament.registrationEnd < new Date())
       throw new BadRequestError("Cannot delete team after registration end");
-    const res = await deleteTeam(tournamentId, team.id, user.id);
+    const res = await deleteTeam(tournament, team.id, user.id);
     if (!res) throw new InternalServerError("Failed to remove team");
     return res;
   }

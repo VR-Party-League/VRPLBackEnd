@@ -72,7 +72,10 @@ export default class Match {
   })
   timeConfirmed: Date;
 
-  @Field({ description: "The winner of the match", nullable: true })
+  @Field((_type) => Match, {
+    description: "The winner of the match",
+    nullable: true,
+  })
   winner: Team;
 
   @Field((_type) => [Team], {

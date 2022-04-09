@@ -84,8 +84,8 @@ export default class {
   }
 
   @FieldResolver()
-  teams(@Root() vrplPlayer: VrplPlayer): Promise<VrplTeam[]> {
-    return getAllTeamsOfPlayer(vrplPlayer.id);
+  async teams(@Root() vrplPlayer: VrplPlayer): Promise<VrplTeam[]> {
+    return await getAllTeamsOfPlayer(vrplPlayer.id);
   }
 
   @FieldResolver()
@@ -99,8 +99,8 @@ export default class {
   }
 
   @FieldResolver()
-  avatar(@Root() vrplPlayer: VrplPlayer): Promise<string | undefined> {
-    return getAvatar("player", vrplPlayer.id);
+  async avatar(@Root() vrplPlayer: VrplPlayer): Promise<string | undefined> {
+    return await getAvatar("player", vrplPlayer.id);
   }
 
   @Authorized()
@@ -259,7 +259,7 @@ export default class {
       throw new BadRequestError(
         `Invalid region, options are: ${Object.keys(VrplRegion).join(", ")} `
       );
-    return await setPlayerRegion(player, region as VrplRegion);
+    return await setPlayerRegion(player, region as VrplRegion, user.id);
   }
 
   @Authorized()

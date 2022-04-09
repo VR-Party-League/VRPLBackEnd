@@ -3,42 +3,35 @@ import dotenv from "dotenv";
 dotenv.config({});
 
 import "reflect-metadata";
-// Graphql/Express
-import express from "express";
-import { ApolloServer } from "apollo-server-express";
-import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
-import { buildSchema } from "type-graphql";
-import { CustomError } from "./utils/errors";
+// MongoDb
+import "./utils/servers/createMongoConnection";
 import { VrplPlayer } from "./db/models/vrplPlayer";
+
+// Graphql/Express
+import server from "./utils/servers/httpServer";
+import app from "./utils/servers/expresServer";
+import io from "./utils/servers/socketIoServer";
+
 //Sentry
 import * as Sentry from "@sentry/node";
 import * as Tracing from "@sentry/tracing";
 
 // Other stuff
-import mongoose from "mongoose";
+
 import { json, urlencoded } from "body-parser";
 import cors, { CorsOptions } from "cors";
 import cookieParser from "cookie-parser";
 
-// Resolvers
-import MatchResolver from "./resolvers/MatchResolver";
-import TournamentResolver from "./resolvers/TournamentResolver";
-import PlayerResolver from "./resolvers/PlayerResolver";
-import TeamPlayerResolver from "./resolvers/TeamPlayerResolver";
-import GameResolver from "./resolvers/GameResolver";
-import TeamResolver from "./resolvers/TeamResolver";
-
 // Authentication
-import { Authenticate } from "./utils/authentication/jwt";
+import { Authenticate, AuthenticateSocketIO } from "./utils/authentication/jwt";
 import { authChecker } from "./utils/permissions";
 
 // Routes
 import router from "./routes";
-import BadgeResolver from "./resolvers/BadgeResolver";
-import { PlayerCooldownResolver } from "./resolvers/CooldownResolver";
-import SiteSettingsResolver from "./resolvers/SiteSettingsResolver";
-import MessageResolver from "./resolvers/MessageResolver";
-import MessageButtonResolver from "./resolvers/MessageButtonResolver";
+
+// Websocket stuff
+import { createApolloServer } from "./utils/servers/createApolloServer";
+import ms from "ms";
 
 // import fs from "fs";
 // import https from "https";
@@ -68,67 +61,9 @@ export interface Context {
 }
 
 async function bootstrap() {
-  try {
-    await mongoose.connect(process.env.DB_URI!, {});
-  } catch (err) {
-    console.log(err);
-  }
   // Setup GraphQl
-  const schema = await buildSchema({
-    resolvers: [
-      TournamentResolver,
-      TeamResolver,
-      MatchResolver,
-      PlayerResolver,
-      TeamPlayerResolver,
-      GameResolver,
-      BadgeResolver,
-      PlayerCooldownResolver,
-      SiteSettingsResolver,
-      MessageButtonResolver,
-      MessageResolver,
-    ],
-    emitSchemaFile: true,
-    dateScalarMode: "timestamp",
-    authChecker: authChecker,
-  });
-
-  const server = new ApolloServer({
-    schema: schema,
-    introspection: true,
-    plugins: [
-      ApolloServerPluginLandingPageGraphQLPlayground(),
-      // process.env.NODE_ENV === "production"
-      //   ? ApolloServerPluginLandingPageDisabled()
-      //   : ApolloServerPluginLandingPageGraphQLPlayground(),
-    ],
-    formatError(err) {
-      if (err.originalError instanceof CustomError) {
-        const error: CustomError = err.originalError;
-        return {
-          message: error.message,
-          code: error.code || 501, // <--
-          locations: err.locations,
-          path: err.path,
-        };
-      }
-      return {
-        message: err.message,
-        code: 501, // <--
-        locations: err.locations,
-        path: err.path,
-      };
-    },
-    context: ({ req, res }) => {
-      const context: Context = {
-        user: req.user,
-      };
-      return context;
-    },
-  });
-  await server.start();
-
-  const app = express();
+  const apolloServer = await createApolloServer();
+  await apolloServer.start();
 
   // Setup sentry
   Sentry.init({
@@ -177,13 +112,15 @@ async function bootstrap() {
 
   app.use(Authenticate);
 
-  server.applyMiddleware({ app, cors: corsOptions });
+  apolloServer.applyMiddleware({ app, cors: corsOptions });
 
   app.use(router);
 
   // The error handler must be before any other error middleware and after all controllers
   app.use(Sentry.Handlers.errorHandler());
-  app.listen(PORT, () => {
+
+  io.listen(server);
+  server.listen(PORT, () => {
     console.log(`Server is listening on http://localhost:${PORT}`);
   });
   // const httpServer = https.createServer({ key, cert }, app);

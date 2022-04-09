@@ -120,7 +120,7 @@ export default class {
     else if (tournament.registrationStart > new Date())
       throw new ForbiddenError("Registration is not open");
     const createdTeamRes = await createTeam(
-      tournamentId,
+      tournament.id,
       teamName,
       ownerId,
       user.id

@@ -5,38 +5,58 @@ import { range } from "lodash";
 import { BadRequestError, InternalServerError } from "../utils/errors";
 import { SeededVrplTeam } from "./models/vrplTeam";
 
+type tournamentId = string;
+type tournamentName = string;
+const tournamentNameCache = new Map<tournamentId, tournamentName>();
+
+function updateTournamentNameCache(
+  tournaments: (VrplTournament | null)[],
+  clear: boolean = false
+) {
+  if (clear) tournamentNameCache.clear();
+  for (const tournament of tournaments) {
+    if (!tournament) continue;
+    tournamentNameCache.set(tournament.id, tournament.name);
+  }
+}
+
+export function getTournamentNameFromIdFromCache(tournamentId: string) {
+  return tournamentNameCache.get(tournamentId);
+}
+
 export async function getAllTournaments() {
-  return VrplTournamentDB.find().exec();
+  const tournaments = await VrplTournamentDB.find({}).exec();
+  updateTournamentNameCache(tournaments, true);
+  return tournaments;
 }
 
 export async function getTournamentFromName(tournamentName: string) {
-  const tournaments = await getAllTournaments();
-  return (
-    tournaments.find(
-      (tournament) =>
-        convertSiteInput(tournament.name) === convertSiteInput(tournamentName)
-    ) || null
-  );
+  const tournament = await VrplTournamentDB.findOne({
+    $text: {
+      $caseSensitive: false,
+      $diacriticSensitive: false,
+      // $language: 'en',
+      $search: convertSiteInput(tournamentName),
+    },
+  }).exec();
+  updateTournamentNameCache([tournament]);
+  return tournament;
 }
 
 export async function getTournamentFromId(tournamentId: string) {
-  return VrplTournamentDB.findOne({
+  const tournament = await VrplTournamentDB.findOne({
     id: tournamentId,
   }).exec();
-}
-
-export async function getTournamentIdFromName(
-  name: string
-): Promise<string | null> {
-  const tournament = await getTournamentFromName(name);
-  if (tournament) return tournament.id;
-  return null;
+  updateTournamentNameCache([tournament]);
+  return tournament;
 }
 
 export async function getTournamentsOfGame(gameId: string) {
-  return VrplTournamentDB.find({
+  const tournaments = await VrplTournamentDB.find({
     gameId: gameId,
   }).exec();
+  updateTournamentNameCache(tournaments);
+  return tournaments;
 }
 
 export async function generateRoundRobinForTournament(

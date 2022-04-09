@@ -22,10 +22,16 @@ export default class Team {
   @Field((_type) => Tournament, { description: "The unique team name" })
   tournament: Tournament;
 
+  @Field({ description: "The tournament id" })
+  tournamentId: string;
+
   @Field((_type) => Player, {
     description: "The owner of the team, this player holds the permissions",
   })
   owner: Player;
+
+  @Field({ description: "The id of the team owner" })
+  ownerId: string;
 
   @Field((_type) => [TeamPlayer], { description: "An array of team players" })
   teamPlayers: TeamPlayer[];

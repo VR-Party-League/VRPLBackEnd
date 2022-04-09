@@ -8,7 +8,7 @@ import {
   apiTokenDeleteRecord,
 } from "./models/records/authentication";
 import { recordType } from "./models/records";
-import { storeRecord } from "./logs";
+import { storeAndBroadcastRecord } from "./records";
 
 const apiKeyCache = new Map<string, ApiToken>();
 let cacheTimeStamp = 0;
@@ -87,7 +87,10 @@ export async function newApiToken(user: VrplPlayer) {
     token: token,
     userId: token.playerId,
   };
-  const [newDoc] = await Promise.all([newDocPromise, storeRecord(record)]);
+  const [newDoc] = await Promise.all([
+    newDocPromise,
+    storeAndBroadcastRecord(record),
+  ]);
   // Remove old keys from cache
   for (const [token, data] of apiKeyCache) {
     if (data.playerId === user.id) {
@@ -105,15 +108,15 @@ export async function removeApiToken(user: VrplPlayer) {
   await ApiTokenModel.findOneAndRemove({ playerId: user.id });
   for (const [token, data] of apiKeyCache) {
     if (data.playerId === user.id) {
-      const record: apiTokenDeleteRecord = {
+      const record: apiTokenCreateRecord = {
         v: 1,
-        type: recordType.apiTokenDelete,
+        type: recordType.apiTokenCreate,
         id: uuidv4(),
         timestamp: new Date(),
         token: data,
         userId: data.playerId,
       };
-      await storeRecord(record);
+      await storeAndBroadcastRecord(record);
       apiKeyCache.delete(token);
     }
   }

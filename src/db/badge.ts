@@ -3,7 +3,7 @@ import { badgeCreateRecord } from "./models/records/badgeRecords";
 import VrplBadgeDB, { VrplBadge } from "./models/vrplBadge";
 import { v4 as uuidv4 } from "uuid";
 import { recordType } from "./models/records";
-import { storeRecord } from "./logs";
+import { storeAndBroadcastRecord } from "./records";
 import { findPositions } from "../utils/bitFields";
 
 const badgeCache = new Map<number, VrplBadge>();
@@ -50,6 +50,7 @@ export async function getBadgeFromBitPosition(
   await refreshBadges();
   return badgeCache.get(bitPosition);
 }
+
 export async function getBadgesFromBitField(bitField: number) {
   await refreshBadges();
 
@@ -69,6 +70,7 @@ export async function getBadgesFromBitField(bitField: number) {
   }
   return badges;
 }
+
 export async function getBadgeFromName(badgeName: string) {
   const badges = await getAllBadges();
   const foundBadge = badges.find(
@@ -82,6 +84,7 @@ export async function getAllBadges(): Promise<VrplBadge[]> {
   await refreshBadges();
   return Array.from(badgeCache.values());
 }
+
 export async function getFreeBadgePosition(): Promise<number> {
   const badges = await getAllBadges();
   const positions = badges.map((badge: VrplBadge) => badge.bitPosition);
@@ -106,6 +109,9 @@ export async function createNewBadge(
     bitPosition: cleanedBadge.bitPosition,
     badge: cleanedBadge,
   };
-  await Promise.all([VrplBadgeDB.create(cleanedBadge), storeRecord(record)]);
+  await Promise.all([
+    VrplBadgeDB.create(cleanedBadge),
+    storeAndBroadcastRecord(record),
+  ]);
   return cleanedBadge;
 }

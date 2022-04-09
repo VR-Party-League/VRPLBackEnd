@@ -5,7 +5,7 @@ import {
 } from "./models/records/playerRecords";
 import { v4 as uuidv4 } from "uuid";
 import { recordType } from "./models/records";
-import { storeRecord } from "./logs";
+import { storeAndBroadcastRecord } from "./records";
 
 import { APIUser } from "discord-api-types/v9";
 import { cleanNameFromInput, isValidEmailRegex } from "../utils/regex/player";
@@ -14,11 +14,11 @@ import { BadRequestError, InternalServerError } from "../utils/errors";
 import discord from "../utils/discord";
 
 export async function getPlayerFromId(PlayerId: string) {
-  return await VrplPlayerDB.findOne({ id: PlayerId });
+  return await VrplPlayerDB.findOne({ id: PlayerId }).exec();
 }
 
 export async function getPlayersFromIds(playerIds: string[]) {
-  return await VrplPlayerDB.find({ id: { $in: playerIds } });
+  return await VrplPlayerDB.find({ id: { $in: playerIds } }).exec();
 }
 
 export async function getAllPlayerIds() {
@@ -33,16 +33,16 @@ export async function getPlayerFromNickname(nickname: string) {
       $caseSensitive: false,
       $diacriticSensitive: false,
     },
-  });
+  }).exec();
   // TODO: should this be fuzzy?
 }
 
 export async function getPlayerFromDiscordTag(discordTag: string) {
-  return await VrplPlayerDB.findOne({ discordTag: discordTag });
+  return await VrplPlayerDB.findOne({ discordTag: discordTag }).exec();
 }
 
 export async function getPlayerFromDiscordId(discordId: string) {
-  return await VrplPlayerDB.findOne({ discordId: discordId });
+  return await VrplPlayerDB.findOne({ discordId: discordId }).exec();
 }
 
 export async function updatePlayerDiscordInfo(
@@ -65,7 +65,7 @@ export async function updatePlayerDiscordInfo(
         },
       }
     ),
-    recordPlayerUpdate(oldPlayer, Player),
+    recordPlayerUpdate(oldPlayer, Player, User.id),
   ]);
   return Player;
 }
@@ -114,10 +114,14 @@ function recordPlayerCreate(player: VrplPlayer) {
     playerId: player.id,
     timestamp: new Date(),
   };
-  return storeRecord(record);
+  return storeAndBroadcastRecord(record);
 }
 
-function recordPlayerUpdate(oldPlayer: VrplPlayer, newPlayer: VrplPlayer) {
+function recordPlayerUpdate(
+  oldPlayer: VrplPlayer,
+  newPlayer: VrplPlayer,
+  userId: string
+) {
   const promises: Promise<void>[] = [];
   const toCheck: [any, any, keyof VrplPlayer][] = [
     [newPlayer.discordAvatar, oldPlayer.discordAvatar, "discordAvatar"],
@@ -128,11 +132,12 @@ function recordPlayerUpdate(oldPlayer: VrplPlayer, newPlayer: VrplPlayer) {
     [newPlayer.badgeField, oldPlayer.badgeField, "badgeField"],
     [newPlayer.region, oldPlayer.region, "region"],
     [newPlayer.permissions, oldPlayer.permissions, "permissions"],
+    [newPlayer.email, oldPlayer.email, "email"],
   ];
   toCheck.forEach(([newValue, oldValue, key]) => {
     if (newValue !== oldValue) {
       promises.push(
-        recordPlayerKeyUpdate(oldPlayer.id, key, oldValue, newValue)
+        recordPlayerKeyUpdate(oldPlayer.id, userId, key, oldValue, newValue)
       );
     }
   });
@@ -141,6 +146,7 @@ function recordPlayerUpdate(oldPlayer: VrplPlayer, newPlayer: VrplPlayer) {
 
 function recordPlayerKeyUpdate(
   playerId: string,
+  userId: string,
   key: keyof VrplPlayer,
   old: any,
   newValue: any
@@ -149,20 +155,20 @@ function recordPlayerKeyUpdate(
     v: 1,
     id: uuidv4(),
     type: recordType.playerUpdate,
-    userId: playerId,
+    userId: userId,
     playerId: playerId,
     timestamp: new Date(),
     valueChanged: key,
     old: old,
     new: newValue,
   };
-  return storeRecord(record);
+  return storeAndBroadcastRecord(record);
 }
 
 export async function updatePlayerBadges(
   player: VrplPlayer,
   newBitField: number,
-  performedBy: string
+  performedById: string
 ) {
   const oldPlayer = Object.assign({}, player);
   player.badgeField = newBitField;
@@ -172,7 +178,7 @@ export async function updatePlayerBadges(
       { id: player.id },
       { $set: { badgeField: player.badgeField } }
     ),
-    recordPlayerUpdate(oldPlayer, player),
+    recordPlayerUpdate(oldPlayer, player, performedById),
   ]);
   return player;
 }
@@ -180,7 +186,7 @@ export async function updatePlayerBadges(
 export async function updatePlayerName(
   player: VrplPlayer,
   newPlayerName: string,
-  performedBy: string
+  performedById: string
 ) {
   newPlayerName = cleanNameFromInput(newPlayerName);
   const foundPlayer = await getPlayerFromNickname(newPlayerName);
@@ -202,7 +208,13 @@ export async function updatePlayerName(
         $push: { nicknameHistory: nicknameHistoryItem },
       }
     ),
-    recordPlayerKeyUpdate(player.id, "nickname", oldNickname, player.nickname),
+    recordPlayerKeyUpdate(
+      player.id,
+      performedById,
+      "nickname",
+      oldNickname,
+      player.nickname
+    ),
   ]);
   return player;
 }
@@ -214,7 +226,8 @@ export async function howManyOfThesePlayersExist(players: string[]) {
 
 export async function setPlayerRegion(
   player: VrplPlayer,
-  newRegion: VrplRegion
+  newRegion: VrplRegion,
+  performedById: string
 ) {
   const old = player.region;
   player.region = newRegion;
@@ -224,7 +237,7 @@ export async function setPlayerRegion(
       { id: player.id },
       { $set: { region: player.region } }
     ),
-    recordPlayerKeyUpdate(player.id, "region", old, newRegion),
+    recordPlayerKeyUpdate(player.id, performedById, "region", old, newRegion),
   ]);
   return player;
 }
@@ -266,7 +279,7 @@ export async function updatePlayerEmail(
       { id: player.id },
       { $set: { email: newEmail } }
     ).exec(),
-    storeRecord({
+    storeAndBroadcastRecord({
       v: 1,
       id: uuidv4(),
       type: recordType.playerUpdate,
@@ -315,7 +328,7 @@ export async function updatePlayerAbout(
     { id: player.id },
     { $set: { about: player.about } }
   );
-  const recPromise = storeRecord({
+  const recPromise = storeAndBroadcastRecord({
     v: 1,
     id: uuidv4(),
     type: recordType.playerUpdate,

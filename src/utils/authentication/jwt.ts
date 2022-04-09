@@ -4,6 +4,9 @@ import { getPlayerFromId } from "../../db/player";
 import jwt from "jsonwebtoken";
 import { VrplPlayer } from "../../db/models/vrplPlayer";
 import * as Sentry from "@sentry/node";
+import { Socket } from "socket.io/dist/socket";
+import { ExtendedError } from "socket.io/dist/namespace";
+import { Permissions, userHasPermission } from "../permissions";
 
 export const Authenticate: (
   req: typeof request,
@@ -76,6 +79,23 @@ export const Authenticate: (
   }
 };
 
+export const AuthenticateSocketIO: (
+  socket: Socket,
+  next: (err?: ExtendedError) => void
+) => void = async (socket, next) => {
+  const token = socket.handshake.headers["authorization"];
+  if (!token || !token.startsWith("Token "))
+    return next(new Error("No token provided"));
+  const ApiTokenString = token.substring("Token ".length);
+  const ApiToken = await getUserFromKey(ApiTokenString.trim());
+  if (!ApiToken) return next(new Error("Invalid token"));
+  const player = await getPlayerFromId(ApiToken.playerId);
+  if (!player) return next(new Error("Invalid token"));
+  else if (!userHasPermission(player, Permissions.Server))
+    return next(new Error("User does not have permission"));
+
+  next();
+};
 export const refreshTokenExpireIn: string = "60d";
 
 export function createRefreshToken(player: VrplPlayer) {

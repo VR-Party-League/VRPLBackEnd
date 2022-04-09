@@ -1,6 +1,9 @@
 import { Document, model, Schema } from "mongoose";
 
-export type VrplMatch = PlainVrplMatch | SubmittedVrplMatch | CompletedVrplMatch;
+export type VrplMatch =
+  | PlainVrplMatch
+  | SubmittedVrplMatch
+  | CompletedVrplMatch;
 
 export interface PlainVrplMatch {
   id: string;

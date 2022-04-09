@@ -1,27 +1,46 @@
-import {baseRecord, recordType} from ".";
-import {VrplTeam, VrplTeamPlayer, VrplTeamPlayerRole} from "../vrplTeam";
+import { baseRecord, record, recordType } from ".";
+import { VrplTeam, VrplTeamPlayer, VrplTeamPlayerRole } from "../vrplTeam";
 
-export interface teamCreateRecord extends baseRecord {
+export function isRecordTeamRecord(record: record): record is teamRecords {
+  switch (record.type) {
+    case recordType.teamCreate:
+      return true;
+    case recordType.teamUpdate:
+      return true;
+    case recordType.teamDelete:
+      return true;
+    case recordType.teamPlayerCreate:
+      return true;
+    case recordType.teamPlayerUpdate:
+      return true;
+    case recordType.teamPlayerRemove:
+      return true;
+    default:
+      return false;
+  }
+}
+
+interface baseTeamRecord extends baseRecord {
+  tournamentId: string;
+  teamId: string;
+  tournamentName?: string;
+}
+
+export interface teamCreateRecord extends baseTeamRecord {
   v: 1;
   type: recordType.teamCreate;
-  tournamentId: string;
-  teamId: string;
   team: VrplTeam;
 }
 
-export interface teamDeleteRecord extends baseRecord {
+export interface teamDeleteRecord extends baseTeamRecord {
   v: 1;
   type: recordType.teamDelete;
-  tournamentId: string;
-  teamId: string;
   team: VrplTeam;
 }
 
-export interface teamUpdateRecord extends baseRecord {
+export interface teamUpdateRecord extends baseTeamRecord {
   v: 1;
   type: recordType.teamUpdate;
-  tournamentId: string;
-  teamId: string;
   valueChanged: keyof VrplTeam;
   old: any;
   new: any;
@@ -29,31 +48,25 @@ export interface teamUpdateRecord extends baseRecord {
 
 // Team player records
 
-export interface teamPlayerCreateRecord extends baseRecord {
+export interface teamPlayerCreateRecord extends baseTeamRecord {
   v: 1;
   type: recordType.teamPlayerCreate;
-  tournamentId: string;
-  teamId: string;
   playerId: string;
   role: VrplTeamPlayerRole;
 }
 
-export interface teamPlayerUpdateRecord extends baseRecord {
+export interface teamPlayerUpdateRecord extends baseTeamRecord {
   v: 1;
   type: recordType.teamPlayerUpdate;
-  tournamentId: string;
-  teamId: string;
   playerId: string;
   valueChanged: keyof VrplTeamPlayer;
   old: any;
   new: any;
 }
 
-export interface teamPlayerRemoveRecord extends baseRecord {
+export interface teamPlayerRemoveRecord extends baseTeamRecord {
   v: 1;
   type: recordType.teamPlayerRemove;
-  tournamentId: string;
-  teamId: string;
   playerId: string;
 }
 

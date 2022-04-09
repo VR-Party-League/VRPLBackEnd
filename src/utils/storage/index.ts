@@ -1,10 +1,10 @@
 import {
   BlobDeleteIfExistsResponse,
-  BlobSASPermissions,
   BlobServiceClient,
   BlockBlobUploadResponse,
 } from "@azure/storage-blob";
 import ms from "ms";
+import { BadRequestError } from "../errors";
 
 const AZURE_STORAGE_CONNECTION_STRING = process.env
   .AZURE_STORAGE_CONNECTION_STRING as string;
@@ -24,7 +24,7 @@ let allBlobs = new Set<string>();
 let lastBlobRefresh = 0;
 
 export async function refreshAllAvatars() {
-  if (lastBlobRefresh + ms("6h") < Date.now()) {
+  if (lastBlobRefresh + ms("24h") < Date.now()) {
     lastBlobRefresh = Date.now();
     const newSet = new Set<string>();
     for await (const blob of containerClient.listBlobsFlat()) {
@@ -35,13 +35,6 @@ export async function refreshAllAvatars() {
     allBlobs = newSet;
   }
 }
-
-export interface avatarData {
-  createdAt: number;
-  url: string;
-}
-
-const avatarCache = new Map<string, avatarData>();
 
 function createPlayerBlobName(userId: string): string {
   return `players/${userId}.png`;
@@ -60,17 +53,6 @@ function createBlobName(
 ): string {
   if (forWho === "player") return createPlayerBlobName(id);
   else return createTeamBlobName(id, tourneyId!);
-}
-
-async function fetchAvatar(blobName: string): Promise<string> {
-  const perms = new BlobSASPermissions();
-  perms.read = true;
-  const blockBlobClient = containerClient.getBlobClient(blobName);
-  const url = await blockBlobClient.generateSasUrl({
-    expiresOn: new Date(Date.now() + ms("7d")),
-    permissions: perms,
-  });
-  return url;
 }
 
 // Get avatar
@@ -93,14 +75,7 @@ export async function getAvatar(
   if (forWho === "team") blobName = createBlobName(forWho, id, tourneyId!);
   else blobName = createBlobName(forWho, id);
   if (!allBlobs.has(blobName)) return undefined;
-
-  const foundItem = avatarCache.get(blobName);
-  if (!foundItem || foundItem.createdAt + ms("1d") < Date.now()) {
-    const url = await fetchAvatar(blobName);
-    avatarCache.set(blobName, { createdAt: Date.now(), url: url });
-    return url;
-  }
-  return foundItem.url;
+  return `${containerClient.url}/${blobName}`;
 }
 
 // Upload avatar
@@ -124,7 +99,6 @@ export async function uploadAvatar(
   let blobName: string;
   if (forWho === "team") blobName = createBlobName(forWho, id, tourneyId!);
   else blobName = createBlobName(forWho, id);
-
   const blockBlobClient = containerClient.getBlockBlobClient(blobName);
   const uploadBlobResponse = await blockBlobClient.uploadData(fileData);
   if (!allBlobs.has(blobName)) allBlobs.add(blobName);
@@ -149,11 +123,12 @@ export async function removeAvatar(
   let blobName: string;
   if (forWho === "team") blobName = createBlobName(forWho, id, tourneyId!);
   else blobName = createBlobName(forWho, id);
+
+  if (!allBlobs.delete(blobName))
+    throw new BadRequestError("No avatar to be removed");
+
   const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-  const deleteBlobResponse = await blockBlobClient.deleteIfExists();
-  allBlobs.delete(blobName);
-  avatarCache.delete(blobName);
-  return deleteBlobResponse;
+  return await blockBlobClient.deleteIfExists();
 }
 
 // TODO: Log changing avatars

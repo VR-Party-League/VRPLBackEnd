@@ -5,8 +5,8 @@ import VrplTeamDB, {
   VrplTeamPlayerRole,
 } from "../db/models/vrplTeam";
 import * as Sentry from "@sentry/node";
-import {v4 as uuidv4} from "uuid";
-import {storeRecord, storeRecords} from "./logs";
+import { v4 as uuidv4 } from "uuid";
+import { storeAndBroadcastRecord, storeAndBroadcastRecords } from "./records";
 import {
   teamCreateRecord,
   teamDeleteRecord,
@@ -44,7 +44,7 @@ export async function getTeamFromId(tournamentId: string, teamId: string) {
   return VrplTeamDB.findOne({
     tournamentId: tournamentId,
     id: teamId,
-  });
+  }).exec();
 }
 
 export async function getTeamsFromIds(tournamentId: string, teamIds: string[]) {
@@ -87,23 +87,24 @@ export async function getTeamFromName(tournamentId: string, TeamName: string) {
 }
 
 export async function deleteTeam(
-  tournamentId: string,
+  tournament: VrplTournament,
   teamId: string,
   performedById: string
 ) {
   try {
     const deleted = await VrplTeamDB.findOneAndDelete({
       id: teamId,
-      tournamentId: tournamentId,
+      tournamentId: tournament.id,
     }).exec();
     // TODO: Remove avatars!!!!
     if (!deleted?.ownerId) throw new InternalServerError("Did not delete team");
-    await storeRecord({
+    await storeAndBroadcastRecord({
       v: 1,
       id: uuidv4(),
       userId: performedById,
       type: recordType.teamDelete,
-      tournamentId: tournamentId,
+      tournamentId: tournament.id,
+      tournamentName: tournament.name,
       teamId: teamId,
       team: deleted.toObject(),
       timestamp: new Date(),
@@ -189,7 +190,7 @@ export async function invitePlayersToTeam(
       { id: team.id, tournamentId: team.tournamentId },
       { $set: { teamPlayers: team.teamPlayers } }
     ),
-    storeRecords(records),
+    storeAndBroadcastRecords(records),
     createMessages(
       {
         title: `You have been invited to join '${team.name}'`,
@@ -265,7 +266,6 @@ export async function addPlayerToTeam(
 
 // This function makes a new player the owner of a team.
 export async function transferTeam(
-  tournamentId: string,
   team: VrplTeam,
   playerId: string,
   performedBy: string,
@@ -299,6 +299,7 @@ export async function transferTeam(
         type: recordType.teamPlayerUpdate,
         userId: performedBy,
         tournamentId: team.tournamentId,
+
         teamId: team.id,
         playerId: teamPlayer.playerId,
         timestamp: new Date(),
@@ -313,6 +314,7 @@ export async function transferTeam(
         id: uuidv4(),
         type: recordType.teamPlayerCreate,
         tournamentId: team.tournamentId,
+
         userId: performedBy,
         teamId: team.id,
         playerId: teamPlayer.playerId,
@@ -343,15 +345,16 @@ export async function transferTeam(
       { id: team.id, tournamentId: team.tournamentId },
       { $set: { ownerId: team.ownerId, teamPlayers: team.teamPlayers } }
     ),
-    storeRecord(TeamUpdateRecord),
-    changePlayersRecordPromise ? storeRecord(changePlayersRecordPromise) : null,
+    storeAndBroadcastRecord(TeamUpdateRecord),
+    changePlayersRecordPromise
+      ? storeAndBroadcastRecord(changePlayersRecordPromise)
+      : null,
   ]);
   return team;
 }
 
 // Change the role of a player on a team.
 export async function changeTeamPlayerRole(
-  tournamentId: string,
   team: VrplTeam,
   playerId: string,
   newRole: VrplTeamPlayerRole,
@@ -411,7 +414,7 @@ export async function changeTeamPlayerRole(
       { id: team.id, tournamentId: team.tournamentId },
       { $set: { teamPlayers: team.teamPlayers } }
     ),
-    storeRecord(record),
+    storeAndBroadcastRecord(record),
   ]);
   return team;
 }
@@ -447,14 +450,17 @@ export async function createTeam(
     const TeamCreateRecord: teamCreateRecord = {
       id: uuidv4(),
       team: teamData,
-      tournamentId: teamData.tournamentId,
+      tournamentId: tournamentId,
       teamId: teamData.id,
       timestamp: new Date(),
       type: recordType.teamCreate,
       userId: performedBy,
       v: 1,
     };
-    await Promise.all([storeRecord(TeamCreateRecord), TeamModel.save()]);
+    await Promise.all([
+      storeAndBroadcastRecord(TeamCreateRecord),
+      TeamModel.save(),
+    ]);
 
     return teamData;
   } catch (err) {
@@ -536,7 +542,9 @@ export async function getAllTeamsFromId(teamId: string): Promise<VrplTeam[]> {
 }
 
 // Update team stats after match, stuff like wins and losses and stuff
-export async function updateTeamsAfterMatch(match: CompletedVrplMatch): Promise<void> {
+export async function updateTeamsAfterMatch(
+  match: CompletedVrplMatch
+): Promise<void> {
   const teamSeeds = match.teamSeeds;
   const gamesPlayed = VrplTeamDB.updateMany(
     {
@@ -600,20 +608,22 @@ export async function updateTeamsAfterMatch(match: CompletedVrplMatch): Promise<
 
 export const updateTeamName = async (
   team: VrplTeam,
-  tournament: VrplTournament,
   newTeamName: string,
   performedBy: string
 ): Promise<VrplTeam> => {
-  const validatedTeamName = await validateTeamName(tournament.id, newTeamName);
+  const validatedTeamName = await validateTeamName(
+    team.tournamentId,
+    newTeamName
+  );
 
-  const teamData: VrplTeam = Object.assign({}, team);
-  teamData.name = validatedTeamName;
-  const UpdatePromise = VrplTeamDB.findOne({
-    tournamentId: tournament.id,
-    id: team.id,
-  })
-    .updateOne({ name: validatedTeamName })
-    .exec();
+  const teamData: VrplTeam = { ...team, name: validatedTeamName };
+  const UpdatePromise = VrplTeamDB.updateOne(
+    {
+      tournamentId: team.tournamentId,
+      id: team.id,
+    },
+    { name: validatedTeamName }
+  ).exec();
   const TeamUpdateRecord: teamUpdateRecord = {
     id: uuidv4(),
     tournamentId: teamData.tournamentId,
@@ -622,12 +632,12 @@ export const updateTeamName = async (
     type: recordType.teamUpdate,
     userId: performedBy,
     valueChanged: "name",
-    new: validateTeamName,
+    new: validatedTeamName,
     old: team.name,
     v: 1,
   };
   const [rec, res] = await Promise.all([
-    storeRecord(TeamUpdateRecord),
+    storeAndBroadcastRecord(TeamUpdateRecord),
     UpdatePromise,
   ]);
   if (res.modifiedCount === 0)
@@ -658,11 +668,9 @@ export async function removePlayersFromTeam(
         id: uuidv4(),
         userId: performedById,
         type: recordType.teamPlayerRemove,
-
         tournamentId: team.tournamentId,
         teamId: team.id,
         playerId: playerId,
-
         v: 1,
         timestamp: new Date(),
       } as teamPlayerRemoveRecord)
@@ -675,7 +683,7 @@ export async function removePlayersFromTeam(
       },
       { teamPlayers: team.teamPlayers }
     ).exec(),
-    storeRecords(RemoveRecords),
+    storeAndBroadcastRecords(RemoveRecords),
   ]);
   if (remRes.modifiedCount === 0)
     throw new InternalServerError("No team modified");
@@ -688,7 +696,6 @@ export async function addSocialAccountToTeam(
   code: string,
   performedById: string
 ) {
-  const toSet: { [key: string]: string } = {};
   switch (platform) {
     case "twitch":
       if (!twitchRegex.test(code))
@@ -746,7 +753,7 @@ export async function addSocialAccountToTeam(
     .exec();
   const [updateRes] = await Promise.all([
     UpdatePromise,
-    storeRecord(UpdateRecord),
+    storeAndBroadcastRecord(UpdateRecord),
   ]);
   if (updateRes.matchedCount === 0)
     throw new InternalServerError("No team matched when updating socials");
@@ -761,7 +768,7 @@ export async function removeSocialAccountFromTeam(
   performedById: string
 ): Promise<VrplTeam> {
   const oldSocials = Object.assign({}, team.socials);
-  delete team.socials[platform];
+  team.socials[platform] = undefined;
   const UpdateRecord: teamUpdateRecord = {
     id: uuidv4(),
     tournamentId: team.tournamentId,
@@ -785,7 +792,7 @@ export async function removeSocialAccountFromTeam(
     .exec();
   const [updateRes] = await Promise.all([
     UpdatePromise,
-    storeRecord(UpdateRecord),
+    storeAndBroadcastRecord(UpdateRecord),
   ]);
   if (updateRes.matchedCount === 0)
     throw new InternalServerError("No team matched when removing socials");
@@ -836,6 +843,7 @@ export async function seedAllTeams(
     records.push({
       id: uuidv4(),
       tournamentId: team.tournamentId,
+      tournamentName: tournament.name,
       teamId: team.id,
       timestamp: new Date(),
       type: recordType.teamUpdate,
@@ -849,7 +857,7 @@ export async function seedAllTeams(
 
   const [res] = await Promise.all([
     VrplTeamDB.bulkWrite(bulkWrites),
-    storeRecords(records),
+    storeAndBroadcastRecords(records),
   ]);
   if (res.modifiedCount !== notSeededTeamsAmount)
     throw new InternalServerError(
@@ -869,7 +877,8 @@ export async function unSeedAllTeams(
   seededTeams.forEach((team) => {
     records.push({
       id: uuidv4(),
-      tournamentId: team.tournamentId,
+      tournamentId: tournament.id,
+      tournamentName: tournament.name,
       teamId: team.id,
       timestamp: new Date(),
       type: recordType.teamUpdate,
@@ -897,7 +906,7 @@ export async function unSeedAllTeams(
 
   const [res] = await Promise.all([
     VrplTeamDB.bulkWrite(bulkWrites),
-    storeRecords(records),
+    storeAndBroadcastRecords(records),
   ]);
   if (res.modifiedCount !== seededTeams.length)
     throw new InternalServerError(
@@ -923,7 +932,7 @@ export async function setTeamSeed(
         },
       }
     ),
-    storeRecord({
+    storeAndBroadcastRecord({
       id: uuidv4(),
       tournamentId: team.tournamentId,
       teamId: team.id,
@@ -957,7 +966,7 @@ export async function clearTeamSeed(team: VrplTeam, performedById: string) {
         },
       }
     ),
-    storeRecord({
+    storeAndBroadcastRecord({
       id: uuidv4(),
       tournamentId: team.tournamentId,
       teamId: team.id,
