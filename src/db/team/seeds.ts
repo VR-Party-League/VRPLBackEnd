@@ -58,6 +58,7 @@ export async function seedAllTeams(
       valueChanged: `seed`,
       new: seed,
       old: undefined,
+      team: team,
       v: 1,
     });
   }
@@ -93,6 +94,7 @@ export async function unSeedAllTeams(
       valueChanged: `seed`,
       new: undefined,
       old: team.seed,
+      team: team,
       v: 1,
     });
     team.seed = undefined;
@@ -149,6 +151,7 @@ export async function setTeamSeed(
       valueChanged: `seed`,
       new: seed,
       old: team.seed,
+      team: team,
       v: 1,
     }),
   ]);
@@ -183,6 +186,7 @@ export async function clearTeamSeed(team: VrplTeam, performedById: string) {
       valueChanged: `seed`,
       new: undefined,
       old: team.seed,
+      team: team,
       v: 1,
     }),
   ]);

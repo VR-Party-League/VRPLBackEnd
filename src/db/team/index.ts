@@ -105,6 +105,8 @@ export async function transferTeam(
         valueChanged: "role",
         old: oldPlayer.role,
         new: teamPlayer.role,
+
+        team: team,
       };
     } else {
       changePlayersRecordPromise = {
@@ -119,6 +121,7 @@ export async function transferTeam(
         timestamp: new Date(),
 
         role: teamPlayer.role,
+        team: team,
       };
     }
     team.teamPlayers = filteredTeamPlayers;
@@ -135,6 +138,7 @@ export async function transferTeam(
     valueChanged: "ownerId",
     new: playerId,
     old: `${team.ownerId}`,
+    team: team,
   };
   team.ownerId = playerId;
 
@@ -326,7 +330,6 @@ export const updateTeamName = async (
     team.tournamentId,
     newTeamName
   );
-
   const teamData: VrplTeam = { ...team, name: validatedTeamName };
   const UpdatePromise = VrplTeamDB.updateOne(
     {
@@ -345,6 +348,7 @@ export const updateTeamName = async (
     valueChanged: "name",
     new: validatedTeamName,
     old: team.name,
+    team: teamData,
     v: 1,
   };
   const [rec, res] = await Promise.all([
@@ -385,6 +389,7 @@ export async function setTeamAvatarHash(
       valueChanged: `avatarHash`,
       new: avatarHash,
       old: team.avatarHash,
+      team: team,
       v: 1,
     }),
   ]);

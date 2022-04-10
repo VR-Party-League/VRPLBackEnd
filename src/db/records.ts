@@ -2,15 +2,18 @@ import dbRecord, { recordType, record } from "./models/records";
 import io from "../utils/servers/socketIoServer";
 import axios, { AxiosError } from "axios";
 import { frontEndUrl } from "../index";
-import { isRecordTeamRecord } from "./models/records/teamRecordTypes";
+import {
+  isRecordTeamRecord,
+  teamRecords,
+} from "./models/records/teamRecordTypes";
 import {
   getTournamentFromId,
   getTournamentNameFromIdFromCache,
 } from "./tournaments";
 import { isRecordMatchRecord } from "./models/records/matchRecords";
 import { InternalServerError } from "../utils/errors";
-import { URLSearchParams } from "url";
 import { captureException } from "@sentry/node";
+import { getAllTeamsOfPlayer } from "./team";
 
 const revalidateSecret = process.env.FRONT_END_SECRET!;
 if (!revalidateSecret) throw new Error("No revalidate secret found");
@@ -34,18 +37,29 @@ async function completeRecords(records: record[]): Promise<void> {
   }
 }
 
+function cleanRecord(record: record) {
+  let cleanedRecord: any = Object.assign({}, record);
+  if (isRecordTeamRecord(record)) {
+    cleanedRecord.team = undefined;
+  }
+  return cleanedRecord;
+}
+
+function cleanRecords(records: record[]): any[] {
+  const cleanedRecords: record[] = records.map((record) => cleanRecord(record));
+  return cleanedRecords;
+}
+
 export async function storeAndBroadcastRecord(record: record) {
-  // console.log("Before completion", record);
   await completeRecords([record]);
-  // console.log("After completion", record);
-  const dbEntry = new dbRecord(record);
+  const dbEntry = new dbRecord(cleanRecord(record));
   await dbEntry.save();
   Promise.resolve(broadcastRecords([record]));
 }
 
 export async function storeRecord(record: record) {
   await completeRecords([record]);
-  const dbEntry = new dbRecord(record);
+  const dbEntry = new dbRecord(cleanRecord(record));
   await dbEntry.save();
 }
 
@@ -54,25 +68,36 @@ async function broadcastRecords(records: record[]) {
   for (let record of records) {
     const type = recordType[record.type].toString();
     io.sockets.emit(type, record);
-    if (record.type === recordType.playerUpdate)
+    if (record.type === recordType.playerUpdate) {
       paths_to_revalidate.push(`/player/${record.playerId}`);
-    else if (record.type === recordType.teamUpdate)
+      const playerTeams = await getAllTeamsOfPlayer(record.playerId);
+      for (let team of playerTeams) {
+        paths_to_revalidate.push(
+          `/tournament/${team.tournamentId}/team/${team.id}`
+        );
+      }
+    } else if (record.type === recordType.teamUpdate) {
       paths_to_revalidate.push(
         `/tournament/${record.tournamentName}/team/${record.teamId}`
       );
+      const { team } = record;
+      const playerIds = [
+        team.ownerId,
+        ...team.teamPlayers.map((teamPlayer) => teamPlayer.playerId),
+      ];
+      for (let playerId of playerIds) {
+        paths_to_revalidate.push(`/player/${playerId}`);
+      }
+    }
   }
   if (paths_to_revalidate.length === 0) return;
   try {
-    let params = new URLSearchParams();
-    params.set("secret", revalidateSecret);
-    params.set(
-      "paths",
-      paths_to_revalidate.filter((v, i, a) => a.indexOf(v) === i).join("|")
-    );
+    const request = {
+      secret: revalidateSecret,
+      paths: paths_to_revalidate.filter((v, i, a) => a.indexOf(v) === i),
+    };
 
-    await axios.get(frontEndUrl + "/api/revalidate", {
-      params: params,
-    });
+    await axios.post(frontEndUrl + "/api/revalidate", request);
   } catch (err) {
     const error = err as AxiosError;
     captureException(error);
@@ -82,6 +107,6 @@ async function broadcastRecords(records: record[]) {
 
 export async function storeAndBroadcastRecords(records: record[]) {
   await completeRecords(records);
-  await dbRecord.insertMany(records);
+  await dbRecord.insertMany(cleanRecords(records));
   Promise.resolve(broadcastRecords(records));
 }

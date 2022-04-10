@@ -24,6 +24,7 @@ interface baseTeamRecord extends baseRecord {
   tournamentId: string;
   teamId: string;
   tournamentName?: string;
+  team: VrplTeam;
 }
 
 export interface teamCreateRecord extends baseTeamRecord {

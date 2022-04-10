@@ -221,7 +221,6 @@ export default class {
     )
       throw new ForbiddenError();
     const res = await updateTeamName(team.toObject(), newName, ctx.user.id);
-
     if (!res) throw new InternalServerError("Failed to change team name");
     return res;
   }

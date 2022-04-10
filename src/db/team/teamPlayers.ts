@@ -69,6 +69,7 @@ export async function invitePlayersToTeam(
       playerId: teamPlayer.playerId,
       timestamp: new Date(),
       role: teamPlayer.role,
+      team: team,
     };
     records.push(record);
   }
@@ -190,6 +191,7 @@ export async function changeTeamPlayerRole(
       valueChanged: "role",
       old: oldPlayer.role,
       new: teamPlayer.role,
+      team: team,
     };
   } else {
     record = {
@@ -203,6 +205,7 @@ export async function changeTeamPlayerRole(
       timestamp: new Date(),
 
       role: teamPlayer.role,
+      team: team,
     };
   }
   team.teamPlayers = filteredTeamPlayers;

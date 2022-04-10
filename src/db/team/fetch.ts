@@ -69,16 +69,12 @@ export async function getTeamsOfPlayer(
 
 // A function that returns all the teams of a player.
 export async function getAllTeamsOfPlayer(
-  playerId: string,
-  tournamentId?: string
+  playerId: string
 ): Promise<VrplTeam[]> {
-  let query: any = {
+  return await VrplTeamDB.find({
     $or: [
       { teamPlayers: { $elemMatch: { playerId: playerId } } },
       { ownerId: playerId },
     ],
-  };
-  if (tournamentId) query["tournamentId"] = tournamentId;
-  let res = await VrplTeamDB.find(query);
-  return res;
+  }).exec();
 }

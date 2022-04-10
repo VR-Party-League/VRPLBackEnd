@@ -61,6 +61,7 @@ export async function addSocialAccountToTeam(
     valueChanged: `socials`,
     new: team.socials,
     old: oldSocials,
+    team: team,
     v: 1,
   };
   const UpdatePromise = VrplTeamDB.findOne()
@@ -100,6 +101,7 @@ export async function removeSocialAccountFromTeam(
     valueChanged: `socials`,
     new: team.socials,
     old: oldSocials,
+    team: team,
     v: 1,
   };
   const UpdatePromise = VrplTeamDB.findOne()
