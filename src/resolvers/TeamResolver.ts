@@ -90,7 +90,13 @@ export default class {
 
   @FieldResolver()
   async avatar(@Root() vrplTeam: VrplTeam): Promise<string | undefined> {
-    return await getAvatar("team", vrplTeam.id, vrplTeam.tournamentId);
+    if (!vrplTeam.avatarHash) return undefined;
+    return await getAvatar(
+      "team",
+      vrplTeam.id,
+      vrplTeam.avatarHash,
+      vrplTeam.tournamentId
+    );
   }
 
   @FieldResolver((_returns) => [Match])

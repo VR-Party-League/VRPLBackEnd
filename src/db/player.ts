@@ -346,3 +346,34 @@ export async function updatePlayerAbout(
     throw new InternalServerError("Failed to update player");
   return player;
 }
+
+export async function setPlayerAvatarHash(
+  player: VrplPlayer,
+  newAvatarHash: string | null,
+  performedById: string
+) {
+  const old = player.avatarHash;
+  if (player.avatarHash === newAvatarHash) return player;
+  player.avatarHash = newAvatarHash ?? undefined;
+  const updatePromise = VrplPlayerDB.updateOne(
+    { id: player.id },
+    { $set: { avatarHash: player.avatarHash } }
+  );
+  const recPromise = storeAndBroadcastRecord({
+    v: 1,
+    id: uuidv4(),
+    type: recordType.playerUpdate,
+    userId: performedById,
+    playerId: player.id,
+    timestamp: new Date(),
+    valueChanged: "avatarHash",
+    old: old,
+    new: newAvatarHash,
+  });
+  const [updateRes, recRes] = await Promise.all([updatePromise, recPromise]);
+  if (updateRes.matchedCount === 0)
+    throw new InternalServerError("Failed to find player to update");
+  else if (updateRes.modifiedCount === 0)
+    throw new InternalServerError("Failed to update player");
+  return player;
+}

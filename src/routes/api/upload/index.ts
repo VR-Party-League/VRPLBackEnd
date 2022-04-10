@@ -10,31 +10,34 @@ import { playerUpdateRecord } from "../../../db/models/records/playerRecords";
 import { recordType } from "../../../db/models/records";
 import { v4 as uuidv4 } from "uuid";
 import { teamUpdateRecord } from "../../../db/models/records/teamRecordTypes";
+import { getPlayerFromId } from "../../../db/player";
 
 const router = Router();
-const upload = multer({ limits: { fileSize: 1024 ** 2 } });
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
+const upload = multer({ limits: { fileSize: MAX_FILE_SIZE } });
 router.post("/user/:id", async (req, res) => {
   upload.single("avatar")(req, res, async function (err) {
     try {
+      let user = req.user;
       // Check for the player is logged in
-      if (!req.user) return res.status(401).send({ message: "Unauthorized" });
+      if (!user) return res.status(401).send({ message: "Unauthorized" });
       // Check for multer errors
       else if (err && err instanceof MulterError)
         return res.status(400).send({ message: err.code });
       else if (err) throw err;
+      let player = await getPlayerFromId(req.params.id);
       // Check if the player is permitted to perform this action
+      if (!player) return res.status(404).send({ message: "Player not found" });
       else if (
-        req.params.id !== req.user.id &&
-        !userHasPermission(req.user, Permissions.ManagePlayers)
+        player.id !== user.id &&
+        !userHasPermission(user, Permissions.ManagePlayers)
       )
         return res.status(403).send({ message: "Forbidden" });
       // Check if the player is on cooldown
       else if (
-        !userHasPermission(req.user, Permissions.ManagePlayers) &&
-        (await doesHaveCooldown("player", req.user.id, "changeAvatar"))
+        !userHasPermission(user, Permissions.ManagePlayers) &&
+        (await doesHaveCooldown("player", player.id, "changeAvatar"))
       ) {
-        // TODO: make other promises in if statemenets also awaited
         return res.status(429).send({ message: "You are on a cooldown" });
       }
       // Verify file properties
@@ -54,28 +57,13 @@ router.post("/user/:id", async (req, res) => {
         return res.status(400).send({ message: "Invalid image" });
       }
       // Add cooldown
-      await addCooldown("player", req.user.id, "changeAvatar");
+      await addCooldown("player", player.id, "changeAvatar");
       // Upload it to the blob storage
-      const uploadRes = await uploadAvatar(
-        "player",
-        req.user.id,
-        resizedBuffer
-      );
-      if (uploadRes.errorCode) {
+      const uploadRes = await uploadAvatar(player, resizedBuffer, user.id);
+      if (uploadRes && uploadRes.errorCode) {
         console.error(uploadRes, uploadRes.errorCode);
         return res.status(500).send({ message: uploadRes.errorCode });
       }
-      storeAndBroadcastRecord({
-        id: uuidv4(),
-        type: recordType.playerUpdate,
-        timestamp: new Date(),
-        playerId: req.params.id,
-        userId: req.user.id,
-        v: 1,
-        valueChanged: "avatar",
-        old: undefined,
-        new: undefined,
-      } as playerUpdateRecord);
       return res.status(201).send({ message: "Success!" });
     } catch (err) {
       console.error("Error setting player profile pic", err);
@@ -87,8 +75,9 @@ router.post("/user/:id", async (req, res) => {
 router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
   upload.single("avatar")(req, res, async function (err) {
     try {
+      const user = req.user;
       // Check for the player is logged in
-      if (!req.user) return res.status(401).send({ message: "Unauthorized" });
+      if (!user) return res.status(401).send({ message: "Unauthorized" });
       // Check for multer errors
       else if (err && err instanceof MulterError)
         return res.status(400).send({ message: err.code });
@@ -98,13 +87,13 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
       if (!team) return res.status(400).send({ message: "Invalid team" });
       // Check if the player is permitted to perform this action
       else if (
-        team.ownerId !== req.user.id &&
-        !userHasPermission(req.user, Permissions.ManageTeams)
+        team.ownerId !== user.id &&
+        !userHasPermission(user, Permissions.ManageTeams)
       )
         return res.status(403).send({ message: "Forbidden" });
       // Check if the player is on cooldown
       else if (
-        !userHasPermission(req.user, Permissions.ManageTeams) &&
+        !userHasPermission(user, Permissions.ManageTeams) &&
         (await doesHaveCooldown("team", team.id, "changeAvatar"))
       )
         return res.status(429).send({ message: "This team is on a cooldown" });
@@ -128,28 +117,11 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
       // Add cooldown
       await addCooldown("team", team.id, "changeAvatar");
       // Upload it to the blob storage
-      const uploadRes = await uploadAvatar(
-        "team",
-        team.id,
-        resizedBuffer,
-        team.tournamentId
-      );
-      if (uploadRes.errorCode) {
+      const uploadRes = await uploadAvatar(team, resizedBuffer, user.id);
+      if (uploadRes && uploadRes.errorCode) {
         console.error(uploadRes, uploadRes.errorCode);
         return res.status(500).send({ message: uploadRes.errorCode });
       }
-      storeAndBroadcastRecord({
-        id: uuidv4(),
-        type: recordType.teamUpdate,
-        timestamp: new Date(),
-        userId: req.user.id,
-        tournamentId: team.tournamentId,
-        teamId: team.id,
-        valueChanged: "avatar",
-        old: undefined,
-        new: undefined,
-        v: 1,
-      } as teamUpdateRecord);
       return res.status(201).send({ message: "Success!" });
     } catch (err) {
       console.error("Error setting team profile pic", err);
@@ -158,4 +130,4 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
   });
 });
 export default router;
-// TODO: Return new avatar image
+// TODO: Have it not show the old pic from cache

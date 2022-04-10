@@ -10,6 +10,7 @@ import {
 import { isRecordMatchRecord } from "./models/records/matchRecords";
 import { InternalServerError } from "../utils/errors";
 import { URLSearchParams } from "url";
+import { captureException } from "@sentry/node";
 
 const revalidateSecret = process.env.FRONT_END_SECRET!;
 if (!revalidateSecret) throw new Error("No revalidate secret found");
@@ -51,7 +52,6 @@ export async function storeRecord(record: record) {
 async function broadcastRecords(records: record[]) {
   let paths_to_revalidate: string[] = [];
   for (let record of records) {
-    console.log("record type", record.type);
     const type = recordType[record.type].toString();
     io.sockets.emit(type, record);
     if (record.type === recordType.playerUpdate)
@@ -70,12 +70,12 @@ async function broadcastRecords(records: record[]) {
       paths_to_revalidate.filter((v, i, a) => a.indexOf(v) === i).join("|")
     );
 
-    const res = await axios.get(frontEndUrl + "/api/revalidate", {
+    await axios.get(frontEndUrl + "/api/revalidate", {
       params: params,
     });
-    console.log(res.status, res.data);
   } catch (err) {
     const error = err as AxiosError;
+    captureException(error);
     console.error("Error revalidating frontend", error.response!.data);
   }
 }

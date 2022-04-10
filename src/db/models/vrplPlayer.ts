@@ -1,5 +1,6 @@
-import {Document, model, Schema} from "mongoose";
-import {registerEnumType} from "type-graphql";
+import { Document, model, Schema } from "mongoose";
+import { registerEnumType } from "type-graphql";
+import { VrplTeam } from "./vrplTeam";
 
 // Nickname history
 export interface VrplPlayerNickname {
@@ -33,6 +34,8 @@ export interface VrplPlayer {
   email: string;
   region: VrplRegion;
 
+  avatarHash?: string;
+
   discordId: string;
   discordTag: string;
   discordAvatar?: string;
@@ -56,9 +59,16 @@ const PlayerSchema = new Schema<VrplPlayer & Document>(
       required: true,
     },
     //    avatar: { type: String, require: true },
-    about: { type: String, require: false },
+    about: { type: String, require: true },
     email: { type: String, require: true },
-    region: { type: String, require: true, default: VrplRegion.UNKNOWN },
+    region: {
+      type: String,
+      require: true,
+      default: VrplRegion.UNKNOWN,
+      enum: VrplRegion,
+    },
+
+    avatarHash: String,
 
     discordId: { type: String, required: true, unique: true, index: true },
     discordTag: { type: String, required: true, index: true },
@@ -70,6 +80,18 @@ const PlayerSchema = new Schema<VrplPlayer & Document>(
   },
   { collection: "players" }
 );
+
+export function isPlayer(obj: VrplPlayer | VrplTeam): obj is VrplPlayer {
+  let teamOrPlayer = obj as VrplPlayer;
+  if (
+    !teamOrPlayer.id ||
+    !teamOrPlayer.email ||
+    !teamOrPlayer.nickname ||
+    !teamOrPlayer.about
+  )
+    return false;
+  return true;
+}
 
 const PlayerModel = model<VrplPlayer & Document>("players", PlayerSchema);
 export { PlayerModel as default };

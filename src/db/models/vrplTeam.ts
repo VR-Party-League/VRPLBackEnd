@@ -23,6 +23,8 @@ export interface VrplTeam {
   tournamentId: string;
   createdAt: Date;
 
+  avatarHash?: string;
+
   gp: number;
   wins: number;
   losses: number;
@@ -76,6 +78,8 @@ const TeamSchema = new Schema<VrplTeam & Document>(
     },
     tournamentId: String,
     createdAt: Date,
+
+    avatarHash: String,
 
     gp: Number,
     wins: Number,

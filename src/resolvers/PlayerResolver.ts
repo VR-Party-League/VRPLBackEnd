@@ -99,8 +99,11 @@ export default class {
   }
 
   @FieldResolver()
-  async avatar(@Root() vrplPlayer: VrplPlayer): Promise<string | undefined> {
-    return await getAvatar("player", vrplPlayer.id);
+  async avatar(
+    @Root() { avatarHash, id }: VrplPlayer
+  ): Promise<string | undefined> {
+    if (!avatarHash) return undefined;
+    return await getAvatar("player", id, avatarHash);
   }
 
   @Authorized()

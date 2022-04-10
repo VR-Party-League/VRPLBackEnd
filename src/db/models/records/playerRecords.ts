@@ -12,7 +12,7 @@ export interface playerUpdateRecord extends baseRecord {
   v: 1;
   type: recordType.playerUpdate;
   playerId: string;
-  valueChanged: keyof VrplPlayer | "avatar";
+  valueChanged: keyof VrplPlayer;
   old: any;
   new: any;
 }
