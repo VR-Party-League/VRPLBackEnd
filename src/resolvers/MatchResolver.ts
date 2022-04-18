@@ -44,12 +44,15 @@ import ms from "ms";
 @Resolver((_of) => Match)
 export default class {
   @Query((_returns) => [Match])
-  matchesForTeam(
+  async matchesForTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string
     // @Arg("activeOnly", { nullable: true }) activeOnly: boolean
-  ): Promise<VrplMatch[] | null> {
-    return getMatchesForTeam(tournamentId, teamId);
+  ): Promise<VrplMatch[]> {
+    const team = await getTeamFromId(tournamentId, teamId);
+    if (!team) throw new BadRequestError(`Team not found`);
+    else if (team.seed === undefined) return [];
+    return getMatchesForTeam(tournamentId, team.seed);
   }
 
   @Query((_returns) => Match, { nullable: true })
@@ -121,7 +124,7 @@ export default class {
   }
 
   @Authorized()
-  @Mutation((returns) => Match)
+  @Mutation((_returns) => Match)
   async confirmMatch(
     @Arg("tournamentId") tournamentId: string,
     @Arg("matchId") matchId: string,

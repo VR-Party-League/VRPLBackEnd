@@ -47,12 +47,12 @@ export default class Tournament {
   })
   teams: Team[];
 
-  @Field((type) => [Match], {
+  @Field((_type) => [Match], {
     description: "All the matches that the tournament had",
   })
   matches: Match[];
 
-  @Field((type) => [Match], { description: "The currently active matches" })
+  @Field((_type) => [Match], { description: "The currently active matches" })
   currentMatches: Match[];
 
   @Field({ description: "The start date" })

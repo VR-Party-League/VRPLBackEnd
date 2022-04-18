@@ -70,14 +70,14 @@ type Match {
   """If set to true the match is a forfeit"""
   isForfeit: Boolean
 
+  """The ids of the lost teams"""
+  loserIds: [String!]
+
   """The teams that lost"""
   losers: [Team!]
 
   """The submitted scores"""
   scores: [[Int!]!]
-
-  """The seeds of the teams that will be playing in this match"""
-  seeds: [Int!]!
 
   """The seeds of the teams that have confirmed the scores"""
   seedsConfirmed: [Int!]
@@ -88,6 +88,9 @@ type Match {
   """The seed of the team who submitted the match"""
   submitterSeed: Int
 
+  """The seeds of the teams that will be playing in this match"""
+  teamSeeds: [Int!]!
+
   """The teams playing the match"""
   teams: [Team!]!
 
@@ -96,6 +99,9 @@ type Match {
 
   """The teams that tied """
   tied: [Team!]
+
+  """The ids of the tied teams"""
+  tiedIds: [String!]
 
   """The time the score was fully confirmed"""
   timeConfirmed: Timestamp
@@ -112,8 +118,25 @@ type Match {
   """The tournament"""
   tournament: Tournament!
 
+  """The tournament id"""
+  tournamentId: String!
+
   """The winner of the match"""
-  winner: Match
+  winner: Team
+
+  """The id of the winning team"""
+  winnerId: String
+}
+
+input MatchRoundInput {
+  end: Timestamp!
+  matches: [MatchRoundInputMatch!]!
+  start: Timestamp!
+}
+
+input MatchRoundInputMatch {
+  team1Seed: Int!
+  team2Seed: Int!
 }
 
 input MatchScoreInput {
@@ -234,6 +257,7 @@ input MessageInput {
 
 type Mutation {
   addBadgeToPlayer(bitPosition: Int!, playerId: String!): Player!
+  addMatchesToTournament(rounds: [MatchRoundInput!]!, submit: Boolean, tournamentId: String!): [Match!]!
   changePlayerAbout(about: String!, playerId: String!): Player!
   changePlayerName(newName: String!, playerId: String!): Player!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!

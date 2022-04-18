@@ -4,6 +4,7 @@ import {
   Ctx,
   Field,
   FieldResolver,
+  InputType,
   Int,
   Mutation,
   ObjectType,
@@ -14,6 +15,7 @@ import {
 import { Context } from "..";
 import { getGameById } from "../db/game";
 import {
+  createMatches,
   getCurrentMatchesOfTournament,
   getMatchesOfTournament,
 } from "../db/match";
@@ -44,6 +46,7 @@ import {
   UnauthorizedError,
 } from "../utils/errors";
 import { Permissions, userHasPermission } from "../utils/permissions";
+import Match from "../schemas/Match";
 
 @Resolver((_of) => Tournament)
 export default class {
@@ -71,10 +74,8 @@ export default class {
   }
 
   @FieldResolver()
-  async currentMatches(
-    @Root() vrplTournament: VrplTournament
-  ): Promise<VrplMatch[] | undefined> {
-    return getCurrentMatchesOfTournament(vrplTournament.id);
+  async currentMatches(@Root() vrplTournament: VrplTournament) {
+    return await getCurrentMatchesOfTournament(vrplTournament.id);
   }
 
   @FieldResolver()
@@ -154,6 +155,20 @@ export default class {
   }
 
   @Authorized([Permissions.ManageTournaments])
+  @Mutation((_returns) => [Match])
+  async addMatchesToTournament(
+    @Arg("tournamentId") tournamentId: string,
+    @Arg("rounds", (_type) => [MatchRoundInput]) rounds: MatchRoundInput[],
+    @Arg("submit", { nullable: true }) submit?: boolean
+  ) {
+    const tournament = await getTournamentFromId(tournamentId);
+    if (!tournament) throw new BadRequestError("Tournament not found");
+    const res = await createMatches(tournament, rounds, submit);
+    console.log(res);
+    return res;
+  }
+
+  @Authorized([Permissions.ManageTournaments])
   @Mutation((_returns) => [Team])
   async seedsTeamsForTournament(
     @Arg("tournamentId") tournamentId: string,
@@ -189,4 +204,22 @@ class draftRoundRobin {
 
   @Field((_type) => [[[Int]]])
   seeds: number[][][];
+}
+
+@InputType("MatchRoundInputMatch")
+class MatchRoundInputMatch {
+  @Field((_type) => Int)
+  team1Seed: number;
+  @Field((_type) => Int)
+  team2Seed: number;
+}
+
+@InputType("MatchRoundInput")
+class MatchRoundInput {
+  @Field((_type) => [MatchRoundInputMatch])
+  matches: MatchRoundInputMatch[];
+  @Field((_type) => Date)
+  start: Date;
+  @Field((_type) => Date)
+  end: Date;
 }

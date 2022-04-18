@@ -1,6 +1,8 @@
 import { Field, InputType, Int, ObjectType } from "type-graphql";
 import Team from "./Team";
 import Tournament from "./Tournament";
+import teamSeeds from "../db/models/vrplMatch";
+import winnerId from "../db/models/vrplMatch";
 
 @ObjectType()
 export default class Match {
@@ -11,10 +13,13 @@ export default class Match {
   @Field({ description: "The tournament" })
   tournament: Tournament;
 
+  @Field({ description: "The tournament id", nullable: false })
+  tournamentId: string;
+
   @Field((_type) => [Int], {
     description: "The seeds of the teams that will be playing in this match",
   })
-  seeds: number[];
+  teamSeeds: number[];
 
   @Field((_type) => [Team], { description: "The teams playing the match" })
   teams: [Team];
@@ -72,11 +77,17 @@ export default class Match {
   })
   timeConfirmed: Date;
 
-  @Field((_type) => Match, {
+  @Field((_type) => Team, {
     description: "The winner of the match",
     nullable: true,
   })
   winner: Team;
+
+  @Field({
+    description: "The id of the winning team",
+    nullable: true,
+  })
+  winnerId: String;
 
   @Field((_type) => [Team], {
     description: "The teams that tied ",
@@ -84,11 +95,23 @@ export default class Match {
   })
   tied: [Team];
 
+  @Field((_type) => [String], {
+    description: "The ids of the tied teams",
+    nullable: true,
+  })
+  tiedIds: [String];
+
   @Field((_type) => [Team], {
     description: "The teams that lost",
     nullable: true,
   })
   losers: [Team];
+
+  @Field((_type) => [String], {
+    description: "The ids of the lost teams",
+    nullable: true,
+  })
+  loserIds: [String];
 }
 
 @InputType()
