@@ -28,7 +28,6 @@ export async function invitePlayersToTeam(
   else if (!newPlayerRole) throw new BadRequestError("No role provided");
   else if (newPlayerRole == VrplTeamPlayerRole.Pending)
     throw new BadRequestError("Pending is not a valid role");
-  console.log("newPlayerRole", newPlayerRole);
   const teamPlayers: VrplTeamPlayer[] = playerIds.map((playerId) => ({
     playerId: playerId,
     role: VrplTeamPlayerRole.Pending,
@@ -73,7 +72,6 @@ export async function invitePlayersToTeam(
     };
     records.push(record);
   }
-
   await Promise.all([
     VrplTeamDB.updateOne(
       { id: team.id, tournamentId: team.tournamentId },
@@ -117,9 +115,9 @@ export async function invitePlayersToTeam(
 export async function addPlayerToTeam(
   team: VrplTeam,
   playerId: string,
-  role: VrplTeamPlayerRole
+  role: VrplTeamPlayerRole,
+  performedById: string
 ) {
-  console.log;
   if (role === VrplTeamPlayerRole.Pending)
     throw new BadRequestError("Pending is not a valid role");
 
@@ -147,10 +145,26 @@ export async function addPlayerToTeam(
   console.log("newTeamplayer", teamPlayer);
   team.teamPlayers.push(teamPlayer);
   console.log("setting stuff rn", team.teamPlayers);
-  await VrplTeamDB.updateOne(
-    { id: team.id, tournamentId: team.tournamentId },
-    { $set: { teamPlayers: team.teamPlayers } }
-  );
+  const record: teamPlayerCreateRecord = {
+    v: 1,
+    id: uuidv4(),
+    type: recordType.teamPlayerCreate,
+    tournamentId: team.tournamentId,
+    teamId: team.id,
+    userId: performedById,
+    playerId: teamPlayer.playerId,
+    timestamp: new Date(),
+    role: teamPlayer.role,
+    team: team,
+  };
+
+  await Promise.all([
+    VrplTeamDB.updateOne(
+      { id: team.id, tournamentId: team.tournamentId },
+      { $set: { teamPlayers: team.teamPlayers } }
+    ),
+    storeAndBroadcastRecord(record),
+  ]);
 }
 
 // Change the role of a player on a team.
@@ -239,17 +253,17 @@ export async function removePlayersFromTeam(
   }
 
   const RemoveRecords: teamPlayerRemoveRecord[] = removedTeamPlayers.map(
-    (playerId) =>
-      ({
-        id: uuidv4(),
-        userId: performedById,
-        type: recordType.teamPlayerRemove,
-        tournamentId: team.tournamentId,
-        teamId: team.id,
-        playerId: playerId,
-        v: 1,
-        timestamp: new Date(),
-      } as teamPlayerRemoveRecord)
+    (playerId) => ({
+      id: uuidv4(),
+      userId: performedById,
+      type: recordType.teamPlayerRemove,
+      tournamentId: team.tournamentId,
+      teamId: team.id,
+      playerId: playerId,
+      v: 1,
+      team: team,
+      timestamp: new Date(),
+    })
   );
   const [remRes] = await Promise.all([
     VrplTeamDB.updateOne(

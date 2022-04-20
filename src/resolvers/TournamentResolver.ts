@@ -131,7 +131,8 @@ export default class {
       await addPlayerToTeam(
         createdTeamRes,
         ownerId,
-        VrplTeamPlayerRole.Captain
+        VrplTeamPlayerRole.Captain,
+        user.id
       );
     }
     return createdTeamRes;

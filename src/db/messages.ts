@@ -60,7 +60,7 @@ export async function performButtonAction(
     if (!teamPlayer)
       throw new BadRequestError("Player not found in team or not pending");
     else if (teamPlayer.role === VrplTeamPlayerRole.Pending) {
-      const res = addPlayerToTeam(team, player.id, action.role);
+      const res = addPlayerToTeam(team, player.id, action.role, performedBy.id);
       if (!res) throw new InternalServerError("Player not added to team");
       responseText = `You have been successfully added to the team '${team.name}'!`;
     } else {

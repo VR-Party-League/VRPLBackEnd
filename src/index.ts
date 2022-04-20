@@ -23,15 +23,13 @@ import cors, { CorsOptions } from "cors";
 import cookieParser from "cookie-parser";
 
 // Authentication
-import { Authenticate, AuthenticateSocketIO } from "./utils/authentication/jwt";
-import { authChecker } from "./utils/permissions";
+import { Authenticate } from "./utils/authentication/jwt";
 
 // Routes
 import router from "./routes";
 
 // Websocket stuff
 import { createApolloServer } from "./utils/servers/createApolloServer";
-import ms from "ms";
 
 // import fs from "fs";
 // import https from "https";
@@ -96,12 +94,13 @@ async function bootstrap() {
     origin: frontEndUrl, // origin should be where the frontend code is hosted
     credentials: true,
     methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS", "HEAD", "BREW"],
+    maxAge: 3600,
   };
   app.use(cors(corsOptions));
 
   app.use(async function (req, res, next) {
     try {
-      req.headers["if-none-match"] = "no-match-for-this";
+      // req.headers["if-none-match"] = "no-match-for-this";
     } catch (err) {
       console.trace();
       console.error(err);
