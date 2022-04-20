@@ -68,7 +68,10 @@ async function broadcastRecords(records: record[]) {
   for (let record of records) {
     const type = recordType[record.type].toString();
     io.sockets.emit(type, record);
-    if (record.type === recordType.playerUpdate) {
+    if (
+      record.type === recordType.playerUpdate ||
+      record.type === recordType.playerDelete
+    ) {
       paths_to_revalidate.push(`/player/${record.playerId}`);
       const playerTeams = await getAllTeamsOfPlayer(record.playerId);
       for (let team of playerTeams) {
@@ -76,7 +79,7 @@ async function broadcastRecords(records: record[]) {
           `/tournament/${team.tournamentId}/team/${team.id}`
         );
       }
-    } else if (record.type === recordType.teamUpdate) {
+    } else if (isRecordTeamRecord(record)) {
       paths_to_revalidate.push(
         `/tournament/${record.tournamentName}/team/${record.teamId}`
       );
@@ -84,13 +87,15 @@ async function broadcastRecords(records: record[]) {
       const playerIds = [
         team.ownerId,
         ...team.teamPlayers.map((teamPlayer) => teamPlayer.playerId),
-      ];
+      ].filter((playerId, index, self) => self.indexOf(playerId) === index);
+
       for (let playerId of playerIds) {
         paths_to_revalidate.push(`/player/${playerId}`);
       }
     }
   }
   if (paths_to_revalidate.length === 0) return;
+  console.log("Revalidating", paths_to_revalidate);
   try {
     const request = {
       secret: revalidateSecret,

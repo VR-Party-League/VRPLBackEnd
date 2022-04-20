@@ -50,4 +50,3 @@ export class GameField {
  *  .matches tied
  *  .points scored
  */
-// TODO: update those scores when a match gets confirmed

@@ -30,13 +30,11 @@ interface baseTeamRecord extends baseRecord {
 export interface teamCreateRecord extends baseTeamRecord {
   v: 1;
   type: recordType.teamCreate;
-  team: VrplTeam;
 }
 
 export interface teamDeleteRecord extends baseTeamRecord {
   v: 1;
   type: recordType.teamDelete;
-  team: VrplTeam;
 }
 
 export interface teamUpdateRecord extends baseTeamRecord {

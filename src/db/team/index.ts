@@ -21,27 +21,24 @@ import { BadRequestError, InternalServerError } from "../../utils/errors";
 import _ from "lodash";
 
 import * as fetch from "./fetch";
+import { deleteTeamAvatar } from "../../utils/storage";
 
 export * from "./fetch";
 export * from "./teamPlayers";
 export * from "./seeds";
 export * from "./socials";
 
-// TODO: add Sentry.captureException(err) to more places!
-
-// TODO: Test this really does return an array, and not a cursor or whatever
-
 export async function deleteTeam(
   tournament: VrplTournament,
-  teamId: string,
+  team: VrplTeam,
   performedById: string
 ) {
   try {
     const deleted = await VrplTeamDB.findOneAndDelete({
-      id: teamId,
+      id: team.id,
       tournamentId: tournament.id,
     }).exec();
-    // TODO: Remove avatars!!!!
+    team = await deleteTeamAvatar(team, performedById, true);
     if (!deleted?.ownerId) throw new InternalServerError("Did not delete team");
     await storeAndBroadcastRecord({
       v: 1,
@@ -50,11 +47,11 @@ export async function deleteTeam(
       type: recordType.teamDelete,
       tournamentId: tournament.id,
       tournamentName: tournament.name,
-      teamId: teamId,
-      team: deleted.toObject(),
+      teamId: team.id,
+      team: team,
       timestamp: new Date(),
     } as teamDeleteRecord);
-    return deleted.toObject();
+    return team;
   } catch (err) {
     console.trace();
     console.error(err);

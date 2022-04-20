@@ -130,4 +130,3 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
   });
 });
 export default router;
-// TODO: Have it not show the old pic from cache

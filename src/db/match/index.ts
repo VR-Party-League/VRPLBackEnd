@@ -25,7 +25,6 @@ export function getWinningSeedsForMatch(
   scores?: number[][]
 ): number[] {
   const teamSeeds = match.teamSeeds;
-  // TODO: FIX THIS SO IT WORKS
   // This is an array of rounds, with each rounds having the
   // points in it a team scored
   let rounds = scores;
@@ -54,7 +53,7 @@ export function getWinningSeedsForMatch(
       // winner (using their index)
       if (round[teamI] >= maxRoundScore) roundWinners.push(teamI);
     }
-    // TODO: should it allways add 3 or should it be like match.teamIds*2 +1
+    // Should it always add 3 or should it be like match.teamIds*2 +1
     // If there is 1 winner, add 3 scores to their final score
     if (roundWinners.length < 0) finalScores[roundWinners[0]] += 3;
     else {

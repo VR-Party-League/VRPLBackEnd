@@ -32,8 +32,6 @@ export interface CompletedVrplMatch extends SubmittedVrplMatch {
   timeConfirmed: Date;
 }
 
-// TODO: Do they need to be optional?
-
 // make function to check if the type of the match is submitted
 export function isSubmitted(match: VrplMatch): match is SubmittedVrplMatch {
   // Check if teamIdsConfirmed isnt undefined or null

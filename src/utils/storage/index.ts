@@ -30,7 +30,6 @@ const containerName = "pictures";
 export const containerClient =
   blobServiceClient.getContainerClient(containerName);
 
-// TODO: Does this need to cache everything? or was i being dummy again
 let allBlobs = new Set<string>();
 let lastBlobRefresh = 0;
 
@@ -159,6 +158,27 @@ export async function uploadAvatar(
   return uploadBlobResponse;
 }
 
+export async function deleteTeamAvatar(
+  team: VrplTeam,
+  performedById: string,
+  teamGone: boolean
+) {
+  if (!team.avatarHash) throw new Error("Team has no avatar hash");
+  const blobName = createBlobName(
+    "team",
+    team.id,
+    team.avatarHash,
+    team.tournamentId
+  );
+  if (!allBlobs.has(blobName)) throw new Error("Team avatar not in blob list");
+  const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+  await blockBlobClient.deleteIfExists();
+  allBlobs.delete(blobName);
+  if (!teamGone) await setTeamAvatarHash(team, null, performedById);
+  team.avatarHash = undefined;
+  return team;
+}
+
 // storeAndBroadcastRecord({
 //   id: uuidv4(),
 //   type: recordType.playerUpdate,
@@ -196,5 +216,3 @@ export async function uploadAvatar(
 //   const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 //   return await blockBlobClient.deleteIfExists();
 // }
-
-// TODO: Log changing avatars

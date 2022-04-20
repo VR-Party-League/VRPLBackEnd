@@ -34,7 +34,6 @@ export async function getPlayerFromNickname(nickname: string) {
       $diacriticSensitive: false,
     },
   }).exec();
-  // TODO: should this be fuzzy?
 }
 
 export async function getPlayerFromDiscordTag(discordTag: string) {

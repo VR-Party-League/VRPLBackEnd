@@ -58,9 +58,7 @@ export const supportedSocialPlatforms = [
 ];
 
 export type SocialPlatform = keyof VrplTeam["socials"];
-// TODO: team socials
 
-// TODO: Whats text indexing, is it useful?
 const TeamSchema = new Schema<VrplTeam & Document>(
   {
     ownerId: String,

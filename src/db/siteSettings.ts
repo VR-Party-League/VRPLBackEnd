@@ -8,7 +8,6 @@ export async function getSiteSettingFromKey(
   return siteSettings;
 }
 
-// TODO: Add logging to this function
 export async function updateSiteSettingValue(
   key: string,
   value: string

@@ -7,7 +7,7 @@ import MessageModel, {
 } from "./models/vrplMessages";
 import { VrplTeamPlayerRole } from "./models/vrplTeam";
 import { getPlayerFromId, howManyOfThesePlayersExist } from "./player";
-import { addPlayerToTeam, getTeamFromId } from "./team";
+import { addPlayerToTeam, getTeamFromId, removePlayersFromTeam } from "./team";
 import { v4 as uuidv4 } from "uuid";
 import { BadRequestError, InternalServerError } from "../utils/errors";
 import { VrplPlayer } from "./models/vrplPlayer";
@@ -60,15 +60,24 @@ export async function performButtonAction(
     if (!teamPlayer)
       throw new BadRequestError("Player not found in team or not pending");
     else if (teamPlayer.role === VrplTeamPlayerRole.Pending) {
-      const res = addPlayerToTeam(team, player.id, action.role);
+      const res = addPlayerToTeam(team, player.id, action.role, performedBy.id);
       if (!res) throw new InternalServerError("Player not added to team");
       responseText = `You have been successfully added to the team '${team.name}'!`;
     } else {
       throw new BadRequestError("Player is not a pending player for that team");
     }
   } else if (action.type === MessageButtonActionTypes.DeclineTeamInvite) {
-    // TODO: Make the decline func, it should remove the pending status
-    responseText = `This still needs to be made`;
+    const { teamId, tournamentId } = action;
+    // Check if the user has an invite to the team
+    const [team, player] = await Promise.all([
+      getTeamFromId(tournamentId, teamId),
+      getPlayerFromId(performedBy.id),
+    ]);
+
+    if (!team) throw new Error("Team not found");
+    else if (!player) throw new Error("Player not found");
+    await removePlayersFromTeam(team, [player.id], performedBy.id);
+    responseText = `Successfully declined the invite to the team '${team.name}'`;
   } else if (action.type === MessageButtonActionTypes.Debug) {
     console.log("HEYO DEBUG BUTTON CLICKED!!!!");
     responseText = `<DEBUG_ROBOT_ACTIVATED>\n<SEARCHING_TARGET>\n<TARGET_FOUND>\n<ELIMINATING_TARGET>\n<AAAAAAAAAAAA>`;
@@ -86,7 +95,6 @@ async function storeClickedButton(
       buttons: { $elemMatch: { id: button.id, clickedAt: null } },
     },
     {
-      // TODO: test this
       "buttons.$.clickedAt": new Date(),
     },
     { new: true }

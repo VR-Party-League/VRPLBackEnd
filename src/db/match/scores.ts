@@ -3,6 +3,7 @@ import { BadRequestError, InternalServerError } from "../../utils/errors";
 import { getTeamsFromSeeds, updateTeamsAfterMatch } from "../team";
 import VrplMatchDB, {
   CompletedVrplMatch,
+  isSubmitted,
   SubmittedVrplMatch,
   VrplMatch,
 } from "../models/vrplMatch";
@@ -31,9 +32,10 @@ export async function submitMatch(
   force?: boolean
 ): Promise<SubmittedVrplMatch | null> {
   if (!match || !tournament) return null;
-  else if (!force && isMatchSubmitted(match, tournament))
-    throw new BadRequestError("Match submitted already");
-  else if (areScoresInvalid(scores, match, tournament))
+  else if (isSubmitted(match)) {
+    match.seedsConfirmed = [];
+    // throw new BadRequestError("Match submitted already");
+  } else if (areScoresInvalid(scores, match, tournament))
     throw new BadRequestError("Invalid match scores");
   else if (!force && Date.now() < match.timeStart.getTime())
     throw new BadRequestError("Match not started yet");

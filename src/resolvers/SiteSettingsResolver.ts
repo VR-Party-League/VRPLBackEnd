@@ -44,7 +44,6 @@ export default class SiteSettingsResolver {
     return setting;
   }
 
-  // TODO: Make sure these perms really work
   @Authorized()
   @Mutation((_returns) => SiteSettings)
   async updateSettingValue(

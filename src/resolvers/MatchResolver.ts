@@ -183,8 +183,7 @@ export default class {
     return res;
   }
 
-  // TODO: Create match edit mutation
-
+  // TODO: Check if this works when resubmitting a match
   @Authorized()
   @Mutation((_returns) => Match)
   async submitMatch(
@@ -226,8 +225,10 @@ export default class {
       throw new BadRequestError("Match expired");
     else if (match.timeStart.getTime() > Date.now())
       throw new BadRequestError("Match not yet started");
-    else if (isSubmitted(match))
-      throw new BadRequestError("Match already been submitted");
+    else if (isCompleted(match))
+      throw new BadRequestError("Match already been completed");
+    // else if (isSubmitted(match))
+    //   throw new BadRequestError("Match already been submitted");
     const validation = areScoresInvalid(scores.rounds, match, tournament);
     if (validation) throw new BadRequestError(`Invalid scores: ${validation}`);
     const res = await submitMatch(
