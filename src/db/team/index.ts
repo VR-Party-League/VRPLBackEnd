@@ -270,9 +270,9 @@ export async function updateTeamsAfterMatch(
     }
   );
 
-  let gamesWon: any = undefined;
+  let gamesWon = undefined;
   if (match.winnerId) {
-    gamesWon = VrplTeamDB.updateMany(
+    gamesWon = VrplTeamDB.updateOne(
       {
         id: match.winnerId,
         tournamentId: match.tournamentId,
@@ -285,7 +285,7 @@ export async function updateTeamsAfterMatch(
     );
   }
 
-  let gamesTied: any = undefined;
+  let gamesTied = undefined;
   if (match.tiedIds) {
     gamesTied = VrplTeamDB.updateMany(
       {

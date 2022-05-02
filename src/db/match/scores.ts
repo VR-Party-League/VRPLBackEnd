@@ -167,7 +167,7 @@ export async function completeMatch(
     timeConfirmed: new Date(),
   };
   const resultPromise = VrplMatchDB.updateOne(
-    { id: match.id },
+    { id: match.id, tournament: match.tournamentId },
     {
       $set: {
         seedsConfirmed: completedMatch.seedsConfirmed,
@@ -234,7 +234,7 @@ export async function confirmMatch(
     throw new BadRequestError("This team is not playing in this match");
 
   match.seedsConfirmed.push(team.seed);
-  if (match.seedsConfirmed.length === match.seedsConfirmed.length - 1) {
+  if (match.seedsConfirmed.length === match.teamSeeds.length - 1) {
     return completeMatch(match, team, performedById, force);
   }
 
@@ -251,7 +251,7 @@ export async function confirmMatch(
     scores: match.scores,
   };
   const resultPromise = VrplMatchDB.updateOne(
-    { id: match.id },
+    { id: match.id, tournamentId: tournament.id },
     {
       $set: {
         seedsConfirmed: match.seedsConfirmed,

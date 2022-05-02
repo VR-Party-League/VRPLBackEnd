@@ -23,9 +23,9 @@ export async function getMatchesForTeam(
   return VrplMatchDB.find({
     tournamentId: tournamentId,
     teamSeeds: teamSeed,
-    $or: [
-      { timeDeadline: recentOnly ? { $lt: aWeekLater } : undefined },
-      { timeStart: recentOnly ? { $gt: aWeekAgo } : undefined },
+    $and: [
+      { timeStart: recentOnly ? { $lt: aWeekLater } : undefined },
+      { timeDeadline: recentOnly ? { $gt: aWeekAgo } : undefined },
     ],
   });
 }
