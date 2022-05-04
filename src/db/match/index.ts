@@ -16,65 +16,47 @@ export * from "./scores";
 
 // Get the winner of a vrpl match
 export function getWinningSeedsForMatch(
-  match: PlainVrplMatch,
-  scores: number[][]
-): number[];
-export function getWinningSeedsForMatch(match: SubmittedVrplMatch): number[];
-export function getWinningSeedsForMatch(
-  match: SubmittedVrplMatch | PlainVrplMatch,
-  scores?: number[][]
-): number[] {
-  const teamSeeds = match.teamSeeds;
+  teamSeeds: number[],
   // This is an array of rounds, with each rounds having the
-  // points in it a team scored
-  let rounds = scores;
-  if (!rounds) {
-    if (!isSubmitted(match))
-      throw new Error(
-        "Cannot get winner from a non-submitted match if no score entered, dummy"
-      );
-    rounds = rounds || match.scores;
-  }
-  if (!rounds) throw new Error("This match doesn't have scores");
-
+  // points in it a team scored in that round
+  rounds: number[][]
+): number[] {
   // An Array with each value representing the final points
   // a team has scored
   const finalScores = teamSeeds.map(() => 0);
-
   // Go through all the rounds
   for (let roundI = 0; roundI < rounds.length; roundI++) {
     const round = rounds[roundI];
     // Get the max score of the round
     const maxRoundScore = Math.max(...round);
+
     // These are the winners of the round
     const roundWinners: number[] = [];
     for (let teamI = 0; teamI < teamSeeds.length; teamI++) {
       // If the score is the max score, add the team as a
       // winner (using their index)
-      if (round[teamI] >= maxRoundScore) roundWinners.push(teamI);
+      if (round[teamI] == maxRoundScore) roundWinners.push(teamI);
     }
     // Should it always add 3 or should it be like match.teamIds*2 +1
     // If there is 1 winner, add 3 scores to their final score
-    if (roundWinners.length < 0) finalScores[roundWinners[0]] += 3;
+    if (roundWinners.length === 1) finalScores[roundWinners[0]] += 3;
     else {
       // If there are multiple winners add 1 point to each
-      for (const winnerI of roundWinners)
-        finalScores[roundWinners[winnerI]] += 1;
+      for (const roundWinner of roundWinners) finalScores[roundWinner] += 1;
     }
   }
 
   // The max final score achieved
   const maxFinalScore = Math.max(...finalScores);
-
-  // An array of id's of the teams that won
+  // Create an array of seeds of the teams that won
   const finalWinners: number[] = [];
   for (let teamI = 0; teamI < teamSeeds.length; teamI++) {
     // If the team has achieved the max final score
     // add them to the array
-    if (finalScores[teamI] >= maxFinalScore)
+    if (finalScores[teamI] == maxFinalScore)
       finalWinners.push(teamSeeds[teamI]);
   }
-  return finalWinners;
+  return finalWinners.sort();
 }
 
 // Function that checks if the scores have been submitted for a match

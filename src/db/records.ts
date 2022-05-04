@@ -2,10 +2,7 @@ import dbRecord, { recordType, record } from "./models/records";
 import io from "../utils/servers/socketIoServer";
 import axios, { AxiosError } from "axios";
 import { frontEndUrl } from "../index";
-import {
-  isRecordTeamRecord,
-  teamRecords,
-} from "./models/records/teamRecordTypes";
+import { isRecordTeamRecord } from "./models/records/teamRecordTypes";
 import {
   getTournamentFromId,
   getTournamentNameFromIdFromCache,
@@ -91,6 +88,13 @@ async function broadcastRecords(records: record[]) {
 
       for (let playerId of playerIds) {
         paths_to_revalidate.push(`/player/${playerId}`);
+      }
+    } else if (isRecordMatchRecord(record)) {
+      const teamIds = record.teamIds;
+      for (let teamId of teamIds) {
+        paths_to_revalidate.push(
+          `/tournament/${record.tournamentName}/team/${teamId}`
+        );
       }
     }
   }

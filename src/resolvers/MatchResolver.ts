@@ -136,21 +136,19 @@ export default class {
     if (!user) throw new UnauthorizedError();
     else if (!force && !userHasPermission(user, Permissions.Admin))
       throw new ForbiddenError("Only admins can use force");
-    const [team, tournament, match] = await Promise.all([
-      getTeamFromId(tournamentId, teamId),
+    const [tournament, match] = await Promise.all([
       getTournamentFromId(tournamentId),
       getMatchFromId(tournamentId, matchId),
     ]);
-
+    if (!match) throw new BadRequestError("Match not found");
+    const teams = await getTeamsFromSeeds(tournamentId, match.teamSeeds);
+    const team = teams.find((t) => t.id === teamId);
     if (!team) throw new BadRequestError("Team not found");
     else if (!tournament) throw new BadRequestError("Tournament not found");
     else if (tournament.id !== team.tournamentId)
       throw new BadRequestError("This team is not in this tournament");
-    else if (!match) throw new BadRequestError("Match not found");
     else if (!isSubmitted(match))
       throw new BadRequestError("Match has not been submitted");
-    else if (!isSeededVrplTeam(team))
-      throw new BadRequestError("Team is not seeded");
 
     const isAdmin = userHasPermission(user, Permissions.ManageMatches);
 
@@ -174,7 +172,14 @@ export default class {
       throw new BadRequestError("Match not yet started");
 
     // Confirm match
-    const res = await confirmMatch(tournament, team, match, user.id, force);
+    const res = await confirmMatch(
+      tournament,
+      team,
+      teams,
+      match,
+      user.id,
+      force
+    );
     return res;
   }
 
@@ -193,19 +198,18 @@ export default class {
     if (!user) throw new UnauthorizedError();
     else if (!force && !userHasPermission(user, Permissions.Admin))
       throw new ForbiddenError("Only admins can use force");
-    const [team, tournament, match] = await Promise.all([
-      getTeamFromId(tournamentId, teamId),
+
+    const [tournament, match] = await Promise.all([
       getTournamentFromId(tournamentId),
       getMatchFromId(tournamentId, matchId),
     ]);
-
-    if (!team) throw new BadRequestError("Team not found");
-    else if (!isSeededVrplTeam(team))
-      throw new BadRequestError("This team doesn't have a seed");
+    if (!match) throw new BadRequestError("Match not found");
+    const teams = await getTeamsFromSeeds(tournamentId, match.teamSeeds);
+    const team = teams.find((team) => team.id === teamId);
+    if (!team) throw new BadRequestError("Team not found or not seeded");
     else if (!tournament) throw new BadRequestError("Tournament not found");
     else if (tournament.id !== team.tournamentId)
       throw new BadRequestError("This team is not in this tournament");
-    else if (!match) throw new BadRequestError("Match not found");
 
     const isAdmin = userHasPermission(user, Permissions.ManageMatches);
     const isUserOnTeam =
@@ -230,6 +234,7 @@ export default class {
       tournament,
       match,
       team,
+      teams,
       scores.rounds,
       user.id
     );

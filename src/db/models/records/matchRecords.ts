@@ -22,6 +22,7 @@ interface baseMatchRecord extends baseRecord {
   tournamentId: string;
   tournamentName?: string;
   matchId: string;
+  teamIds: string[];
 }
 
 export interface matchSubmitRecord extends baseMatchRecord {

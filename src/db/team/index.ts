@@ -1,4 +1,5 @@
 import VrplTeamDB, {
+  SeededVrplTeam,
   SocialPlatform,
   VrplTeam,
   VrplTeamPlayer,
@@ -255,13 +256,14 @@ export async function validateTeamName(
 
 // Update team stats after match, stuff like wins and losses and stuff
 export async function updateTeamsAfterMatch(
-  match: CompletedVrplMatch
+  match: CompletedVrplMatch,
+  teams: SeededVrplTeam[]
 ): Promise<void> {
-  const teamSeeds = match.teamSeeds;
+  const teamIds = teams.map((team) => team.id);
   const gamesPlayed = VrplTeamDB.updateMany(
     {
+      id: { $in: teamIds },
       tournamentId: match.tournamentId,
-      seed: { $in: teamSeeds },
     },
     {
       $inc: {
