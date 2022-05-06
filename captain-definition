@@ -2,14 +2,14 @@
   "schemaVersion": 2,
   "dockerfileLines": [
     "FROM node:18.1.0",
-    "WORKDIR /app",
-    "COPY package.json /app",
-    "COPY yarn.lock /app",
+    "WORKDIR /home/node/app",
+    "COPY package.json ./",
+    "COPY yarn.lock ./",
     "RUN yarn install",
-    "COPY . /app",
+    "COPY . .",
     "ENV NODE_ENV production",
     "ENV PORT 80",
-    "CMD yarn build",
+    "RUN yarn build",
     "CMD yarn start",
     "EXPOSE 80"
   ]
