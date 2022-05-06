@@ -13,7 +13,10 @@ export class PlayerCooldown {
     nullable: false,
   })
   playerId!: string;
-  @Field({ description: "The player that owns the cooldown", nullable: false })
+  @Field((_type) => Player, {
+    description: "The player that owns the cooldown",
+    nullable: false,
+  })
   player!: Player;
   @Field({
     description: "Explanation about what this cooldown effects",
@@ -43,7 +46,10 @@ export class TeamCooldown {
   })
   tournamentId!: string;
 
-  @Field({ description: "The team that owns the cooldown", nullable: false })
+  @Field((_type) => Team, {
+    description: "The team that owns the cooldown",
+    nullable: false,
+  })
   team!: Team;
   @Field({
     description: "Explanation about what this cooldown effects",
