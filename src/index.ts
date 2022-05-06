@@ -39,9 +39,9 @@ import { createApolloServer } from "./utils/servers/createApolloServer";
 // const cert = fs.readFileSync("/home/fish/code/cert/CA/localhost/localhost.crt");
 
 const PORT = process.env.PORT || 3001;
-export const frontEndUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-if (process.env.NODE_ENV === "production" && !process.env.FRONTEND_URL)
-  throw new Error("FRONTEND_URL is not set");
+export const frontEndUrl = process.env.FRONT_END || "http://localhost:3000";
+if (process.env.NODE_ENV === "production" && !process.env.FRONT_END)
+  throw new Error("FRONT_END is not set");
 export const frontEndDomain = new URL(frontEndUrl).hostname;
 
 declare global {
