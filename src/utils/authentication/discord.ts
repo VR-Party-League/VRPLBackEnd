@@ -29,17 +29,10 @@ export async function getUserFromOAuthData(
   return userResult.data;
 }
 
-export function getRedirectUri() {
-  const redirect_uri_base =
-    process.env.NODE_ENV === "production"
-      ? `https://vrpl-graphql.herokuapp.com`
-      : `http://localhost:3001`;
-  const redirect_uri = `${redirect_uri_base}/api/auth/discord/callback`;
-  return redirect_uri;
-}
-export function getOAuthUrl() {
+export function getOAuthUrl(serverUrl: string) {
   const client_id = process.env.CLIENT_ID;
-  const redirect_uri = getRedirectUri();
+  const redirect_uri = `${serverUrl}/api/auth/discord/callback`;
+
   const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURI(
     redirect_uri
   )}&response_type=code&scope=email%20identify`;

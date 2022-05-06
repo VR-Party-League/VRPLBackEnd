@@ -3,7 +3,6 @@ import * as Sentry from "@sentry/node";
 import { frontEndUrl } from "../..";
 import {
   getOAuthUrl,
-  getRedirectUri,
   getUserFromOAuthData,
 } from "../../utils/authentication/discord";
 import { newApiToken } from "../../db/apiKeys";
@@ -52,11 +51,13 @@ const cookieSettings: CookieOptions = {
 };
 
 router.get("/discord", (req, res) => {
-  res.redirect(getOAuthUrl());
+  const serverUrl = req.protocol + "://" + req.get("host");
+  res.redirect(getOAuthUrl(serverUrl));
 });
 
 router.get("/discord/callback", async (req, res) => {
   const code = req.query.code;
+  const serverUrl = req.protocol + "://" + req.get("host");
   if (!code) return res.status(400).send({ message: "No code provided" });
   else if (typeof code !== "string")
     return res.status(400).send({ message: "Code not string" });
@@ -69,7 +70,7 @@ router.get("/discord/callback", async (req, res) => {
         client_secret: process.env.CLIENT_SECRET as string,
         code,
         grant_type: "authorization_code",
-        redirect_uri: getRedirectUri(),
+        redirect_uri: `${serverUrl}/api/auth/discord/callback`,
         scope: "identify",
       }),
       {

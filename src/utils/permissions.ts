@@ -1,19 +1,19 @@
-import { AuthChecker } from "type-graphql";
-import { Context } from "..";
-import { VrplPlayer } from "../db/models/vrplPlayer";
+import {AuthChecker} from "type-graphql";
+import {Context} from "..";
+import {VrplPlayer} from "../db/models/vrplPlayer";
 
 export enum Permissions {
-  None = 0,
-  Admin = 1 << 0, // 0001 -- the bitshift is unnecessary, but done for consistency
-  Server = 1 << 1, // 0010
-  ManageTournaments = 1 << 2, // 0100
-  ManageMatches = 1 << 3, // 1000
-  ManagePlayers = 1 << 4,
-  ManageBadges = 1 << 5,
-  ManageTeams = 1 << 6, // 0010
-  ManageMessages = 1 << 7,
-  AccessDiscordId = 1 << 10,
-
+  None = 0,                   // 0
+  Admin = 1 << 0,             // 1
+  Server = 1 << 1,            // 2
+  ManageTournaments = 1 << 2, // 4
+  ManageMatches = 1 << 3,     // 8
+  ManagePlayers = 1 << 4,     // 16
+  ManageBadges = 1 << 5,      // 32
+  ManageTeams = 1 << 6,       // 64
+  ManageMessages = 1 << 7,    // 128
+  AccessDiscordId = 1 << 10,  // 256
+  
   //All = ~(~0 << 2), // 0111
 }
 
@@ -46,12 +46,12 @@ export const authChecker: AuthChecker<any, any> = (
   roles
 ) => {
   if (!opts.context.user?.id) return false;
-
+  
   const userPerms = opts.context.user.permissions;
   if (bitFieldHas(userPerms, Permissions.Admin)) return true;
   else if (!roles?.[0]) return true;
   else if (userPerms === Permissions.None) return false;
-
+  
   for (const role of roles) {
     if (typeof role !== "number")
       throw new Error(
@@ -59,6 +59,6 @@ export const authChecker: AuthChecker<any, any> = (
       );
     else if (bitFieldHas(userPerms, role)) return true;
   }
-
+  
   return false;
 };
