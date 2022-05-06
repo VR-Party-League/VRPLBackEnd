@@ -17,7 +17,7 @@ import {
   getBadgesFromBitField,
 } from "../db/badge";
 import {
-  addCooldown,
+  addCooldownToPlayer,
   doesHaveCooldown,
   getPlayerCooldowns,
 } from "../db/cooldown";
@@ -239,7 +239,7 @@ export default class {
       if (hasCooldown) throw new BadRequestError("You are on a cooldown!");
     }
     const newPlayer = await updatePlayerName(vrplPlayer, newName, user.id);
-    if (!userHasPerms) await addCooldown("player", playerId, "changeNickname");
+    if (!userHasPerms) await addCooldownToPlayer(playerId, "changeNickname");
     return newPlayer;
   }
 

@@ -4,6 +4,7 @@ import Player from "./Player";
 import { TeamPlayer } from "./TeamPlayer";
 import Tournament from "./Tournament";
 import { VrplTeam } from "../db/models/vrplTeam";
+import { PlayerCooldown, TeamCooldown } from "./Cooldown";
 
 @ObjectType("Team")
 export default class Team {
@@ -24,6 +25,12 @@ export default class Team {
 
   @Field({ description: "The tournament id" })
   tournamentId: string;
+
+  @Field((_type) => [TeamCooldown], {
+    description: "The team's cooldowns",
+    nullable: false,
+  })
+  cooldowns: TeamCooldown[];
 
   @Field((_type) => Player, {
     description: "The owner of the team, this player holds the permissions",

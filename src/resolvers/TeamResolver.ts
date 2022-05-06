@@ -45,6 +45,9 @@ import { getTournamentFromId, getTournamentFromName } from "../db/tournaments";
 import { getAvatar } from "../utils/storage";
 import { getMatchesForTeam } from "../db/match";
 import Match from "../schemas/Match";
+import { VrplPlayerCooldown, VrplTeamCooldown } from "../db/models/cooldowns";
+import { getPlayerCooldowns, getTeamCooldowns } from "../db/cooldown";
+import { TeamCooldown } from "../schemas/Cooldown";
 
 @Resolver((_of) => Team)
 export default class {
@@ -103,6 +106,11 @@ export default class {
   async matches(@Root() vrplTeam: VrplTeam) {
     if (vrplTeam.seed === undefined) return [];
     return await getMatchesForTeam(vrplTeam.tournamentId, vrplTeam.seed, true);
+  }
+
+  @FieldResolver()
+  cooldowns(@Root() vrplTeam: VrplTeam): Promise<VrplTeamCooldown[]> {
+    return getTeamCooldowns(vrplTeam.id, vrplTeam.tournamentId);
   }
 
   // TODO: Untested
@@ -221,7 +229,8 @@ export default class {
       !userHasPermission(ctx.user, Permissions.ManageTeams)
     )
       throw new ForbiddenError();
-    const res = await updateTeamName(team.toObject(), newName, ctx.user.id);
+    const teamObj = team.toJSON<VrplTeam>();
+    const res = await updateTeamName(teamObj, newName, ctx.user.id);
     if (!res) throw new InternalServerError("Failed to change team name");
     return res;
   }
