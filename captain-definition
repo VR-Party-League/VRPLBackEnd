@@ -1,4 +1,16 @@
- {
+{
   "schemaVersion": 2,
-  "templateId": "node/16.15.0"
- }
+  "dockerfileLines": [
+    "FROM node:18.1.0",
+    "WORKDIR /app",
+    "COPY package.json /app",
+    "COPY yarn.lock /app",
+    "RUN yarn install",
+    "COPY . /app",
+    "ENV NODE_ENV production",
+    "ENV PORT 80",
+    "CMD yarn build",
+    "CMD yarn start",
+    "EXPOSE 80"
+  ]
+}

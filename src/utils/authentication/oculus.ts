@@ -1,5 +1,6 @@
 import axios from "axios";
 import { URLSearchParams } from "url";
+
 if (!process.env.OCULUS_ACCESS_TOKEN)
   throw new Error("env var OCULUS_ACCESS_TOKEN is not set");
 else if (!process.env.OCULUS_ORGANIZATION)
@@ -9,14 +10,17 @@ export interface OculusRawData {
   code: string;
   org_scoped_id: string;
 }
+
 export interface OculusTokens {
   oauth_token: string;
   refresh_code: string;
 }
+
 export interface OculusUser {
   id: string;
   alias: string;
 }
+
 export function decodeOculusData(data: string): OculusRawData {
   if (!data) throw new Error("invalid data string");
   const decoded = Buffer.from(data, "base64").toString();
@@ -31,11 +35,11 @@ export async function getOculusTokens(
   oculusData: OculusRawData
 ): Promise<OculusTokens> {
   const { code, org_scoped_id } = oculusData;
-  const params = new URLSearchParams({
-    code: code,
-    access_token: process.env.OCULUS_ACCESS_TOKEN,
-    org_scoped_id: org_scoped_id,
-  });
+  const params = new URLSearchParams([
+    ["code", code],
+    ["access_token", process.env.OCULUS_ACCESS_TOKEN!],
+    ["org_scoped_id", org_scoped_id],
+  ]);
   const accessRes = await axios.post(
     "https://graph.oculus.com/sso_authorize_code?" + params.toString()
   );
@@ -54,6 +58,7 @@ export async function getOculusUser(access_token: string): Promise<OculusUser> {
   );
   return data.data;
 }
+
 export function getBaseRedirect() {
   const redirect_uri_base =
     process.env.NODE_ENV === "production"
