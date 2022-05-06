@@ -10,6 +10,8 @@ import { VrplPlayer } from "../db/models/vrplPlayer";
 import { getPlayerFromId } from "../db/player";
 import { getTeamFromId } from "../db/team";
 import { VrplTeam } from "../db/models/vrplTeam";
+import Player from "../schemas/Player";
+import Team from "../schemas/Team";
 
 @Resolver((_of) => PlayerCooldown)
 export class PlayerCooldownResolver {
@@ -20,7 +22,7 @@ export class PlayerCooldownResolver {
     return getPlayerCooldownFromId(cooldownId);
   }
 
-  @FieldResolver()
+  @FieldResolver((_returns) => Team)
   explanation(@Root() playerCooldown: VrplPlayerCooldown): string | undefined {
     return VrplPlayerCooldownTypes[playerCooldown.type]?.explanation;
   }
@@ -47,7 +49,7 @@ export class TeamCooldownResolver {
     return VrplTeamCooldownTypes[playerCooldown.type]?.explanation;
   }
 
-  @FieldResolver()
+  @FieldResolver((_returns) => Player)
   async player(@Root() teamCooldown: VrplTeamCooldown): Promise<VrplTeam> {
     return (await getTeamFromId(
       teamCooldown.tournamentId,
