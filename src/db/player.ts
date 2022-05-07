@@ -5,7 +5,7 @@ import {
 } from "./models/records/playerRecords";
 import { v4 as uuidv4 } from "uuid";
 import { recordType } from "./models/records";
-import { storeAndBroadcastRecord } from "./records";
+import { storeAndBroadcastRecord, storeAndBroadcastRecords } from "./records";
 
 import { APIUser } from "discord-api-types/v9";
 import { cleanNameFromInput, isValidEmailRegex } from "../utils/regex/player";
@@ -48,14 +48,57 @@ export async function updatePlayerDiscordInfo(
   Player: VrplPlayer,
   User: APIUser
 ) {
-  const oldPlayer = Object.assign({}, Player);
+  const oldDiscordAvatar = Player.discordAvatar;
+  const oldDiscordTag = Player.discordTag;
+  const oldDiscordId = Player.discordId;
+
   Player.discordAvatar = User.avatar || undefined;
   Player.discordTag = `${User.username}#${User.discriminator}`;
   Player.discordId = User.id;
 
+  const records = [];
+  if (oldDiscordTag !== Player.discordTag) {
+    records.push({
+      id: uuidv4(),
+      type: recordType.playerUpdate,
+      playerId: Player.id,
+      old: oldDiscordTag,
+      new: Player.discordTag,
+      userId: Player.id,
+      timestamp: new Date(),
+      v: 1,
+      valueChanged: "discordTag",
+    } as playerUpdateRecord);
+  }
+  if (oldDiscordId !== Player.discordId) {
+    records.push({
+      id: uuidv4(),
+      type: recordType.playerUpdate,
+      playerId: Player.id,
+      old: oldDiscordId,
+      new: Player.discordId,
+      userId: Player.id,
+      timestamp: new Date(),
+      v: 1,
+      valueChanged: "discordId",
+    } as playerUpdateRecord);
+  }
+  if (oldDiscordAvatar !== Player.discordAvatar) {
+    records.push({
+      id: uuidv4(),
+      type: recordType.playerUpdate,
+      playerId: Player.id,
+      old: oldDiscordAvatar,
+      new: Player.discordAvatar,
+      userId: Player.id,
+      timestamp: new Date(),
+      v: 1,
+      valueChanged: "discordAvatar",
+    } as playerUpdateRecord);
+  }
   await Promise.all([
     VrplPlayerDB.updateOne(
-      { id: oldPlayer.id },
+      { id: Player.id },
       {
         $set: {
           discordAvatar: Player.discordAvatar,
@@ -64,7 +107,7 @@ export async function updatePlayerDiscordInfo(
         },
       }
     ),
-    recordPlayerUpdate(oldPlayer, Player, User.id),
+    records.length > 0 && storeAndBroadcastRecords(records),
   ]);
   return Player;
 }
@@ -169,7 +212,7 @@ export async function updatePlayerBadges(
   newBitField: number,
   performedById: string
 ) {
-  const oldPlayer = Object.assign({}, player);
+  const oldPlayer_badgeField = player.badgeField;
   player.badgeField = newBitField;
 
   await Promise.all([
@@ -177,7 +220,13 @@ export async function updatePlayerBadges(
       { id: player.id },
       { $set: { badgeField: player.badgeField } }
     ),
-    recordPlayerUpdate(oldPlayer, player, performedById),
+    recordPlayerKeyUpdate(
+      player.id,
+      performedById,
+      "badgeField",
+      oldPlayer_badgeField,
+      player.badgeField
+    ),
   ]);
   return player;
 }
