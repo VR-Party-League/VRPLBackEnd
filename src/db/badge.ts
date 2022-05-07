@@ -23,9 +23,9 @@ function storeBadge(badge: VrplBadge): VrplBadge {
   return cleanBadge;
 }
 
-async function refreshBadges(): Promise<void> {
+async function refreshBadges(opts?: { force: boolean }): Promise<void> {
   if (fetchingBadges) await fetchingBadges;
-  if (badgeCacheTimestamp + ms("30d") < Date.now()) {
+  if (opts?.force || badgeCacheTimestamp + ms("30d") < Date.now()) {
     badgeCacheTimestamp = Date.now();
     fetchingBadges = new Promise<void>(async (resolve, reject) => {
       const badges = await VrplBadgeDB.find({});
@@ -78,6 +78,11 @@ export async function getBadgeFromName(badgeName: string) {
       badge.name.trim().toLowerCase() === badgeName.trim().toLowerCase()
   );
   return foundBadge;
+}
+
+export async function refreshBadgesCache() {
+  await refreshBadges({ force: true });
+  return Array.from(badgeCache.values());
 }
 
 export async function getAllBadges(): Promise<VrplBadge[]> {

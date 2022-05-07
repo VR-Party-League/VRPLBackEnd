@@ -1,4 +1,5 @@
 import SiteSettingsModal, { VrplSiteSetting } from "./models/vrplSiteSettings";
+import { InternalServerError } from "../utils/errors";
 
 export async function getSiteSettingFromKey(
   key: string
@@ -18,6 +19,7 @@ export async function updateSiteSettingValue(
       { value },
       { new: true }
     );
+    if (!siteSettings) throw new InternalServerError("Site setting not found");
     return siteSettings;
   } catch (e) {
     throw new Error(`Error updating setting '${key}' to '${value}':\n${e}`);

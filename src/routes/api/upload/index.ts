@@ -1,15 +1,14 @@
 import { Router } from "express";
 import multer, { MulterError } from "multer";
 import sharp from "sharp";
-import { addCooldown, doesHaveCooldown } from "../../../db/cooldown";
+import {
+  addCooldownToPlayer,
+  addCooldownToTeam,
+  doesHaveCooldown,
+} from "../../../db/cooldown";
 import { getTeamFromId } from "../../../db/team";
 import { Permissions, userHasPermission } from "../../../utils/permissions";
 import { uploadAvatar } from "../../../utils/storage";
-import { storeAndBroadcastRecord } from "../../../db/records";
-import { playerUpdateRecord } from "../../../db/models/records/playerRecords";
-import { recordType } from "../../../db/models/records";
-import { v4 as uuidv4 } from "uuid";
-import { teamUpdateRecord } from "../../../db/models/records/teamRecordTypes";
 import { getPlayerFromId } from "../../../db/player";
 
 const router = Router();
@@ -57,7 +56,7 @@ router.post("/user/:id", async (req, res) => {
         return res.status(400).send({ message: "Invalid image" });
       }
       // Add cooldown
-      await addCooldown("player", player.id, "changeAvatar");
+      await addCooldownToPlayer(player.id, "changeAvatar");
       // Upload it to the blob storage
       const uploadRes = await uploadAvatar(player, resizedBuffer, user.id);
       if (uploadRes && uploadRes.errorCode) {
@@ -115,7 +114,7 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
         return res.status(400).send({ message: "Invalid image" });
       }
       // Add cooldown
-      await addCooldown("team", team.id, "changeAvatar");
+      await addCooldownToTeam(team.id, team.tournamentId, "changeAvatar");
       // Upload it to the blob storage
       const uploadRes = await uploadAvatar(team, resizedBuffer, user.id);
       if (uploadRes && uploadRes.errorCode) {

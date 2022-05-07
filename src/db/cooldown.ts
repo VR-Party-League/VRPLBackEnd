@@ -11,8 +11,7 @@ import {
   VrplTeamCooldownType,
   VrplTeamCooldownTypes,
 } from "../utils/cooldowns";
-import { VrplPlayer } from "./models/vrplPlayer";
-import { VrplTeam } from "./models/vrplTeam";
+import { InternalServerError } from "../utils/errors";
 
 export async function getPlayerCooldowns(
   playerId: string,
@@ -41,6 +40,25 @@ export async function getPlayerCooldowns(
     }
     return toReturn;
   }
+}
+
+export async function getTeamCooldowns(
+  teamId: string,
+  tournamentId: string,
+  type?: VrplTeamCooldownType
+): Promise<VrplTeamCooldown[]> {
+  const cooldowns: VrplTeamCooldown[] = [];
+  const filter = {
+    for: "team",
+    teamId: teamId,
+    tournamentId: tournamentId,
+    type: type,
+  };
+  const res = await CooldownDB.find(filter).exec();
+  res.forEach((cooldown) => {
+    if (cooldown.for === "team") cooldowns.push(cooldown);
+  });
+  return cooldowns;
 }
 
 export async function doesHaveCooldown(
@@ -77,80 +95,84 @@ export async function doesHaveCooldown(
       type: type,
     });
   }
+
+  return !!res;
+}
+
+export async function addCooldownToPlayer(
+  playerId: string,
+  type: VrplPlayerCooldownType,
+  length?: number
+): Promise<VrplPlayerCooldown> {
+  const now = new Date();
+  if (!isVrplPlayerCooldownType(type))
+    throw new Error("Cooldown type not for players");
+  const expire = new Date(
+    +now + (length || VrplPlayerCooldownTypes[type]?.duration)
+  );
+
+  const playerCooldown: VrplPlayerCooldown = {
+    id: uuidv4(),
+    playerId: playerId,
+    for: "player",
+    type: type,
+    createdAt: now,
+    expiresAt: expire,
+  };
+  const cooldown = new CooldownDB(playerCooldown);
+  await cooldown.save();
+  return playerCooldown;
+}
+
+export async function addCooldownToTeam(
+  teamId: string,
+  tournamentId: string,
+  type: VrplTeamCooldownType,
+  length?: number
+) {
+  const now = new Date();
+  if (!isVrplTeamCooldownType(type))
+    throw new Error("Cooldown type not for team");
+  const expire = new Date(
+    +now + (length || VrplTeamCooldownTypes[type]?.duration)
+  );
+
+  const teamCooldown: VrplTeamCooldown = {
+    id: uuidv4(),
+    teamId: teamId,
+    tournamentId: tournamentId,
+    for: "team",
+    type: type,
+    createdAt: now,
+    expiresAt: expire,
+  };
+  const cooldown = new CooldownDB(teamCooldown);
+  await cooldown.save();
+  return teamCooldown;
+}
+
+export async function getPlayerCooldownFromId(cooldownId: string) {
+  const res = await CooldownDB.findOne({
+    id: cooldownId,
+    for: "player",
+  }).exec();
+  if (!res?.for) return undefined;
+  else if (res.for !== "player")
+    throw new InternalServerError(
+      "Returned player cooldown is not a player cooldown"
+    );
   return res;
 }
 
-// For players:
-export async function addCooldown(
-  forWho: "player",
-  forId: string,
-  type: VrplPlayerCooldownType,
-  length?: number
-): Promise<VrplPlayerCooldown>;
-// For teams:
-export async function addCooldown(
-  forWho: "team",
-  forId: string,
-  type: VrplTeamCooldownType,
-  length?: number
-): Promise<VrplTeamCooldown>;
-export async function addCooldown(
-  forWho: "player" | "team",
-  forId: string,
-  type: VrplPlayerCooldownType | VrplTeamCooldownType,
-  length?: number
-): Promise<VrplPlayerCooldown | VrplTeamCooldown> {
-  const now = new Date();
-  if (forWho === "player") {
-    if (!isVrplPlayerCooldownType(type))
-      throw new Error("Cooldown type not for players");
-    const expire = new Date(
-      +now + (length || VrplPlayerCooldownTypes[type]?.duration)
-    );
-
-    const playerCooldown: VrplPlayerCooldown = {
-      id: uuidv4(),
-      playerId: forId,
-      for: "player",
-      type: type,
-      createdAt: now,
-      expiresAt: expire,
-    };
-    const cooldown = new CooldownDB(playerCooldown);
-    await cooldown.save();
-    return playerCooldown;
-  } else {
-    if (!isVrplTeamCooldownType(type))
-      throw new Error("Cooldown type not for team");
-    const expire = new Date(
-      +now + (length || VrplTeamCooldownTypes[type]?.duration)
-    );
-
-    const teamCooldown: VrplTeamCooldown = {
-      id: uuidv4(),
-      teamId: forId,
-      for: "team",
-      type: type,
-      createdAt: now,
-      expiresAt: expire,
-    };
-    const cooldown = new CooldownDB(teamCooldown);
-    await cooldown.save();
-    return teamCooldown;
-  }
-}
-
-export async function getCooldownFromId<T extends "player" | "team">(
-  forWho: T,
-  cooldownId: string
-): Promise<
-  (T extends "player" ? VrplPlayerCooldown : VrplTeamCooldown) | undefined
-> {
+export async function getTeamCooldownFromId(cooldownId: string) {
   const res = await CooldownDB.findOne({
     id: cooldownId,
-    //@ts-ignore
-    for: forWho,
-  });
-  if (!res?.for || res.for !== forWho) return undefined;
+    for: "team",
+  }).exec();
+  if (!res?.for) return undefined;
+  else if (res.for !== "team")
+    throw new InternalServerError(
+      "Returned team cooldown is not a team cooldown"
+    );
   return res;
 }

@@ -272,10 +272,13 @@ type Mutation {
   invitePlayersToTeam(playerIds: [String!]!, teamId: String!, tournamentId: String!): Team!
   performMessageButtonAction(buttonId: String!, messageId: String!, playerId: String!): PerformMessageButtonActionResponse!
   readAllUnreadMessages(limit: Float, messageIds: [String!], playerId: String!, reverse: Boolean): Int!
+  refreshBadgeCache: [Badge!]!
   refreshDiscordData(playerId: String!): Player!
   removeBadgeFromPlayer(bitPosition: Int!, playerId: String!): Player!
   removePlayersFromTeam(playerIds: [String!]!, teamId: String!, tournamentId: String!): Team!
   removeSocialAccountFromTeam(platform: String!, teamId: String!, tournamentId: String!): Team!
+  revalidatePlayerPages(playerIds: [String!]!): Boolean!
+  revalidateTeamPage(teams: [TeamsInput!]!): Boolean!
   seedsTeamsForTournament(tournamentId: String!): [Team!]!
   setBadgesOfPlayer(bitField: Int!, playerId: String!): Player!
   setPlayerRegion(playerId: String!, region: String!): Player!
@@ -305,7 +308,7 @@ type Player {
   """The player's badges"""
   badges: [Badge!]!
 
-  """The player's cooldowns, this is slow"""
+  """The player's cooldowns"""
   cooldowns: [PlayerCooldown!]!
 
   """The player's discord avatar hash"""
@@ -354,6 +357,12 @@ type PlayerCooldown {
 
   """The cooldown identifier"""
   id: String!
+
+  """The player that owns the cooldown"""
+  player: Player!
+
+  """The id of the player that owns the cooldown"""
+  playerId: String!
 
   """The cooldown type"""
   type: String!
@@ -426,6 +435,9 @@ type Team {
   """The team avatar"""
   avatar: String
 
+  """The team's cooldowns"""
+  cooldowns: [TeamCooldown!]!
+
   """The date this team was created"""
   createdAt: Timestamp!
 
@@ -472,12 +484,43 @@ type Team {
   wins: Int!
 }
 
+type TeamCooldown {
+  """When the cooldown was created"""
+  createdAt: Timestamp!
+
+  """When the cooldown will expire"""
+  expiresAt: Timestamp!
+
+  """Explanation about what this cooldown effects"""
+  explanation: String
+
+  """The cooldown identifier"""
+  id: String!
+
+  """The team that owns the cooldown"""
+  team: Team!
+
+  """The id of the team that owns the cooldown"""
+  teamId: String!
+
+  """The id of the tournament the team plays in"""
+  tournamentId: String!
+
+  """The cooldown type"""
+  type: String!
+}
+
 type TeamPlayer {
   player: Player!
   playerId: String!
   roleId: Float!
   roleName: String!
   since: Timestamp!
+}
+
+input TeamsInput {
+  teamId: String!
+  tournamentName: String!
 }
 
 """

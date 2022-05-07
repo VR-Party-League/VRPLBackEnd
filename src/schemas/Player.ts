@@ -69,7 +69,7 @@ export default class Player {
   discordAvatar: string;
 
   @Field((_type) => [PlayerCooldown], {
-    description: "The player's cooldowns, this is slow",
+    description: "The player's cooldowns",
     nullable: false,
   })
   cooldowns: PlayerCooldown[];

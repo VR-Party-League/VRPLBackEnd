@@ -3,6 +3,7 @@ import {
   VrplPlayerCooldownType,
   VrplTeamCooldownType,
 } from "../../utils/cooldowns";
+
 export type Cooldown = VrplPlayerCooldown | VrplTeamCooldown;
 
 export interface VrplPlayerCooldown {
@@ -13,10 +14,12 @@ export interface VrplPlayerCooldown {
   createdAt: Date;
   expiresAt: Date;
 }
+
 export interface VrplTeamCooldown {
   id: string;
   for: "team";
   teamId: string;
+  tournamentId: string;
   type: VrplTeamCooldownType;
   createdAt: Date;
   expiresAt: Date;
@@ -32,6 +35,7 @@ const CooldownSchema = new Schema<Cooldown & Document>(
 
     playerId: { type: String, required: false },
     teamId: { type: String, required: false },
+    tournamentId: { type: String, required: false },
   },
   { collection: "cooldowns" }
 );

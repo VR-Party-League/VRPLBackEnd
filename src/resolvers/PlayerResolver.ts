@@ -17,7 +17,7 @@ import {
   getBadgesFromBitField,
 } from "../db/badge";
 import {
-  addCooldown,
+  addCooldownToPlayer,
   doesHaveCooldown,
   getPlayerCooldowns,
 } from "../db/cooldown";
@@ -53,6 +53,7 @@ import {
   userHasPermission,
 } from "../utils/permissions";
 import { getAvatar } from "../utils/storage";
+import { revalidatePlayerPages } from "../db/records";
 
 @Resolver((_of) => Player)
 export default class {
@@ -239,7 +240,7 @@ export default class {
       if (hasCooldown) throw new BadRequestError("You are on a cooldown!");
     }
     const newPlayer = await updatePlayerName(vrplPlayer, newName, user.id);
-    if (!userHasPerms) await addCooldown("player", playerId, "changeNickname");
+    if (!userHasPerms) await addCooldownToPlayer(playerId, "changeNickname");
     return newPlayer;
   }
 
@@ -318,5 +319,14 @@ export default class {
       );
 
     return await updatePlayerAbout(player, about, user.id);
+  }
+
+  @Authorized([Permissions.ManagePlayers])
+  @Mutation((_returns) => Boolean)
+  async revalidatePlayerPages(
+    @Arg("playerIds", (_type) => [String]) playerIds: [string]
+  ) {
+    await revalidatePlayerPages(playerIds);
+    return true;
   }
 }

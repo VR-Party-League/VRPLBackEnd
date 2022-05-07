@@ -83,7 +83,8 @@ router.get("/discord/callback", async (req, res) => {
     const oauthData: RESTPostOAuth2AccessTokenResult = oauthResult.data;
     const user = await getUserFromOAuthData(oauthData);
     let rawPlayer = await getPlayerFromDiscordId(user.id);
-    let player: VrplPlayer | null = rawPlayer?.toObject() || rawPlayer;
+    let player: VrplPlayer | null =
+      rawPlayer?.toObject<VrplPlayer>() || rawPlayer;
     if (player) {
       if (player.discordId !== user.id) {
         return res.status(400).send({
