@@ -2,7 +2,9 @@ import {
   Arg,
   Authorized,
   Ctx,
+  Field,
   FieldResolver,
+  InputType,
   Int,
   Mutation,
   Query,
@@ -48,6 +50,7 @@ import Match from "../schemas/Match";
 import { VrplPlayerCooldown, VrplTeamCooldown } from "../db/models/cooldowns";
 import { getPlayerCooldowns, getTeamCooldowns } from "../db/cooldown";
 import { TeamCooldown } from "../schemas/Cooldown";
+import { revalidateTeamPages } from "../db/records";
 
 @Resolver((_of) => Team)
 export default class {
@@ -386,4 +389,21 @@ export default class {
     if (!team) throw new BadRequestError("Team not found");
     return clearTeamSeed(team, user.id);
   }
+
+  @Authorized([Permissions.ManageTeams])
+  @Mutation((_returns) => Boolean)
+  async revalidateTeamPage(
+    @Arg("teams", (_type) => [TeamsInput]) teams: TeamsInput[]
+  ) {
+    await revalidateTeamPages(teams);
+    return true;
+  }
+}
+
+@InputType("TeamsInput")
+class TeamsInput {
+  @Field((_type) => String)
+  tournamentName: string;
+  @Field((_type) => String)
+  teamId: string;
 }

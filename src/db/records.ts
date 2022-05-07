@@ -119,3 +119,25 @@ export async function storeAndBroadcastRecords(records: record[]) {
   await dbRecord.insertMany(cleanRecords(records));
   Promise.resolve(broadcastRecords(records));
 }
+
+export async function revalidatePlayerPages(playerIds: string[]) {
+  const paths = playerIds.map((playerId) => `/player/${playerId}`);
+  const request = {
+    secret: revalidateSecret,
+    paths,
+  };
+  await axios.post(frontEndUrl + "/api/revalidate", request);
+}
+
+export async function revalidateTeamPages(
+  teams: { tournamentName: string; teamId: string }[]
+) {
+  const paths = teams.map(
+    (team) => `/tournament/${team.tournamentName}/team/${team.teamId}`
+  );
+  const request = {
+    secret: revalidateSecret,
+    paths,
+  };
+  await axios.post(frontEndUrl + "/api/revalidate", request);
+}

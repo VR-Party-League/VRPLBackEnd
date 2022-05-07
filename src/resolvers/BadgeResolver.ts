@@ -17,6 +17,7 @@ import {
   getBadgeFromName,
   getBadgesFromBitField,
   getFreeBadgePosition,
+  refreshBadgesCache,
 } from "../db/badge";
 import { VrplBadge } from "../db/models/vrplBadge";
 import Badge from "../schemas/Badge";
@@ -31,18 +32,21 @@ export default class BadgeResolver {
   ): Promise<VrplBadge[]> {
     return getBadgesFromBitField(bitField);
   }
+
   @Query((_returns) => Badge, { nullable: true })
   badgeFromName(
     @Arg("name", { nullable: true }) name: string
   ): Promise<VrplBadge | undefined> {
     return getBadgeFromName(name);
   }
+
   @Query((_returns) => Badge, { nullable: true })
   badgeFromBitPosition(
     @Arg("bitPosition", (_type) => Int) bitPosition: number
   ): Promise<VrplBadge | undefined> {
     return getBadgeFromBitPosition(bitPosition);
   }
+
   @Query((_returns) => [Badge])
   allBadges(): Promise<VrplBadge[]> {
     return getAllBadges();
@@ -83,5 +87,11 @@ export default class BadgeResolver {
       );
     const res = await createNewBadge(badge, user.id);
     return res;
+  }
+
+  @Authorized([Permissions.ManageBadges])
+  @Mutation((_returns) => [Badge])
+  async refreshBadgeCache(): Promise<VrplBadge[]> {
+    return refreshBadgesCache();
   }
 }

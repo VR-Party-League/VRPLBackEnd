@@ -53,6 +53,7 @@ import {
   userHasPermission,
 } from "../utils/permissions";
 import { getAvatar } from "../utils/storage";
+import { revalidatePlayerPages } from "../db/records";
 
 @Resolver((_of) => Player)
 export default class {
@@ -318,5 +319,14 @@ export default class {
       );
 
     return await updatePlayerAbout(player, about, user.id);
+  }
+
+  @Authorized([Permissions.ManagePlayers])
+  @Mutation((_returns) => Boolean)
+  async revalidatePlayerPages(
+    @Arg("playerIds", (_type) => [String]) playerIds: [string]
+  ) {
+    await revalidatePlayerPages(playerIds);
+    return true;
   }
 }
