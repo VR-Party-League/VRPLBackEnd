@@ -112,10 +112,10 @@
   dependencies:
     tslib "^2.0.0"
 
-"@azure/storage-blob@^12.9.0":
-  version "12.9.0"
-  resolved "https://registry.yarnpkg.com/@azure/storage-blob/-/storage-blob-12.9.0.tgz#4cbd8b4c7a47dd064867430db892f4ef2d8f17ab"
-  integrity sha512-ank38FdCLfJ+EoeMzCz3hkYJuZAd63ARvDKkxZYRDb+beBYf+/+gx8jNTqkq/hfyUl4dJQ/a7tECU0Y0F98CHg==
+"@azure/storage-blob@^12.10.0":
+  version "12.10.0"
+  resolved "https://registry.yarnpkg.com/@azure/storage-blob/-/storage-blob-12.10.0.tgz#b92269f45a1765700a900b41ca81a474a6e36ea4"
+  integrity sha512-FBEPKGnvtQJS8V8Tg1P9obgmVD9AodrIfwtwhBpsjenClhFyugMp3HPJY0tF7rInUB/CivKBCbnQKrUnKxqxzw==
   dependencies:
     "@azure/abort-controller" "^1.0.0"
     "@azure/core-http" "^2.0.0"
@@ -2324,6 +2324,11 @@ webidl-conversions@^7.0.0:
   resolved "https://registry.yarnpkg.com/webidl-conversions/-/webidl-conversions-7.0.0.tgz#256b4e1882be7debbf01d05f0aa2039778ea080a"
   integrity sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g==
 
+whatwg-mimetype@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/whatwg-mimetype/-/whatwg-mimetype-3.0.0.tgz#5fa1a7623867ff1af6ca3dc72ad6b8a4208beba7"
+  integrity sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==
+
 whatwg-url@^11.0.0:
   version "11.0.0"
   resolved "https://registry.yarnpkg.com/whatwg-url/-/whatwg-url-11.0.0.tgz#0a849eebb5faf2119b901bb76fd795c2848d4018"
@@ -2331,11 +2336,6 @@ whatwg-url@^11.0.0:
   dependencies:
     tr46 "^3.0.0"
     webidl-conversions "^7.0.0"
-
-whatwg-mimetype@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/whatwg-mimetype/-/whatwg-mimetype-3.0.0.tgz#5fa1a7623867ff1af6ca3dc72ad6b8a4208beba7"
-  integrity sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==
 
 whatwg-url@^5.0.0:
   version "5.0.0"
