@@ -63,7 +63,7 @@ async function bootstrap() {
 
   // Setup sentry
   Sentry.init({
-    environment: process.env.NODE_ENV || "Dev",
+    environment: process.env.NODE_ENV || "dev",
     dsn: "https://9cbb37563c734339ab41f7c95c432abf@o501927.ingest.sentry.io/5932656",
     integrations: [
       // enable HTTP calls tracing
@@ -75,7 +75,15 @@ async function bootstrap() {
     // Set tracesSampleRate to 1.0 to capture 100%
     // of transactions for performance monitoring.
     // We recommend adjusting this value in production
-    tracesSampleRate: 1.0,
+    beforeBreadcrumb(breadCrumb) {
+      // Modify the event here
+      // if (event.request?.method === "OPTIONS") return null;
+      if (breadCrumb.message === "Authentication complete") return null;
+      else if (breadCrumb.message === "Authenticating user") return null;
+      // console.log("breadCrumb", breadCrumb);
+
+      return breadCrumb;
+    },
   });
 
   // RequestHandler creates a separate execution context using domains, so that every
