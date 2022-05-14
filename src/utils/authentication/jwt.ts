@@ -20,7 +20,7 @@ export const Authenticate: (
     ) {
       if (req.headers["authorization"].startsWith("Token")) {
         Sentry.addBreadcrumb({
-          message: "Authenticating bot",
+          message: "Authenticating with token",
           category: "log",
           data: {
             header: req.headers["authorization"],
