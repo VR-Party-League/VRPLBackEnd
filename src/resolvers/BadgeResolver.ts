@@ -61,15 +61,14 @@ export default class BadgeResolver {
   @Authorized([Permissions.ManageBadges])
   @Mutation((_returns) => Badge)
   async createBadge(
-    @Ctx() ctx: Context,
+    @Ctx() { auth }: Context,
     @Arg("name") name: string,
     @Arg("description") description: string,
     @Arg("icon") icon: string,
     @Arg("bitPosition", (_type) => Int, { nullable: true })
     bitPosition?: number
   ): Promise<VrplBadge> {
-    const user = ctx.user;
-    if (!user) throw new Error("Not authorized!?!?");
+    if (!auth) throw new Error("Not authorized!?!?");
     const badge: VrplBadge = {
       name,
       description,
@@ -85,7 +84,7 @@ export default class BadgeResolver {
       throw new BadRequestError(
         "Invalid badge name, a badge with that name already exists"
       );
-    const res = await createNewBadge(badge, user.id);
+    const res = await createNewBadge(badge, auth);
     return res;
   }
 

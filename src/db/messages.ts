@@ -11,8 +11,9 @@ import { addPlayerToTeam, getTeamFromId, removePlayersFromTeam } from "./team";
 import { v4 as uuidv4 } from "uuid";
 import { BadRequestError, InternalServerError } from "../utils/errors";
 import { VrplPlayer } from "./models/vrplPlayer";
+import { VrplAuth } from "../index";
 
-async function getMessageFromId(
+export async function getMessageFromId(
   messageId: string
 ): Promise<vrplMessage | null> {
   const result = await MessageModel.findOne({
@@ -32,7 +33,8 @@ export async function getButtonFromId(buttonId: string, messageId: string) {
 export async function performButtonAction(
   button: vrplMessageButton,
   message: vrplMessage,
-  performedBy: VrplPlayer
+  player: VrplPlayer,
+  auth: VrplAuth
 ): Promise<{ text: string | undefined; message: vrplMessage }> {
   const messageId = message.id;
   const action = button.action;
@@ -45,13 +47,9 @@ export async function performButtonAction(
   if (action.type === MessageButtonActionTypes.AcceptTeamInvite) {
     const { teamId, tournamentId } = action;
     // Check if the user has an invite to the team
-    const [team, player] = await Promise.all([
-      getTeamFromId(tournamentId, teamId),
-      getPlayerFromId(performedBy.id),
-    ]);
-
-    if (!team) throw new Error("Team not found");
-    else if (!player) throw new Error("Player not found");
+    const team = await getTeamFromId(tournamentId, teamId);
+    if (!team) throw new InternalServerError("Team not found");
+    else if (!player) throw new InternalServerError("Player not found");
     const teamPlayer = team.teamPlayers.find(
       (teamPlayer) =>
         teamPlayer.playerId === player.id &&
@@ -60,7 +58,7 @@ export async function performButtonAction(
     if (!teamPlayer)
       throw new BadRequestError("Player not found in team or not pending");
     else if (teamPlayer.role === VrplTeamPlayerRole.Pending) {
-      const res = addPlayerToTeam(team, player.id, action.role, performedBy.id);
+      const res = addPlayerToTeam(team, player.id, action.role, auth);
       if (!res) throw new InternalServerError("Player not added to team");
       responseText = `You have been successfully added to the team '${team.name}'!`;
     } else {
@@ -69,14 +67,10 @@ export async function performButtonAction(
   } else if (action.type === MessageButtonActionTypes.DeclineTeamInvite) {
     const { teamId, tournamentId } = action;
     // Check if the user has an invite to the team
-    const [team, player] = await Promise.all([
-      getTeamFromId(tournamentId, teamId),
-      getPlayerFromId(performedBy.id),
-    ]);
-
-    if (!team) throw new Error("Team not found");
-    else if (!player) throw new Error("Player not found");
-    await removePlayersFromTeam(team, [player.id], performedBy.id);
+    const team = await getTeamFromId(tournamentId, teamId);
+    if (!team) throw new InternalServerError("Team not found");
+    else if (!player) throw new InternalServerError("Player not found");
+    await removePlayersFromTeam(team, [player.id], auth);
     responseText = `Successfully declined the invite to the team '${team.name}'`;
   } else if (action.type === MessageButtonActionTypes.Debug) {
     console.log("HEYO DEBUG BUTTON CLICKED!!!!");
@@ -229,11 +223,11 @@ export async function readMessagesOfPlayer(
   return res;
 }
 
-export async function hideMessage(playerId: string, messageId: string) {
+export async function hideMessage(player: VrplPlayer, message: vrplMessage) {
   const result = await MessageModel.findOneAndUpdate(
     {
-      id: messageId,
-      recipientId: playerId,
+      id: message.id,
+      recipientId: player.id,
       hiddenAt: { $exists: false },
     },
     {

@@ -1,8 +1,10 @@
-import { VrplPlayer } from "../../db/models/vrplPlayer";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+import * as Sentry from "@sentry/node";
 
-import { v4 as uuidv4 } from "uuid";
 import { APIUser, RESTPostOAuth2AccessTokenResult } from "discord-api-types/v9";
+import { frontEndUrl } from "../../index";
+import { URLSearchParams } from "url";
+import { BadRequestError, InternalServerError } from "../errors";
 
 // {
 //   id: '325893549071663104',
@@ -18,15 +20,56 @@ import { APIUser, RESTPostOAuth2AccessTokenResult } from "discord-api-types/v9";
 //   mfa_enabled: true,
 //   premium_type: 2
 // }
-export async function getUserFromOAuthData(
+
+export async function getDiscordOAuthDataFromCode(code: string) {
+  let OAuthData: RESTPostOAuth2AccessTokenResult;
+  try {
+    const redirectUri = `${frontEndUrl}/api/auth/discord/callback`;
+    const data = new URLSearchParams({
+      client_id: process.env.CLIENT_ID as string,
+      client_secret: process.env.CLIENT_SECRET as string,
+      code: code,
+      grant_type: "authorization_code",
+      redirect_uri: redirectUri,
+      scope: "email%20identify",
+    }).toString();
+    // console.log("DATA:", data);
+    const response = await axios.post(
+      "https://discord.com/api/oauth2/token",
+      data,
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    OAuthData = response.data;
+  } catch (e) {
+    console.error((e as AxiosError).response?.data, (e as AxiosError).request);
+    Sentry.captureException(e);
+    throw new BadRequestError("Invalid discord code");
+  }
+  if (!OAuthData.access_token)
+    throw new InternalServerError("No discord access token got from code");
+  return OAuthData;
+}
+
+export async function getDiscordUserFromOAuthData(
   oauthData: RESTPostOAuth2AccessTokenResult
 ): Promise<APIUser> {
-  const userResult = await axios.get("https://discord.com/api/users/@me", {
-    headers: {
-      authorization: `${oauthData.token_type} ${oauthData.access_token}`,
-    },
-  });
-  return userResult.data;
+  try {
+    const userResult = await axios.get("https://discord.com/api/users/@me", {
+      headers: {
+        authorization: `${oauthData.token_type} ${oauthData.access_token}`,
+      },
+    });
+    return userResult.data;
+  } catch (e) {
+    console.error(e);
+    Sentry.captureException(e);
+    throw new InternalServerError("Could not get discord user from oauth data");
+  }
 }
 
 export function getOAuthUrl(serverUrl: string) {

@@ -4,8 +4,10 @@ import axios, { AxiosError } from "axios";
 import { frontEndUrl } from "../index";
 import { isRecordTeamRecord } from "./models/records/teamRecordTypes";
 import {
+  getAllTournaments,
   getTournamentFromId,
   getTournamentNameFromIdFromCache,
+  tournamentsFromIds,
 } from "./tournaments";
 import { isRecordMatchRecord } from "./models/records/matchRecords";
 import { InternalServerError } from "../utils/errors";
@@ -71,9 +73,35 @@ async function broadcastRecords(records: record[]) {
     ) {
       paths_to_revalidate.push(`/player/${record.playerId}`);
       const playerTeams = await getAllTeamsOfPlayer(record.playerId);
+      const tournamentIds: string[] = playerTeams.map(
+        (team) => team.tournamentId
+      );
+      let tournamentNames = tournamentIds.map((id) => ({
+        id: id,
+        name: getTournamentNameFromIdFromCache(id),
+      }));
+      if (tournamentNames.some((t) => !t.name)) {
+        const tournaments = await tournamentsFromIds(tournamentIds);
+        tournamentNames = tournaments.map((t) => ({ id: t.id, name: t.name }));
+      }
+
       for (let team of playerTeams) {
+        const tournamentName = tournamentNames.find(
+          (t) => t.id === team.tournamentId
+        );
+        if (!tournamentName) {
+          console.error(
+            `Could not find tournament name for ${team.tournamentId}`
+          );
+          captureException(
+            new InternalServerError(
+              "Could not find tournament name for " + team.tournamentId
+            )
+          );
+          continue;
+        }
         paths_to_revalidate.push(
-          `/tournament/${team.tournamentId}/team/${team.id}`
+          `/tournament/${tournamentName.name}/team/${team.id}`
         );
       }
     } else if (isRecordTeamRecord(record)) {
@@ -138,6 +166,24 @@ export async function revalidateTeamPages(
   const request = {
     secret: revalidateSecret,
     paths,
+  };
+  await axios.post(frontEndUrl + "/api/revalidate", request);
+}
+
+export async function revalidateTournamentPage(
+  tournamentName: string
+): Promise<void> {
+  const request = {
+    secret: revalidateSecret,
+    paths: [`/tournament/${tournamentName}`],
+  };
+  await axios.post(frontEndUrl + "/api/revalidate", request);
+}
+
+export async function revalidateGamePage(gameName: string): Promise<void> {
+  const request = {
+    secret: revalidateSecret,
+    paths: [`/game/${gameName}`],
   };
   await axios.post(frontEndUrl + "/api/revalidate", request);
 }

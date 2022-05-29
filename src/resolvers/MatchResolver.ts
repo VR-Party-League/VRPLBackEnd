@@ -130,12 +130,10 @@ export default class {
     @Arg("matchId") matchId: string,
     @Arg("teamId") teamId: string,
     @Arg("force", { nullable: true }) force: boolean,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
-    else if (!force && !userHasPermission(user, Permissions.Admin))
-      throw new ForbiddenError("Only admins can use force");
+    if (!auth) throw new UnauthorizedError();
+    else if (force) auth.assurePerm(Permissions.Admin);
     const [tournament, match] = await Promise.all([
       getTournamentFromId(tournamentId),
       getMatchFromId(tournamentId, matchId),
@@ -150,11 +148,11 @@ export default class {
     else if (!isSubmitted(match))
       throw new BadRequestError("Match has not been submitted");
 
-    const isAdmin = userHasPermission(user, Permissions.ManageMatches);
+    const isAdmin = userHasPermission(auth, Permissions.ManageMatches);
 
     const isUserOnTeam =
-      team.teamPlayers.some((member) => member.playerId === user.id) ||
-      team.ownerId === user.id;
+      team.teamPlayers.some((member) => member.playerId === auth.playerId) ||
+      team.ownerId === auth.playerId;
     if (!isAdmin && !isUserOnTeam)
       throw new ForbiddenError("You are not on this team");
     const isTeamPlayingInMatch = match.teamSeeds.includes(team.seed);
@@ -172,14 +170,7 @@ export default class {
       throw new BadRequestError("Match not yet started");
 
     // Confirm match
-    const res = await confirmMatch(
-      tournament,
-      team,
-      teams,
-      match,
-      user.id,
-      force
-    );
+    const res = await confirmMatch(tournament, team, teams, match, auth, force);
     return res;
   }
 
@@ -192,13 +183,10 @@ export default class {
     @Arg("teamId") teamId: string,
     @Arg("scores", (_type) => MatchScoreInput) scores: MatchScoreInput,
     @Arg("force", { nullable: true }) force: boolean,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ): Promise<SubmittedVrplMatch> {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
-    else if (!force && !userHasPermission(user, Permissions.Admin))
-      throw new ForbiddenError("Only admins can use force");
-
+    if (!auth) throw new UnauthorizedError();
+    else if (force) auth.assurePerm(Permissions.Admin);
     const [tournament, match] = await Promise.all([
       getTournamentFromId(tournamentId),
       getMatchFromId(tournamentId, matchId),
@@ -211,10 +199,10 @@ export default class {
     else if (tournament.id !== team.tournamentId)
       throw new BadRequestError("This team is not in this tournament");
 
-    const isAdmin = userHasPermission(user, Permissions.ManageMatches);
+    const isAdmin = userHasPermission(auth, Permissions.ManageMatches);
     const isUserOnTeam =
-      team.teamPlayers.some((member) => member.playerId === user.id) ||
-      team.ownerId === user.id;
+      team.teamPlayers.some((member) => member.playerId === auth.playerId) ||
+      team.ownerId === auth.playerId;
     if (!isUserOnTeam && !isAdmin)
       throw new ForbiddenError("You are not on this team");
 
@@ -236,7 +224,7 @@ export default class {
       team,
       teams,
       scores.rounds,
-      user.id
+      auth
     );
     if (!res || !res?.id)
       throw new InternalServerError(

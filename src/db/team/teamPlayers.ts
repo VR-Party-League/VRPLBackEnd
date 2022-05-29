@@ -16,13 +16,16 @@ import { createMessages } from "../messages";
 import { VrplPlayer } from "../models/vrplPlayer";
 import { MessageButtonActionTypes } from "../models/vrplMessages";
 import { recordType } from "../models/records";
+import { VrplAuth } from "../../index";
+import { SYSTEM_PLAYER_ID } from "../../utils/permissions";
 
 export async function invitePlayersToTeam(
   team: VrplTeam,
   playerIds: string[],
   newPlayerRole: VrplTeamPlayerRole,
-  performedBy: VrplPlayer
+  auth: VrplAuth
 ): Promise<VrplTeam | undefined> {
+  if (!auth.playerId) throw new InternalServerError("No player linked to user");
   if (!team?.id) throw new BadRequestError("No team provided");
   else if (!playerIds) throw new BadRequestError("No player provided");
   else if (!newPlayerRole) throw new BadRequestError("No role provided");
@@ -33,9 +36,19 @@ export async function invitePlayersToTeam(
     role: VrplTeamPlayerRole.Pending,
     since: new Date(),
   }));
+  playerIds.push(auth.playerId);
   const players = await getPlayersFromIds(playerIds);
+  const inviterIndex = players.findIndex(
+    (player) => player.id == auth.playerId
+  );
+  if (inviterIndex === -1)
+    throw new InternalServerError("Player not fetched from db");
+  const inviter = players[inviterIndex];
+  console.log("inviter", inviter);
+  players.splice(inviterIndex, 1);
+  console.log("players", players);
   if (!players) throw new InternalServerError("Could not get players");
-  else if (players.length != playerIds.length)
+  else if (players.length + 1 != playerIds.length)
     throw new InternalServerError("Could not get all players");
   const records: teamPlayerCreateRecord[] = [];
   for (const teamPlayer of teamPlayers) {
@@ -63,7 +76,8 @@ export async function invitePlayersToTeam(
       id: uuidv4(),
       type: recordType.teamPlayerCreate,
       tournamentId: team.tournamentId,
-      userId: performedBy.id,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       teamId: team.id,
       playerId: teamPlayer.playerId,
       timestamp: new Date(),
@@ -81,8 +95,8 @@ export async function invitePlayersToTeam(
     createMessages(
       {
         title: `You have been invited to join '${team.name}'`,
-        senderId: performedBy.id,
-        content: `${performedBy.nickname} invited you to join their team '${team.name}'!`,
+        senderId: inviter.id,
+        content: `${inviter.nickname} invited you to join their team '${team.name}'!`,
         isPickOne: true,
         buttons: [
           {
@@ -106,7 +120,7 @@ export async function invitePlayersToTeam(
           },
         ],
       },
-      playerIds
+      players.map((player) => player.id)
     ),
   ]);
   return team;
@@ -116,7 +130,7 @@ export async function addPlayerToTeam(
   team: VrplTeam,
   playerId: string,
   role: VrplTeamPlayerRole,
-  performedById: string
+  auth: VrplAuth
 ) {
   if (role === VrplTeamPlayerRole.Pending)
     throw new BadRequestError("Pending is not a valid role");
@@ -142,16 +156,15 @@ export async function addPlayerToTeam(
       );
     }
 
-  console.log("newTeamplayer", teamPlayer);
   team.teamPlayers.push(teamPlayer);
-  console.log("setting stuff rn", team.teamPlayers);
   const record: teamPlayerCreateRecord = {
     v: 1,
     id: uuidv4(),
     type: recordType.teamPlayerCreate,
     tournamentId: team.tournamentId,
     teamId: team.id,
-    userId: performedById,
+    performedByPlayerId: auth.playerId,
+    performedByUserId: auth.userId,
     playerId: teamPlayer.playerId,
     timestamp: new Date(),
     role: teamPlayer.role,
@@ -172,7 +185,7 @@ export async function changeTeamPlayerRole(
   team: VrplTeam,
   playerId: string,
   newRole: VrplTeamPlayerRole,
-  performedBy: string
+  auth: VrplAuth
 ) {
   if (!team?.id) return;
   const teamPlayer: VrplTeamPlayer = {
@@ -197,7 +210,8 @@ export async function changeTeamPlayerRole(
       id: uuidv4(),
       type: recordType.teamPlayerUpdate,
       tournamentId: team.tournamentId,
-      userId: performedBy,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       teamId: team.id,
       playerId: teamPlayer.playerId,
       timestamp: new Date(),
@@ -213,7 +227,8 @@ export async function changeTeamPlayerRole(
       id: uuidv4(),
       type: recordType.teamPlayerCreate,
       tournamentId: team.tournamentId,
-      userId: performedBy,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       teamId: team.id,
       playerId: teamPlayer.playerId,
       timestamp: new Date(),
@@ -238,7 +253,7 @@ export async function changeTeamPlayerRole(
 export async function removePlayersFromTeam(
   team: VrplTeam,
   playerIds: string[],
-  performedById: string
+  auth: VrplAuth
 ): Promise<VrplTeam> {
   const removedTeamPlayers: string[] = [];
   for (let playerId of playerIds) {
@@ -255,7 +270,8 @@ export async function removePlayersFromTeam(
   const RemoveRecords: teamPlayerRemoveRecord[] = removedTeamPlayers.map(
     (playerId) => ({
       id: uuidv4(),
-      userId: performedById,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       type: recordType.teamPlayerRemove,
       tournamentId: team.tournamentId,
       teamId: team.id,

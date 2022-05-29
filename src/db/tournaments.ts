@@ -24,6 +24,14 @@ export function getTournamentNameFromIdFromCache(tournamentId: string) {
   return tournamentNameCache.get(tournamentId);
 }
 
+export async function tournamentsFromIds(tournamentIds: string[]) {
+  const tournaments = await VrplTournamentDB.find({
+    id: { $in: tournamentIds },
+  });
+  updateTournamentNameCache(tournaments);
+  return tournaments;
+}
+
 export async function getAllTournaments() {
   const tournaments = await VrplTournamentDB.find({}).exec();
   updateTournamentNameCache(tournaments, true);

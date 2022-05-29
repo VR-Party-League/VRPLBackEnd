@@ -11,6 +11,7 @@ import {
   Query,
   Resolver,
   Root,
+  UseMiddleware,
 } from "type-graphql";
 import { Context } from "..";
 import { getGameById } from "../db/game";
@@ -23,7 +24,7 @@ import { VrplGame } from "../db/models/vrplGame";
 import { VrplMatch } from "../db/models/vrplMatch";
 import { VrplTeam, VrplTeamPlayerRole } from "../db/models/vrplTeam";
 import { VrplTournament } from "../db/models/vrplTournaments";
-import { getPlayerFromId } from "../db/player";
+import { getPlayerFromId, updatePlayerEmail } from "../db/player";
 import {
   addPlayerToTeam,
   createTeam,
@@ -45,8 +46,16 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../utils/errors";
-import { Permissions, userHasPermission } from "../utils/permissions";
+import {
+  FetchArgs,
+  PermissionChecker,
+  Permissions,
+  ResolvePlayer,
+  ResolveTeam,
+} from "../utils/permissions";
 import Match from "../schemas/Match";
+import { revalidateTournamentPage } from "../db/records";
+import Player from "../schemas/Player";
 
 @Resolver((_of) => Tournament)
 export default class {
@@ -97,25 +106,21 @@ export default class {
     @Arg("teamName") teamName: string,
     @Arg("ownerId") ownerId: string,
     @Arg("makeCaptain", { nullable: true }) makeCaptain: boolean,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ): Promise<VrplTeam> {
     // TODO: Improve this
-    const user = ctx.user;
     const [tournament, owner, team] = await Promise.all([
       getTournamentFromId(tournamentId),
       getPlayerFromId(ownerId),
       getTeamFromName(tournamentId, teamName),
     ]);
 
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     else if (!tournament) throw new BadRequestError("Tournament not found");
     else if (!owner) throw new ForbiddenError("Owner not found");
     else if (team) throw new BadRequestError("Team already exists");
-    else if (
-      user.id !== ownerId &&
-      !userHasPermission(user, Permissions.ManageTeams)
-    )
-      throw new ForbiddenError();
+    else if (auth.playerId !== ownerId)
+      auth.assurePerm(Permissions.ManageTeams);
     else if (tournament.registrationEnd < new Date())
       throw new ForbiddenError("Registration is closed");
     else if (tournament.registrationStart > new Date())
@@ -124,7 +129,7 @@ export default class {
       tournament.id,
       teamName,
       ownerId,
-      user.id
+      auth
     );
 
     if (makeCaptain) {
@@ -132,7 +137,7 @@ export default class {
         createdTeamRes,
         ownerId,
         VrplTeamPlayerRole.Captain,
-        user.id
+        auth
       );
     }
     return createdTeamRes;
@@ -173,13 +178,12 @@ export default class {
   @Mutation((_returns) => [Team])
   async seedsTeamsForTournament(
     @Arg("tournamentId") tournamentId: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const { user } = ctx;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const tournament = await getTournamentFromId(tournamentId);
     if (!tournament) throw new BadRequestError("Tournament not found");
-    const teams = await seedAllTeams(tournament, user.id);
+    const teams = await seedAllTeams(tournament, auth);
     return teams;
   }
 
@@ -187,14 +191,42 @@ export default class {
   @Mutation((_returns) => [Team])
   async unSeedTeamsForTournament(
     @Arg("tournamentId") tournamentId: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const { user } = ctx;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const tournament = await getTournamentFromId(tournamentId);
     if (!tournament) throw new BadRequestError("Tournament not found");
-    const teams = await unSeedAllTeams(tournament, user.id);
+    const teams = await unSeedAllTeams(tournament, auth);
     return teams;
+  }
+
+  @Authorized([Permissions.ManageTournaments])
+  @Mutation((_returns) => Tournament)
+  async revalidateTournamentPage(@Arg("tournamentId") tournamentId: string) {
+    const tournament = await getTournamentFromId(tournamentId);
+    if (!tournament) throw new BadRequestError("Tournament not found");
+    await revalidateTournamentPage(tournament.name);
+    return tournament;
+  }
+
+  // @UseMiddleware(ResolvePlayer("playerId", true, Permissions.ManagePlayers))
+  @UseMiddleware(
+    ResolveTeam(
+      "teamId",
+      "tournamentId",
+      { ownerOf: true },
+      Permissions.ManageTeams
+    )
+  )
+  @Mutation((_returns) => Boolean)
+  testTEST(
+    @Arg("teamId") _: string,
+    @Arg("tournamentId") __: string,
+    @Ctx() { resolved: { team }, auth }: Context
+  ) {
+    console.log("[testTEST] team", team);
+    console.log("[testTEST] auth", auth);
+    return true;
   }
 }
 

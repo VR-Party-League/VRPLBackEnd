@@ -21,6 +21,7 @@ import {
 } from "./index";
 import { SeededVrplTeam } from "../models/vrplTeam";
 import { recordType } from "../models/records";
+import { VrplAuth } from "../../index";
 
 export async function submitMatch(
   tournament: VrplTournament,
@@ -28,7 +29,7 @@ export async function submitMatch(
   team: SeededVrplTeam,
   teams: SeededVrplTeam[],
   scores: number[][],
-  performedBy: string,
+  auth: VrplAuth,
   isForfeit?: boolean,
   force?: boolean
 ): Promise<SubmittedVrplMatch | null> {
@@ -113,10 +114,11 @@ export async function submitMatch(
     timestamp: timeSubmitted,
     tournamentId: tournament.id,
     tournamentName: tournament.name,
+    performedByUserId: auth.userId,
+    performedByPlayerId: auth.playerId,
     matchId: match.id,
     teamId: team.id,
     teamSeed: team.seed,
-    userId: performedBy,
     scores: scores,
     teamIds: teams.map((team) => team.id),
   };
@@ -130,10 +132,11 @@ export async function submitMatch(
 /**
  * This function is used to complete a match once it has been confirmed enough times
  * This also confirms the match that it completes
- * @param {SubmittedVrplMatch} match the match to confirm and complete
+ * @param {VrplTournament} tournament the match to confirm and complete
+ * @param {SubmittedVrplMatch} match the team that will be the final team to confirm the match
  * @param {SeededVrplTeam} team the team that will be the final team to confirm the match
  * @param {SeededVrplTeam[]} teams all the teams playing in the match
- * @param {string} performedBy the user that confirmed the match
+ * @param {VrplAuth} auth the user that confirmed the match
  * @param {boolean} force ignore any checks
  * @returns CompletedVrplMatch | null
  */
@@ -142,7 +145,7 @@ export async function completeMatch(
   match: SubmittedVrplMatch,
   team: SeededVrplTeam,
   teams: SeededVrplTeam[],
-  performedBy: string,
+  auth: VrplAuth,
   force?: boolean
 ): Promise<CompletedVrplMatch> {
   if (!match.seedsConfirmed.includes(team.seed))
@@ -189,7 +192,8 @@ export async function completeMatch(
     scores: match.scores,
     teamId: team.id,
     teamSeed: team.seed,
-    userId: performedBy,
+    performedByUserId: auth.userId,
+    performedByPlayerId: auth.playerId,
     teamIds: teams.map((team) => team.id),
   };
   const recordComplete: matchCompleteRecord = {
@@ -205,7 +209,8 @@ export async function completeMatch(
     teamSeed: team.seed,
     scores: match.scores,
 
-    userId: performedBy,
+    performedByUserId: auth.userId,
+    performedByPlayerId: auth.playerId,
     winnerId: completedMatch.winnerId,
     tiedIds: completedMatch.tiedIds,
     loserIds: completedMatch.loserIds,
@@ -229,7 +234,7 @@ export async function confirmMatch(
   team: SeededVrplTeam,
   teams: SeededVrplTeam[],
   match: SubmittedVrplMatch,
-  performedById: string,
+  auth: VrplAuth,
   force?: boolean
 ): Promise<SubmittedVrplMatch> {
   if (!match || !tournament)
@@ -241,7 +246,7 @@ export async function confirmMatch(
 
   match.seedsConfirmed.push(team.seed);
   if (match.seedsConfirmed.length === match.teamSeeds.length - 1) {
-    return completeMatch(tournament, match, team, teams, performedById, force);
+    return completeMatch(tournament, match, team, teams, auth, force);
   }
 
   const record: matchConfirmRecord = {
@@ -249,7 +254,8 @@ export async function confirmMatch(
     id: uuidv4(),
     timestamp: new Date(),
     type: recordType.matchConfirm,
-    userId: performedById,
+    performedByUserId: auth.userId,
+    performedByPlayerId: auth.playerId,
     tournamentId: tournament.id,
     tournamentName: tournament.name,
     matchId: match.id,

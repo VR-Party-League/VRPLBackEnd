@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { recordType } from "./models/records";
 import { storeAndBroadcastRecord } from "./records";
 import { findPositions } from "../utils/bitFields";
+import { VrplAuth } from "../index";
 
 const badgeCache = new Map<number, VrplBadge>();
 let badgeCacheTimestamp = 0;
@@ -101,13 +102,14 @@ export async function getFreeBadgePosition(): Promise<number> {
 
 export async function createNewBadge(
   badge: VrplBadge,
-  performedBy: string
+  auth: VrplAuth
 ): Promise<VrplBadge> {
   const cleanedBadge = storeBadge(badge);
   const record: badgeCreateRecord = {
     v: 1,
     id: uuidv4(),
-    userId: performedBy,
+    performedByUserId: auth.userId,
+    performedByPlayerId: auth.playerId,
     type: recordType.badgeCreate,
     timestamp: new Date(),
 
