@@ -1,15 +1,16 @@
 import { baseRecord, recordType } from ".";
-import { ApiToken } from "../ApiTokens";
+import { VrplApiToken } from "../ApiTokens";
 
 export interface apiTokenCreateRecord extends baseRecord {
   v: 1;
   type: recordType.apiTokenCreate;
-  token: ApiToken;
+  token: VrplApiToken;
 }
+
 export interface apiTokenDeleteRecord extends baseRecord {
   v: 1;
   type: recordType.apiTokenDelete;
-  token: ApiToken;
+  token: VrplApiToken;
 }
 
 export type authenticationRecords = apiTokenCreateRecord | apiTokenDeleteRecord;

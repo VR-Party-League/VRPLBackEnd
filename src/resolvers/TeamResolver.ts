@@ -47,9 +47,8 @@ import { getTournamentFromId, getTournamentFromName } from "../db/tournaments";
 import { getAvatar } from "../utils/storage";
 import { getMatchesForTeam } from "../db/match";
 import Match from "../schemas/Match";
-import { VrplPlayerCooldown, VrplTeamCooldown } from "../db/models/cooldowns";
-import { getPlayerCooldowns, getTeamCooldowns } from "../db/cooldown";
-import { TeamCooldown } from "../schemas/Cooldown";
+import { VrplTeamCooldown } from "../db/models/cooldowns";
+import { getTeamCooldowns } from "../db/cooldown";
 import { revalidateTeamPages } from "../db/records";
 
 @Resolver((_of) => Team)
@@ -123,17 +122,15 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("playerIds", (_type) => [String]) playerIds: string[],
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
+    else if (!auth.playerId)
+      throw new BadRequestError("Need player to send request");
     const originalTeam = await getTeamFromId(tournamentId, teamId);
     if (!originalTeam) throw new BadRequestError("Team not found");
-    else if (
-      originalTeam.ownerId !== user.id &&
-      !userHasPermission(user, Permissions.ManageTeams)
-    )
-      throw new ForbiddenError();
+    else if (originalTeam.ownerId !== auth.playerId)
+      auth.assurePerm(Permissions.ManageTeams);
     const players = await getPlayersFromIds(playerIds);
     if (!players?.[0]) throw new BadRequestError("No players found");
     else if (players.length !== playerIds.length)
@@ -143,7 +140,7 @@ export default class {
       originalTeam,
       playerIds,
       VrplTeamPlayerRole.Player,
-      user
+      auth
     );
 
     if (!newTeam) throw new InternalServerError(`Failed to add player to team`);
@@ -158,16 +155,13 @@ export default class {
     @Arg("teamId") teamId: string,
     @Arg("playerId") playerId: string,
     @Arg("role", (_type) => Number) role: VrplTeamPlayerRole,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    if (!ctx.user) throw new BadRequestError("Not logged in");
+    if (!auth) throw new UnauthorizedError();
     const originalTeam = await getTeamFromId(tournamentId, teamId);
     if (!originalTeam) throw new BadRequestError("Team not found");
-    else if (
-      originalTeam.ownerId !== ctx.user.id &&
-      !userHasPermission(ctx.user, Permissions.ManageTeams)
-    )
-      throw new ForbiddenError();
+    else if (originalTeam.ownerId !== auth.playerId)
+      auth.assurePerm(Permissions.ManageTeams);
 
     if (!Object.values(VrplTeamPlayerRole).includes(role))
       throw new BadRequestError(
@@ -180,7 +174,7 @@ export default class {
       originalTeam,
       playerId,
       role,
-      ctx.user.id
+      auth
     );
     if (!newTeam) throw new InternalServerError(`Failed to add sub to team`);
     return newTeam;
@@ -194,22 +188,19 @@ export default class {
     @Arg("teamId") teamId: string,
     @Arg("playerId") playerId: string,
     @Arg("makeOldOwnerPlayer", { nullable: true }) makeOldOwnerPlayer: boolean,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    if (!ctx.user) throw new UnauthorizedError("Not logged in");
+    if (!auth) throw new UnauthorizedError("Not logged in");
     const originalTeam = await getTeamFromId(tournamentId, teamId);
     if (!originalTeam) throw new BadRequestError("Team not found");
 
-    if (
-      originalTeam.ownerId !== ctx.user.id &&
-      !userHasPermission(ctx.user, Permissions.ManageTeams)
-    )
-      throw new ForbiddenError();
+    if (originalTeam.ownerId !== auth.playerId)
+      auth.assurePerm(Permissions.ManageTeams);
 
     const res = transferTeam(
       originalTeam,
       playerId,
-      ctx.user.id,
+      auth,
       makeOldOwnerPlayer ? VrplTeamPlayerRole.Player : undefined
     );
     if (!res) throw new InternalServerError("Failed to transfer teams");
@@ -222,18 +213,16 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("newName") newName: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ): Promise<VrplTeam> {
-    if (!ctx.user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const team = await getTeamFromId(tournamentId, teamId);
     if (!team) throw new BadRequestError("Team not found");
-    else if (
-      team.ownerId !== ctx.user.id &&
-      !userHasPermission(ctx.user, Permissions.ManageTeams)
-    )
-      throw new ForbiddenError();
+    else if (team.ownerId !== auth.playerId)
+      auth.assurePerm(Permissions.ManageTeams);
+
     const teamObj = team.toJSON<VrplTeam>();
-    const res = await updateTeamName(teamObj, newName, ctx.user.id);
+    const res = await updateTeamName(teamObj, newName, auth);
     if (!res) throw new InternalServerError("Failed to change team name");
     return res;
   }
@@ -244,17 +233,13 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("playerIds", (_type) => [String]) playerIds: string[],
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const team = await getTeamFromId(tournamentId, teamId);
     if (!team) throw new BadRequestError("Team not found");
-    else if (
-      team.ownerId !== user.id &&
-      !userHasPermission(user, Permissions.ManageTeams)
-    )
-      throw new ForbiddenError();
+    else if (team.ownerId !== auth.playerId)
+      auth.assurePerm(Permissions.ManageTeams);
     else if (
       playerIds.find(
         (id) =>
@@ -264,7 +249,7 @@ export default class {
       throw new BadRequestError(
         "Some of the players that should be removed are not on the team"
       );
-    const res = await removePlayersFromTeam(team, playerIds, user.id);
+    const res = await removePlayersFromTeam(team, playerIds, auth);
     if (!res)
       throw new InternalServerError("Failed to remove players from team");
     return res;
@@ -276,28 +261,23 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("force", { nullable: true }) force: boolean,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
-    else if (force && !userHasPermission(user, Permissions.ManageTeams))
-      throw new ForbiddenError();
+    if (!auth) throw new UnauthorizedError();
+    else if (force) auth.assurePerm(Permissions.ManageTeams);
     const [team, tournament] = await Promise.all([
       getTeamFromId(tournamentId, teamId),
       getTournamentFromId(tournamentId),
     ]);
     if (!tournament) throw new BadRequestError("Tournament not found");
     else if (!team) throw new BadRequestError("Team not found");
-    else if (
-      team.ownerId !== user.id &&
-      !userHasPermission(user, Permissions.ManageTeams)
-    )
-      throw new ForbiddenError();
+    else if (team.ownerId !== auth.playerId)
+      auth.assurePerm(Permissions.ManageTeams);
     else if (!force && tournament.registrationStart > new Date())
       throw new BadRequestError("Cannot delete team before registration start");
     else if (!force && tournament.registrationEnd < new Date())
       throw new BadRequestError("Cannot delete team after registration end");
-    const res = await deleteTeam(tournament, team.id, user.id);
+    const res = await deleteTeam(tournament, team.id, auth);
     if (!res) throw new InternalServerError("Failed to remove team");
     return res;
   }
@@ -309,23 +289,19 @@ export default class {
     @Arg("teamId") teamId: string,
     @Arg("platform", (_type) => String) platform: SocialPlatform,
     @Arg("code") code: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const team = await getTeamFromId(tournamentId, teamId);
     if (!team) throw new BadRequestError("Team not found");
-    else if (
-      team.ownerId !== user.id &&
-      !userHasPermission(user, Permissions.ManageTeams)
-    )
-      throw new ForbiddenError();
+    else if (team.ownerId !== auth.playerId)
+      auth.assurePerm(Permissions.ManageTeams);
     else if (!supportedSocialPlatforms.includes(platform))
       throw new BadRequestError(
         "Invalid platform, platforms supported: " +
           supportedSocialPlatforms.join(", ")
       );
-    const res = await addSocialAccountToTeam(team, platform, code, user.id);
+    const res = await addSocialAccountToTeam(team, platform, code, auth);
     if (!res)
       throw new InternalServerError("Failed to add social account to team");
     return res;
@@ -337,23 +313,19 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("platform", (_type) => String) platform: SocialPlatform,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const { user } = ctx;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const team = await getTeamFromId(tournamentId, teamId);
     if (!team) throw new BadRequestError("Team not found");
-    else if (
-      team.ownerId !== user.id &&
-      !userHasPermission(user, Permissions.ManageTeams)
-    )
-      throw new ForbiddenError();
+    else if (team.ownerId !== auth.playerId)
+      auth.assurePerm(Permissions.ManageTeams);
     else if (!supportedSocialPlatforms.includes(platform))
       throw new BadRequestError(
         "Invalid platform, platforms supported: " +
           supportedSocialPlatforms.join(", ")
       );
-    const res = await removeSocialAccountFromTeam(team, platform, user.id);
+    const res = await removeSocialAccountFromTeam(team, platform, auth);
     if (!res)
       throw new InternalServerError(
         "Failed to remove social account from team"
@@ -367,13 +339,12 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
     @Arg("seed", (_type) => Int) seed: number,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const { user } = ctx;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const team = await getTeamFromId(tournamentId, teamId);
     if (!team) throw new BadRequestError("Team not found");
-    return setTeamSeed(team, seed, user.id);
+    return setTeamSeed(team, seed, auth);
   }
 
   @Authorized([Permissions.ManageTournaments])
@@ -381,13 +352,12 @@ export default class {
   async clearTeamSeed(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const { user } = ctx;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const team = await getTeamFromId(tournamentId, teamId);
     if (!team) throw new BadRequestError("Team not found");
-    return clearTeamSeed(team, user.id);
+    return clearTeamSeed(team, auth);
   }
 
   @Authorized([Permissions.ManageTeams])

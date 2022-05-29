@@ -10,12 +10,13 @@ import { v4 as uuidv4 } from "uuid";
 import VrplTeamDB, { SocialPlatform, VrplTeam } from "../models/vrplTeam";
 import { storeAndBroadcastRecord } from "../records";
 import { recordType } from "../models/records";
+import { VrplAuth } from "../../index";
 
 export async function addSocialAccountToTeam(
   team: VrplTeam,
   platform: SocialPlatform,
   code: string,
-  performedById: string
+  auth: VrplAuth
 ) {
   switch (platform) {
     case "twitch":
@@ -57,7 +58,8 @@ export async function addSocialAccountToTeam(
     teamId: team.id,
     timestamp: new Date(),
     type: recordType.teamUpdate,
-    userId: performedById,
+    performedByPlayerId: auth.playerId,
+    performedByUserId: auth.userId,
     valueChanged: `socials`,
     new: team.socials,
     old: oldSocials,
@@ -87,7 +89,7 @@ export async function addSocialAccountToTeam(
 export async function removeSocialAccountFromTeam(
   team: VrplTeam,
   platform: SocialPlatform,
-  performedById: string
+  auth: VrplAuth
 ): Promise<VrplTeam> {
   const oldSocials = Object.assign({}, team.socials);
   team.socials[platform] = undefined;
@@ -97,7 +99,8 @@ export async function removeSocialAccountFromTeam(
     teamId: team.id,
     timestamp: new Date(),
     type: recordType.teamUpdate,
-    userId: performedById,
+    performedByPlayerId: auth.playerId,
+    performedByUserId: auth.userId,
     valueChanged: `socials`,
     new: team.socials,
     old: oldSocials,

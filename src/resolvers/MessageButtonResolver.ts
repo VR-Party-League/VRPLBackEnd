@@ -5,15 +5,13 @@ import {
   Ctx,
   Field,
   FieldResolver,
-  Int,
   Mutation,
   ObjectType,
-  Query,
   Resolver,
   Root,
 } from "type-graphql";
 import { vrplMessage, vrplMessageButton } from "../db/models/vrplMessages";
-import { Permissions, userHasPermission } from "../utils/permissions";
+import { Permissions } from "../utils/permissions";
 import {
   BadRequestError,
   InternalServerError,
@@ -22,6 +20,7 @@ import {
 import { getMessageForPlayerFromId, performButtonAction } from "../db/messages";
 import Message from "../schemas/Message";
 import { getPlayerFromId } from "../db/player";
+import { Context } from "../index";
 
 @Resolver((_of) => MessageButton)
 export default class {
@@ -37,17 +36,13 @@ export default class {
     @Arg("playerId") playerId: string,
     @Arg("buttonId") buttonId: string,
     @Arg("messageId") messageId: string,
-    @Ctx() ctx: any
+    @Ctx() { auth }: Context
   ): Promise<{ text: string; message: vrplMessage }> {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const player = await getPlayerFromId(playerId);
     if (!player) throw new BadRequestError("Player not found");
-    else if (
-      player.id !== user.id &&
-      !userHasPermission(user, Permissions.ManageMessages)
-    )
-      throw new UnauthorizedError();
+    else if (player.id !== auth.playerId)
+      auth.assurePerm(Permissions.ManageMessages);
 
     const message = await getMessageForPlayerFromId(playerId, messageId);
     if (!message) throw new BadRequestError("Message not found");
@@ -64,7 +59,8 @@ export default class {
     const { text, message: newMessage } = await performButtonAction(
       messageButton,
       message,
-      player
+      player,
+      auth
     );
     if (!text) throw new InternalServerError("Button action failed");
     return { text, message: newMessage };

@@ -12,7 +12,6 @@ function storeGame(rawGame: VrplGame) {
     name: rawGame.name,
     banner: rawGame.banner,
     description: rawGame.description,
-    fields: rawGame.fields.map((field) => Object.assign({}, field)),
   };
   gameCache.set(match.id, match);
   return match;

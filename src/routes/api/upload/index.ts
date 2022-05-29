@@ -17,9 +17,9 @@ const upload = multer({ limits: { fileSize: MAX_FILE_SIZE } });
 router.post("/user/:id", async (req, res) => {
   upload.single("avatar")(req, res, async function (err) {
     try {
-      let user = req.user;
+      let auth = req.auth;
       // Check for the player is logged in
-      if (!user) return res.status(401).send({ message: "Unauthorized" });
+      if (!auth) return res.status(401).send({ message: "Unauthorized" });
       // Check for multer errors
       else if (err && err instanceof MulterError)
         return res.status(400).send({ message: err.code });
@@ -28,13 +28,13 @@ router.post("/user/:id", async (req, res) => {
       // Check if the player is permitted to perform this action
       if (!player) return res.status(404).send({ message: "Player not found" });
       else if (
-        player.id !== user.id &&
-        !userHasPermission(user, Permissions.ManagePlayers)
+        player.id !== auth.playerId &&
+        !userHasPermission(auth, Permissions.ManagePlayers)
       )
         return res.status(403).send({ message: "Forbidden" });
       // Check if the player is on cooldown
       else if (
-        !userHasPermission(user, Permissions.ManagePlayers) &&
+        !userHasPermission(auth, Permissions.ManagePlayers) &&
         (await doesHaveCooldown("player", player.id, "changeAvatar"))
       ) {
         return res.status(429).send({ message: "You are on a cooldown" });
@@ -58,7 +58,7 @@ router.post("/user/:id", async (req, res) => {
       // Add cooldown
       await addCooldownToPlayer(player.id, "changeAvatar");
       // Upload it to the blob storage
-      const uploadRes = await uploadAvatar(player, resizedBuffer, user.id);
+      const uploadRes = await uploadAvatar(player, resizedBuffer, auth);
       if (uploadRes && uploadRes.errorCode) {
         console.error(uploadRes, uploadRes.errorCode);
         return res.status(500).send({ message: uploadRes.errorCode });
@@ -71,12 +71,12 @@ router.post("/user/:id", async (req, res) => {
   });
 });
 
-router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
+router.post("/tournament/:tournamentID/team/:id", (req, res) => {
   upload.single("avatar")(req, res, async function (err) {
     try {
-      const user = req.user;
+      const auth = req.auth;
       // Check for the player is logged in
-      if (!user) return res.status(401).send({ message: "Unauthorized" });
+      if (!auth) return res.status(401).send({ message: "Unauthorized" });
       // Check for multer errors
       else if (err && err instanceof MulterError)
         return res.status(400).send({ message: err.code });
@@ -86,13 +86,13 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
       if (!team) return res.status(400).send({ message: "Invalid team" });
       // Check if the player is permitted to perform this action
       else if (
-        team.ownerId !== user.id &&
-        !userHasPermission(user, Permissions.ManageTeams)
+        team.ownerId !== auth.playerId &&
+        !userHasPermission(auth, Permissions.ManageTeams)
       )
         return res.status(403).send({ message: "Forbidden" });
       // Check if the player is on cooldown
       else if (
-        !userHasPermission(user, Permissions.ManageTeams) &&
+        !userHasPermission(auth, Permissions.ManageTeams) &&
         (await doesHaveCooldown("team", team.id, "changeAvatar"))
       )
         return res.status(429).send({ message: "This team is on a cooldown" });
@@ -116,7 +116,7 @@ router.post("/tournament/:tournamentID/team/:id", async (req, res) => {
       // Add cooldown
       await addCooldownToTeam(team.id, team.tournamentId, "changeAvatar");
       // Upload it to the blob storage
-      const uploadRes = await uploadAvatar(team, resizedBuffer, user.id);
+      const uploadRes = await uploadAvatar(team, resizedBuffer, auth);
       if (uploadRes && uploadRes.errorCode) {
         console.error(uploadRes, uploadRes.errorCode);
         return res.status(500).send({ message: uploadRes.errorCode });

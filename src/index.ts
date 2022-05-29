@@ -23,13 +23,19 @@ import cors, { CorsOptions } from "cors";
 import cookieParser from "cookie-parser";
 
 // Authentication
-import { Authenticate } from "./utils/authentication/jwt";
+// import { Authenticate } from "./utils/authentication/jwt";
 
 // Routes
 import router from "./routes";
 
 // Websocket stuff
 import { createApolloServer } from "./utils/servers/createApolloServer";
+import { ObjectId } from "mongoose";
+import { AllOAuthScopes, OAuthClient } from "./db/models/OAuthModels";
+import { Permissions } from "./utils/permissions";
+import { authenticate } from "./routes/api/oauth2";
+import { VrplTeam } from "./db/models/vrplTeam";
+import { VrplTournament } from "./db/models/vrplTournaments";
 
 // import fs from "fs";
 // import https from "https";
@@ -47,13 +53,32 @@ export const frontEndDomain = new URL(frontEndUrl).hostname;
 declare global {
   namespace Express {
     export interface Request {
-      user: VrplPlayer | undefined;
+      auth?: VrplAuth;
     }
   }
 }
 
+export interface VrplAuth {
+  userId: ObjectId;
+  playerId?: string;
+  permissions: number;
+  scope?: AllOAuthScopes[];
+  getPlayer: () => Promise<VrplPlayer>;
+  hasPerm: (perm: Permissions) => boolean;
+  assurePerm: (perm: Permissions) => void;
+  client?: Pick<
+    OAuthClient,
+    "clientId" | "clientName" | "verified" | "createdAt" | "userId"
+  >;
+}
+
 export interface Context {
-  user?: VrplPlayer;
+  auth?: VrplAuth;
+  resolved: {
+    player?: VrplPlayer | null;
+    team?: VrplTeam | null;
+    tournament?: VrplTournament | null;
+  };
 }
 
 async function bootstrap() {
@@ -81,7 +106,6 @@ async function bootstrap() {
       if (breadCrumb.message === "Authentication complete") return null;
       else if (breadCrumb.message === "Authenticating user") return null;
       // console.log("breadCrumb", breadCrumb);
-
       return breadCrumb;
     },
   });
@@ -115,7 +139,8 @@ async function bootstrap() {
     next();
   });
 
-  app.use(Authenticate);
+  // app.use(Authenticate);
+  app.use(authenticate);
 
   apolloServer.applyMiddleware({ app, cors: corsOptions });
 

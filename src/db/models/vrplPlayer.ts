@@ -1,6 +1,7 @@
 import { Document, model, Schema } from "mongoose";
 import { registerEnumType } from "type-graphql";
 import { VrplTeam } from "./vrplTeam";
+import { ObjectId } from "bson";
 
 // Nickname history
 export interface VrplPlayerNickname {
@@ -43,6 +44,8 @@ export interface VrplPlayer {
   badgeField: number;
   permissions: number;
   timeCreated: Date;
+
+  // userId: ObjectId;
 }
 
 const PlayerSchema = new Schema<VrplPlayer & Document>(
@@ -77,6 +80,7 @@ const PlayerSchema = new Schema<VrplPlayer & Document>(
     badgeField: { type: Number, required: true, default: 0 },
     permissions: { type: Number, required: true, default: 0 },
     timeCreated: { type: Date, require: true },
+    // userId: { type: ObjectId, required: true, index: true },
   },
   { collection: "players" }
 );

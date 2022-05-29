@@ -7,10 +7,11 @@ import VrplTeamDB, { SeededVrplTeam, VrplTeam } from "../models/vrplTeam";
 import { storeAndBroadcastRecord, storeAndBroadcastRecords } from "../records";
 import { InternalServerError } from "../../utils/errors";
 import { recordType } from "../models/records";
+import { VrplAuth } from "../../index";
 
 export async function seedAllTeams(
   tournament: VrplTournament,
-  performedById: string
+  auth: VrplAuth
   // random?: boolean
   // clearPrevious?: boolean
 ): Promise<SeededVrplTeam[]> {
@@ -54,7 +55,8 @@ export async function seedAllTeams(
       teamId: team.id,
       timestamp: new Date(),
       type: recordType.teamUpdate,
-      userId: performedById,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       valueChanged: `seed`,
       new: seed,
       old: undefined,
@@ -76,7 +78,7 @@ export async function seedAllTeams(
 
 export async function unSeedAllTeams(
   tournament: VrplTournament,
-  performedById: string
+  auth: VrplAuth
 ) {
   const teams = await fetch.getTeamsOfTournament(tournament.id);
   const seededTeams = teams.filter((team) => team.seed !== undefined);
@@ -90,7 +92,8 @@ export async function unSeedAllTeams(
       teamId: team.id,
       timestamp: new Date(),
       type: recordType.teamUpdate,
-      userId: performedById,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       valueChanged: `seed`,
       new: undefined,
       old: team.seed,
@@ -127,7 +130,7 @@ export async function unSeedAllTeams(
 export async function setTeamSeed(
   team: VrplTeam,
   seed: number,
-  performedById: string
+  auth: VrplAuth
 ) {
   const [res] = await Promise.all([
     VrplTeamDB.updateOne(
@@ -147,7 +150,8 @@ export async function setTeamSeed(
       teamId: team.id,
       timestamp: new Date(),
       type: recordType.teamUpdate,
-      userId: performedById,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       valueChanged: `seed`,
       new: seed,
       old: team.seed,
@@ -163,7 +167,7 @@ export async function setTeamSeed(
   return team;
 }
 
-export async function clearTeamSeed(team: VrplTeam, performedById: string) {
+export async function clearTeamSeed(team: VrplTeam, auth: VrplAuth) {
   const [res] = await Promise.all([
     VrplTeamDB.updateOne(
       {
@@ -182,7 +186,8 @@ export async function clearTeamSeed(team: VrplTeam, performedById: string) {
       teamId: team.id,
       timestamp: new Date(),
       type: recordType.teamUpdate,
-      userId: performedById,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       valueChanged: `seed`,
       new: undefined,
       old: team.seed,

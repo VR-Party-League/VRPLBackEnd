@@ -15,6 +15,8 @@ import { ApolloServer } from "apollo-server-express";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
 import { CustomError } from "../errors";
 import { Context } from "../../index";
+import { OAuth2ClientResolver } from "../../resolvers/OAuth";
+import ApiTokenResolver from "../../resolvers/ApiTokenResolver";
 
 export async function createApolloServer() {
   const schema = await buildSchema({
@@ -30,13 +32,15 @@ export async function createApolloServer() {
       SiteSettingsResolver,
       MessageButtonResolver,
       MessageResolver,
+      OAuth2ClientResolver,
+      ApiTokenResolver,
     ],
     emitSchemaFile: true,
     dateScalarMode: "timestamp",
     authChecker: authChecker,
   });
 
-  const apolloServer = new ApolloServer({
+  return new ApolloServer({
     schema: schema,
     introspection: true,
     plugins: [
@@ -64,10 +68,10 @@ export async function createApolloServer() {
     },
     context: ({ req, res }) => {
       const context: Context = {
-        user: req.user,
+        auth: req.auth,
+        resolved: {},
       };
       return context;
     },
   });
-  return apolloServer;
 }

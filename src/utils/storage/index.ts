@@ -10,6 +10,7 @@ import { setPlayerAvatarHash } from "../../db/player";
 import { VrplPlayer, isPlayer } from "../../db/models/vrplPlayer";
 import { VrplTeam } from "../../db/models/vrplTeam";
 import { setTeamAvatarHash } from "../../db/team";
+import { VrplAuth } from "../../index";
 
 function getBufferHash(buffer: Buffer): string {
   const hash = crypto.createHash("SHA1");
@@ -105,21 +106,21 @@ export async function getAvatar(
 export async function uploadAvatar(
   player: VrplPlayer,
   fileData: Buffer,
-  performedById: string
+  auth: VrplAuth
 ): Promise<
   (BlockBlobUploadHeaders & { _response: HttpOperationResponse }) | undefined
 >;
 export async function uploadAvatar(
   team: VrplTeam,
   fileData: Buffer,
-  performedById: string
+  auth: VrplAuth
 ): Promise<
   (BlockBlobUploadHeaders & { _response: HttpOperationResponse }) | undefined
 >;
 export async function uploadAvatar(
   teamOrPlayer: VrplPlayer | VrplTeam,
   fileData: Buffer,
-  performedById: string
+  auth: VrplAuth
 ): Promise<
   (BlockBlobUploadHeaders & { _response: HttpOperationResponse }) | undefined
 > {
@@ -152,15 +153,15 @@ export async function uploadAvatar(
   if (!allBlobs.has(blobName)) allBlobs.add(blobName);
 
   if (isPlayer(teamOrPlayer))
-    await setPlayerAvatarHash(teamOrPlayer, imgHash, performedById);
-  else await setTeamAvatarHash(teamOrPlayer, imgHash, performedById);
+    await setPlayerAvatarHash(teamOrPlayer, imgHash, auth);
+  else await setTeamAvatarHash(teamOrPlayer, imgHash, auth);
 
   return uploadBlobResponse;
 }
 
 export async function deleteTeamAvatar(
   team: VrplTeam,
-  performedById: string,
+  auth: VrplAuth,
   teamGone: boolean
 ) {
   if (!team.avatarHash) throw new Error("Team has no avatar hash");
@@ -174,7 +175,7 @@ export async function deleteTeamAvatar(
   const blockBlobClient = containerClient.getBlockBlobClient(blobName);
   await blockBlobClient.deleteIfExists();
   allBlobs.delete(blobName);
-  if (!teamGone) await setTeamAvatarHash(team, null, performedById);
+  if (!teamGone) await setTeamAvatarHash(team, null, auth);
   team.avatarHash = undefined;
   return team;
 }

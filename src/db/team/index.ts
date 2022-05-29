@@ -23,6 +23,7 @@ import _ from "lodash";
 
 import * as fetch from "./fetch";
 import { deleteTeamAvatar } from "../../utils/storage";
+import { VrplAuth } from "../../index";
 
 export * from "./fetch";
 export * from "./teamPlayers";
@@ -32,19 +33,20 @@ export * from "./socials";
 export async function deleteTeam(
   tournament: VrplTournament,
   team: VrplTeam,
-  performedById: string
+  auth: VrplAuth
 ) {
   try {
     const deleted = await VrplTeamDB.findOneAndDelete({
       id: team.id,
       tournamentId: tournament.id,
     }).exec();
-    team = await deleteTeamAvatar(team, performedById, true);
+    team = await deleteTeamAvatar(team, auth, true);
     if (!deleted?.ownerId) throw new InternalServerError("Did not delete team");
     await storeAndBroadcastRecord({
       v: 1,
       id: uuidv4(),
-      userId: performedById,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       type: recordType.teamDelete,
       tournamentId: tournament.id,
       tournamentName: tournament.name,
@@ -64,7 +66,7 @@ export async function deleteTeam(
 export async function transferTeam(
   team: VrplTeam,
   playerId: string,
-  performedBy: string,
+  auth: VrplAuth,
   oldOwnerRole?: VrplTeamPlayerRole
 ): Promise<VrplTeam | undefined> {
   if (!team?.id) return;
@@ -93,7 +95,8 @@ export async function transferTeam(
         v: 1,
         id: uuidv4(),
         type: recordType.teamPlayerUpdate,
-        userId: performedBy,
+        performedByPlayerId: auth.playerId,
+        performedByUserId: auth.userId,
         tournamentId: team.tournamentId,
 
         teamId: team.id,
@@ -113,7 +116,8 @@ export async function transferTeam(
         type: recordType.teamPlayerCreate,
         tournamentId: team.tournamentId,
 
-        userId: performedBy,
+        performedByPlayerId: auth.playerId,
+        performedByUserId: auth.userId,
         teamId: team.id,
         playerId: teamPlayer.playerId,
         timestamp: new Date(),
@@ -130,7 +134,8 @@ export async function transferTeam(
     id: uuidv4(),
     type: recordType.teamUpdate,
     tournamentId: team.tournamentId,
-    userId: performedBy,
+    performedByPlayerId: auth.playerId,
+    performedByUserId: auth.userId,
     teamId: team.id,
     timestamp: new Date(),
     valueChanged: "ownerId",
@@ -157,7 +162,7 @@ export async function createTeam(
   tournamentId: string,
   teamName: string,
   ownerId: string,
-  performedBy: string
+  auth: VrplAuth
 ): Promise<VrplTeam> {
   try {
     const validatedTeamName = await validateTeamName(tournamentId, teamName);
@@ -177,9 +182,9 @@ export async function createTeam(
     };
     // TODO: Handle teams having subteams and they having the same id
     // Also make sure those teams have same createdAt
-    if (await fetch.getTeamFromId(tournamentId, teamData.id)) {
-      return createTeam(tournamentId, teamName, ownerId, performedBy);
-    }
+    if (await fetch.getTeamFromId(tournamentId, teamData.id))
+      throw new InternalServerError("Team with same id already exists!");
+
     const TeamModel = new VrplTeamDB(teamData);
     const TeamCreateRecord: teamCreateRecord = {
       id: uuidv4(),
@@ -188,7 +193,8 @@ export async function createTeam(
       teamId: teamData.id,
       timestamp: new Date(),
       type: recordType.teamCreate,
-      userId: performedBy,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       v: 1,
     };
     await Promise.all([
@@ -255,6 +261,7 @@ export async function validateTeamName(
 }
 
 // Update team stats after match, stuff like wins and losses and stuff
+// TODO: Add records here
 export async function updateTeamsAfterMatch(
   match: CompletedVrplMatch,
   teams: SeededVrplTeam[]
@@ -323,7 +330,7 @@ export async function updateTeamsAfterMatch(
 export const updateTeamName = async (
   team: VrplTeam,
   newTeamName: string,
-  performedBy: string
+  auth: VrplAuth
 ): Promise<VrplTeam> => {
   const validatedTeamName = await validateTeamName(
     team.tournamentId,
@@ -343,7 +350,8 @@ export const updateTeamName = async (
     teamId: teamData.id,
     timestamp: new Date(),
     type: recordType.teamUpdate,
-    userId: performedBy,
+    performedByPlayerId: auth.playerId,
+    performedByUserId: auth.userId,
     valueChanged: "name",
     new: validatedTeamName,
     old: team.name,
@@ -362,7 +370,7 @@ export const updateTeamName = async (
 export async function setTeamAvatarHash(
   team: VrplTeam,
   avatarHash: string | null,
-  performedById: string
+  auth: VrplAuth
 ) {
   if (team.avatarHash === avatarHash) return team;
   team.avatarHash = avatarHash ?? undefined;
@@ -384,7 +392,8 @@ export async function setTeamAvatarHash(
       teamId: team.id,
       timestamp: new Date(),
       type: recordType.teamUpdate,
-      userId: performedById,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       valueChanged: `avatarHash`,
       new: avatarHash,
       old: team.avatarHash,

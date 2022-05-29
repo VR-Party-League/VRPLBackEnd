@@ -12,6 +12,10 @@ import { cleanNameFromInput, isValidEmailRegex } from "../utils/regex/player";
 import { PlayerNicknameHistoryItem } from "../schemas/Player";
 import { BadRequestError, InternalServerError } from "../utils/errors";
 import discord from "../utils/discord";
+import { createUser } from "./user";
+import { VrplAuth } from "../index";
+import { VrplUser } from "./models/vrplUser";
+import { ObjectId } from "mongoose";
 
 export async function getPlayerFromId(PlayerId: string) {
   return await VrplPlayerDB.findOne({ id: PlayerId }).exec();
@@ -36,6 +40,10 @@ export async function getPlayerFromNickname(nickname: string) {
   }).exec();
 }
 
+export async function getPlayerFromUserId(userId: ObjectId) {
+  return await VrplPlayerDB.findOne({ userId }).exec();
+}
+
 export async function getPlayerFromDiscordTag(discordTag: string) {
   return await VrplPlayerDB.findOne({ discordTag: discordTag }).exec();
 }
@@ -45,52 +53,56 @@ export async function getPlayerFromDiscordId(discordId: string) {
 }
 
 export async function updatePlayerDiscordInfo(
-  Player: VrplPlayer,
-  User: APIUser
+  player: VrplPlayer,
+  User: APIUser,
+  userId: ObjectId
 ) {
-  const oldDiscordAvatar = Player.discordAvatar;
-  const oldDiscordTag = Player.discordTag;
-  const oldDiscordId = Player.discordId;
+  const oldDiscordAvatar = player.discordAvatar;
+  const oldDiscordTag = player.discordTag;
+  const oldDiscordId = player.discordId;
 
-  Player.discordAvatar = User.avatar || undefined;
-  Player.discordTag = `${User.username}#${User.discriminator}`;
-  Player.discordId = User.id;
+  player.discordAvatar = User.avatar || undefined;
+  player.discordTag = `${User.username}#${User.discriminator}`;
+  player.discordId = User.id;
 
   const records = [];
-  if (oldDiscordTag !== Player.discordTag) {
+  if (oldDiscordTag !== player.discordTag) {
     records.push({
       id: uuidv4(),
       type: recordType.playerUpdate,
-      playerId: Player.id,
+      playerId: player.id,
       old: oldDiscordTag,
-      new: Player.discordTag,
-      userId: Player.id,
+      new: player.discordTag,
+      performedByPlayerId: player.id,
+      performedByUserId: userId,
       timestamp: new Date(),
       v: 1,
       valueChanged: "discordTag",
     } as playerUpdateRecord);
   }
-  if (oldDiscordId !== Player.discordId) {
+  if (oldDiscordId !== player.discordId) {
     records.push({
       id: uuidv4(),
       type: recordType.playerUpdate,
-      playerId: Player.id,
+      playerId: player.id,
       old: oldDiscordId,
-      new: Player.discordId,
-      userId: Player.id,
+      new: player.discordId,
+      performedByPlayerId: player.id,
+      performedByUserId: userId,
       timestamp: new Date(),
       v: 1,
       valueChanged: "discordId",
     } as playerUpdateRecord);
   }
-  if (oldDiscordAvatar !== Player.discordAvatar) {
+  if (oldDiscordAvatar !== player.discordAvatar) {
     records.push({
       id: uuidv4(),
       type: recordType.playerUpdate,
-      playerId: Player.id,
+      playerId: player.id,
       old: oldDiscordAvatar,
-      new: Player.discordAvatar,
-      userId: Player.id,
+      new: player.discordAvatar,
+      performedByPlayerId: player.id,
+      performedByUserId: userId,
       timestamp: new Date(),
       v: 1,
       valueChanged: "discordAvatar",
@@ -98,60 +110,60 @@ export async function updatePlayerDiscordInfo(
   }
   await Promise.all([
     VrplPlayerDB.updateOne(
-      { id: Player.id },
+      { id: player.id },
       {
         $set: {
-          discordAvatar: Player.discordAvatar,
-          discordTag: Player.discordTag,
-          discordId: Player.discordId,
+          discordAvatar: player.discordAvatar,
+          discordTag: player.discordTag,
+          discordId: player.discordId,
         },
       }
     ),
-    records.length > 0 && storeAndBroadcastRecords(records),
+    records.length > 0 ? storeAndBroadcastRecords(records) : undefined,
   ]);
-  return Player;
+  return player;
 }
 
-export async function createPlayerFromDiscordInfo(
-  User: APIUser
-): Promise<VrplPlayer> {
-  if (!User.email) throw new Error("No User email");
-  let userName = cleanNameFromInput(User.username);
+export async function createPlayerFromDiscordInfo(discordUser: APIUser) {
+  if (!discordUser.email) throw new InternalServerError("No User email");
+  let userName = cleanNameFromInput(discordUser.username);
   if (await getPlayerFromNickname(userName)) {
     userName = cleanNameFromInput(userName + uuidv4());
     if (await getPlayerFromNickname(userName))
       userName = cleanNameFromInput(uuidv4());
   }
 
-  const player: VrplPlayer = {
+  const player = new VrplPlayerDB({
     id: uuidv4(),
     nickname: userName,
     nicknameHistory: [],
-    about: `This is the profile of ${User.username}!`,
-    email: User.email.trim().toLowerCase(),
+    about: `This is the profile of ${discordUser.username}!`,
+    email: discordUser.email.trim().toLowerCase(),
     region: VrplRegion.UNKNOWN,
 
-    discordId: User.id,
-    discordTag: `${User.username}#${User.discriminator}`,
-    discordAvatar: User.avatar || undefined,
+    discordId: discordUser.id,
+    discordTag: `${discordUser.username}#${discordUser.discriminator}`,
+    discordAvatar: discordUser.avatar || undefined,
 
     permissions: 0,
     badgeField: 0,
     timeCreated: new Date(),
-  };
+  });
   if (await getPlayerFromId(player.id))
-    return createPlayerFromDiscordInfo(User);
+    throw new InternalServerError("Player with id already exists");
+  const user = await createUser(player.id, 0, undefined, discordUser.id);
 
-  await Promise.all([VrplPlayerDB.create(player), recordPlayerCreate(player)]);
+  await Promise.all([player.save(), recordPlayerCreate(player, user)]);
   return player;
 }
 
-function recordPlayerCreate(player: VrplPlayer) {
+function recordPlayerCreate(player: VrplPlayer, user: VrplUser) {
   const record: playerCreateRecord = {
     v: 1,
     id: uuidv4(),
     type: recordType.playerCreate,
-    userId: player.id,
+    performedByPlayerId: player.id,
+    performedByUserId: user._id,
     player: player,
     playerId: player.id,
     timestamp: new Date(),
@@ -159,36 +171,37 @@ function recordPlayerCreate(player: VrplPlayer) {
   return storeAndBroadcastRecord(record);
 }
 
-function recordPlayerUpdate(
-  oldPlayer: VrplPlayer,
-  newPlayer: VrplPlayer,
-  userId: string
-) {
-  const promises: Promise<void>[] = [];
-  const toCheck: [any, any, keyof VrplPlayer][] = [
-    [newPlayer.discordAvatar, oldPlayer.discordAvatar, "discordAvatar"],
-    [newPlayer.discordTag, oldPlayer.discordTag, "discordTag"],
-    [newPlayer.discordId, oldPlayer.discordId, "discordId"],
-    [newPlayer.nickname, oldPlayer.nickname, "nickname"],
-    [newPlayer.about, oldPlayer.about, "about"],
-    [newPlayer.badgeField, oldPlayer.badgeField, "badgeField"],
-    [newPlayer.region, oldPlayer.region, "region"],
-    [newPlayer.permissions, oldPlayer.permissions, "permissions"],
-    [newPlayer.email, oldPlayer.email, "email"],
-  ];
-  toCheck.forEach(([newValue, oldValue, key]) => {
-    if (newValue !== oldValue) {
-      promises.push(
-        recordPlayerKeyUpdate(oldPlayer.id, userId, key, oldValue, newValue)
-      );
-    }
-  });
-  return Promise.all(promises);
-}
+//
+// function recordPlayerUpdate(
+//   oldPlayer: VrplPlayer,
+//   newPlayer: VrplPlayer,
+//   auth: VrplAuth
+// ) {
+//   const promises: Promise<void>[] = [];
+//   const toCheck: [any, any, keyof VrplPlayer][] = [
+//     [newPlayer.discordAvatar, oldPlayer.discordAvatar, "discordAvatar"],
+//     [newPlayer.discordTag, oldPlayer.discordTag, "discordTag"],
+//     [newPlayer.discordId, oldPlayer.discordId, "discordId"],
+//     [newPlayer.nickname, oldPlayer.nickname, "nickname"],
+//     [newPlayer.about, oldPlayer.about, "about"],
+//     [newPlayer.badgeField, oldPlayer.badgeField, "badgeField"],
+//     [newPlayer.region, oldPlayer.region, "region"],
+//     [newPlayer.permissions, oldPlayer.permissions, "permissions"],
+//     [newPlayer.email, oldPlayer.email, "email"],
+//   ];
+//   toCheck.forEach(([newValue, oldValue, key]) => {
+//     if (newValue !== oldValue) {
+//       promises.push(
+//         recordPlayerKeyUpdate(oldPlayer.id, auth, key, oldValue, newValue)
+//       );
+//     }
+//   });
+//   return Promise.all(promises);
+// }
 
 function recordPlayerKeyUpdate(
   playerId: string,
-  userId: string,
+  auth: VrplAuth,
   key: keyof VrplPlayer,
   old: any,
   newValue: any
@@ -197,7 +210,8 @@ function recordPlayerKeyUpdate(
     v: 1,
     id: uuidv4(),
     type: recordType.playerUpdate,
-    userId: userId,
+    performedByPlayerId: auth.playerId,
+    performedByUserId: auth.userId,
     playerId: playerId,
     timestamp: new Date(),
     valueChanged: key,
@@ -210,7 +224,7 @@ function recordPlayerKeyUpdate(
 export async function updatePlayerBadges(
   player: VrplPlayer,
   newBitField: number,
-  performedById: string
+  auth: VrplAuth
 ) {
   const oldPlayer_badgeField = player.badgeField;
   player.badgeField = newBitField;
@@ -222,7 +236,7 @@ export async function updatePlayerBadges(
     ),
     recordPlayerKeyUpdate(
       player.id,
-      performedById,
+      auth,
       "badgeField",
       oldPlayer_badgeField,
       player.badgeField
@@ -234,7 +248,7 @@ export async function updatePlayerBadges(
 export async function updatePlayerName(
   player: VrplPlayer,
   newPlayerName: string,
-  performedById: string
+  auth: VrplAuth
 ) {
   newPlayerName = cleanNameFromInput(newPlayerName);
   const foundPlayer = await getPlayerFromNickname(newPlayerName);
@@ -258,7 +272,7 @@ export async function updatePlayerName(
     ),
     recordPlayerKeyUpdate(
       player.id,
-      performedById,
+      auth,
       "nickname",
       oldNickname,
       player.nickname
@@ -275,7 +289,7 @@ export async function howManyOfThesePlayersExist(players: string[]) {
 export async function setPlayerRegion(
   player: VrplPlayer,
   newRegion: VrplRegion,
-  performedById: string
+  auth: VrplAuth
 ) {
   const old = player.region;
   player.region = newRegion;
@@ -285,7 +299,7 @@ export async function setPlayerRegion(
       { id: player.id },
       { $set: { region: player.region } }
     ),
-    recordPlayerKeyUpdate(player.id, performedById, "region", old, newRegion),
+    recordPlayerKeyUpdate(player.id, auth, "region", old, newRegion),
   ]);
   return player;
 }
@@ -318,7 +332,7 @@ export async function validateEmail(rawEmail: string): Promise<string> {
 export async function updatePlayerEmail(
   player: VrplPlayer,
   newEmail: string,
-  performedById: string
+  auth: VrplAuth
 ) {
   const old = player.email;
   player.email = newEmail;
@@ -331,7 +345,8 @@ export async function updatePlayerEmail(
       v: 1,
       id: uuidv4(),
       type: recordType.playerUpdate,
-      userId: performedById,
+      performedByPlayerId: auth.playerId,
+      performedByUserId: auth.userId,
       playerId: player.id,
       timestamp: new Date(),
       valueChanged: "email",
@@ -346,6 +361,7 @@ export async function updatePlayerEmail(
   return player;
 }
 
+// TODO: Record/broadcast this
 export async function refreshDiscordData(player: VrplPlayer) {
   const discordUser = await discord.users.fetch(player.discordId);
   if (!discordUser) throw new BadRequestError("User not found");
@@ -368,7 +384,7 @@ export async function refreshDiscordData(player: VrplPlayer) {
 export async function updatePlayerAbout(
   player: VrplPlayer,
   newAbout: string,
-  performedById: string
+  auth: VrplAuth
 ) {
   const old = player.about;
   player.about = newAbout;
@@ -380,7 +396,8 @@ export async function updatePlayerAbout(
     v: 1,
     id: uuidv4(),
     type: recordType.playerUpdate,
-    userId: performedById,
+    performedByPlayerId: auth.playerId,
+    performedByUserId: auth.userId,
     playerId: player.id,
     timestamp: new Date(),
     valueChanged: "about",
@@ -398,7 +415,7 @@ export async function updatePlayerAbout(
 export async function setPlayerAvatarHash(
   player: VrplPlayer,
   newAvatarHash: string | null,
-  performedById: string
+  auth: VrplAuth
 ) {
   const old = player.avatarHash;
   if (player.avatarHash === newAvatarHash) return player;
@@ -411,7 +428,8 @@ export async function setPlayerAvatarHash(
     v: 1,
     id: uuidv4(),
     type: recordType.playerUpdate,
-    userId: performedById,
+    performedByPlayerId: auth.playerId,
+    performedByUserId: auth.userId,
     playerId: player.id,
     timestamp: new Date(),
     valueChanged: "avatarHash",

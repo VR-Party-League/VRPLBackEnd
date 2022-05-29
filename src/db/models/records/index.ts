@@ -1,9 +1,10 @@
-import { Schema, model, Document } from "mongoose";
-import { authenticationRecords } from "./authentication";
+import { Schema, model, Document, ObjectId } from "mongoose";
+import { authenticationRecords } from "./apiTokenRecords";
 import { badgeRecords } from "./badgeRecords";
 import { matchRecords } from "./matchRecords";
 import { playerRecords } from "./playerRecords";
 import { teamRecords } from "./teamRecordTypes";
+import { OAuthClientRecord } from "./oauthRecords";
 
 export enum recordType {
   apiTokenCreate = 0,
@@ -29,13 +30,18 @@ export enum recordType {
   badgeCreate = 40,
   badgeUpdate = 41,
   badgeDelete = 42,
+
+  OAuthClientCreate = 100,
+  OAuthClientUpdate = 101,
+  OAuthClientDelete = 102,
 }
 
 export interface baseRecord {
   v: number;
   id: string;
   type: recordType;
-  userId: string;
+  performedByPlayerId?: string;
+  performedByUserId: ObjectId;
   timestamp: Date;
 }
 
@@ -44,14 +50,16 @@ export type record =
   | playerRecords
   | matchRecords
   | authenticationRecords
-  | badgeRecords;
+  | badgeRecords
+  | OAuthClientRecord;
 
 const logSchema = new Schema<record & Document>(
   {
     v: { type: Number, required: true },
     id: { type: String, required: true },
     type: { type: Number, required: true },
-    userId: { type: String, required: true },
+    performedByPlayerId: { type: String, required: true },
+    performedByUserId: { type: Schema.Types.ObjectId, required: true },
     timestamp: { type: Date, required: true },
   },
   { collection: "logs", strict: false }

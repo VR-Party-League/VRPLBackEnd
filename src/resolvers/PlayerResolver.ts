@@ -9,6 +9,7 @@ import {
   Resolver,
   Root,
   UnauthorizedError,
+  UseMiddleware,
 } from "type-graphql";
 import { Context } from "..";
 import {
@@ -46,11 +47,13 @@ import {
   BadRequestError,
   ForbiddenError,
   InternalServerError,
+  InvalidScopeError,
 } from "../utils/errors";
 import {
   Permissions,
+  ResolvePlayer,
+  ScopeChecker,
   userHasOneOfPermissions,
-  userHasPermission,
 } from "../utils/permissions";
 import { getAvatar } from "../utils/storage";
 import { revalidatePlayerPages } from "../db/records";
@@ -58,10 +61,12 @@ import { revalidatePlayerPages } from "../db/records";
 @Resolver((_of) => Player)
 export default class {
   @Query((_returns) => Player, { nullable: true })
+  @UseMiddleware(ResolvePlayer("playerId", false, { nullable: true }))
   async playerFromId(
-    @Arg("playerId") playerId: string
+    @Arg("playerId") playerId: string,
+    @Ctx() { resolved }: Context
   ): Promise<VrplPlayer | null> {
-    return await getPlayerFromId(playerId);
+    return resolved.player!;
   }
 
   @Authorized([Permissions.Server])
@@ -109,12 +114,12 @@ export default class {
 
   @Authorized()
   @FieldResolver()
-  discordId(@Root() vrplPlayer: VrplPlayer, @Ctx() ctx: Context) {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
+  @UseMiddleware(ScopeChecker(["player.discordId:read"]))
+  discordId(@Root() vrplPlayer: VrplPlayer, @Ctx() { auth }: Context) {
+    if (!auth) throw new UnauthorizedError();
     else if (
-      user.id !== vrplPlayer.id &&
-      !userHasOneOfPermissions(user, [
+      auth.playerId !== vrplPlayer.id &&
+      !userHasOneOfPermissions(auth, [
         Permissions.ManagePlayers,
         Permissions.AccessDiscordId,
       ])
@@ -127,26 +132,23 @@ export default class {
   @Query((_returns) => Player, { nullable: true })
   async findPlayer(
     @Arg("search") search: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ): Promise<VrplPlayer | null> {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
 
     return await findPlayerBroadly(search);
   }
 
   @Authorized()
   @FieldResolver()
+  @UseMiddleware(ScopeChecker(["player.email:read"]))
   email(
     @Root() vrplPlayer: VrplPlayer,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ): VrplPlayer["email"] {
-    if (!ctx.user) throw new UnauthorizedError();
-    else if (
-      ctx.user.id !== vrplPlayer.id &&
-      !userHasPermission(ctx.user, Permissions.Admin)
-    )
-      throw new ForbiddenError();
+    if (!auth) throw new UnauthorizedError();
+    else if (auth.playerId !== vrplPlayer.id)
+      auth.assurePerm(Permissions.Admin);
     return vrplPlayer.email;
   }
 
@@ -155,17 +157,16 @@ export default class {
   async addBadgeToPlayer(
     @Arg("playerId") playerId: string,
     @Arg("bitPosition", (_type) => Int) bitPosition: number,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ): Promise<VrplPlayer> {
-    const user = ctx.user;
-    if (!user) throw new InternalServerError("No user found in context");
+    if (!auth) throw new InternalServerError("No user found in context");
     const vrplPlayer = await getPlayerFromId(playerId);
     if (!vrplPlayer) throw new BadRequestError("Player not found");
     const playerBadges = vrplPlayer.badgeField;
     const badge = await getBadgeFromBitPosition(bitPosition);
     if (!badge) throw new BadRequestError("No badge found with that position");
     const newBadgeBitField = playerBadges | (1 << bitPosition);
-    return await updatePlayerBadges(vrplPlayer, newBadgeBitField, user.id);
+    return await updatePlayerBadges(vrplPlayer, newBadgeBitField, auth);
   }
 
   @Authorized([Permissions.ManageBadges])
@@ -173,10 +174,9 @@ export default class {
   async removeBadgeFromPlayer(
     @Arg("playerId") playerId: string,
     @Arg("bitPosition", (_type) => Int) bitPosition: number,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ): Promise<VrplPlayer> {
-    const user = ctx.user;
-    if (!user) throw new InternalServerError("No user found in context");
+    if (!auth) throw new InternalServerError("No user found in context");
     const vrplPlayer = await getPlayerFromId(playerId);
     if (!vrplPlayer) throw new BadRequestError("Player not found");
     const playerBadges = vrplPlayer.badgeField;
@@ -185,7 +185,7 @@ export default class {
     const newBadgeBitField = playerBadges & ~(1 << bitPosition);
     if (newBadgeBitField === playerBadges)
       throw new BadRequestError("Player doesn't have this badge");
-    return await updatePlayerBadges(vrplPlayer, newBadgeBitField, user.id);
+    return await updatePlayerBadges(vrplPlayer, newBadgeBitField, auth);
   }
 
   @Authorized([Permissions.ManageBadges])
@@ -193,10 +193,9 @@ export default class {
   async setBadgesOfPlayer(
     @Arg("playerId") playerId: string,
     @Arg("bitField", (_type) => Int) bitField: number,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ): Promise<VrplPlayer> {
-    const user = ctx.user;
-    if (!user) throw new InternalServerError("No user found in context");
+    if (!auth) throw new InternalServerError("No user found in context");
     const vrplPlayer = await getPlayerFromId(playerId);
     if (!vrplPlayer) throw new BadRequestError("Player not found");
     const positionsInBitField = findPositions(bitField);
@@ -204,121 +203,106 @@ export default class {
     const notFound = positionsInBitField.some((pos) => {
       return !allBadges.some((badge) => badge.bitPosition === pos);
     });
-
     if (typeof notFound === "number")
       throw new BadRequestError(
         "One or more badges not found, bitPosition: " + notFound
       );
-
-    return await updatePlayerBadges(vrplPlayer, bitField, user.id);
+    return await updatePlayerBadges(vrplPlayer, bitField, auth);
   }
 
   @Authorized()
   @Mutation((_returns) => Player)
+  @UseMiddleware(ScopeChecker(["player.nickname:write"]))
+  @UseMiddleware(ResolvePlayer("playerId", true))
   async changePlayerName(
     @Arg("playerId") playerId: string,
     @Arg("newName") newName: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth, resolved }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new InternalServerError("No user found in context");
-    const vrplPlayer = await getPlayerFromId(playerId);
-    if (!vrplPlayer) throw new BadRequestError("Player not found");
+    const vrplPlayer = resolved.player!;
+    auth = auth!;
     const foundPlayer = await getPlayerFromNickname(newName);
     if (foundPlayer)
       throw new BadRequestError("A player with that name already exists.");
-
-    const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
-    if (!userHasPerms) {
-      if (vrplPlayer.id !== user.id)
-        throw new ForbiddenError("You can't change other players' names");
+    if (vrplPlayer.id !== auth.playerId)
+      auth.assurePerm(Permissions.ManagePlayers);
+    else {
       const hasCooldown = await doesHaveCooldown(
         "player",
-        playerId,
+        vrplPlayer.id,
         "changeNickname"
       );
-      if (hasCooldown) throw new BadRequestError("You are on a cooldown!");
+      if (hasCooldown) throw new ForbiddenError("You are on a cooldown!");
     }
-    const newPlayer = await updatePlayerName(vrplPlayer, newName, user.id);
-    if (!userHasPerms) await addCooldownToPlayer(playerId, "changeNickname");
+    const newPlayer = await updatePlayerName(vrplPlayer, newName, auth);
+    if (!auth.hasPerm(Permissions.ManagePlayers))
+      await addCooldownToPlayer(playerId, "changeNickname");
     return newPlayer;
   }
 
   @Authorized()
   @Mutation((_returns) => Player)
+  @UseMiddleware(ScopeChecker(["player.region:write"]))
+  @UseMiddleware(ResolvePlayer("playerId", true))
   async setPlayerRegion(
     @Arg("playerId") playerId: string,
     @Arg("region") region: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth, resolved }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new InternalServerError("No user found in context");
-    const player = await getPlayerFromId(playerId);
-    if (!player) throw new BadRequestError("Player not found");
-    const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
-    if (player.id !== user.id && !userHasPerms)
-      throw new ForbiddenError("You can't change other players' regions");
-
+    const player = resolved.player!;
+    auth = auth!;
     if (!Object.keys(VrplRegion).includes(region))
       throw new BadRequestError(
         `Invalid region, options are: ${Object.keys(VrplRegion).join(", ")} `
       );
-    return await setPlayerRegion(player, region as VrplRegion, user.id);
+    return await setPlayerRegion(player, region as VrplRegion, auth);
   }
 
   @Authorized()
   @Mutation((_returns) => Player)
+  @UseMiddleware(ScopeChecker(["player.email:write"]))
+  @UseMiddleware(ResolvePlayer("playerId", true))
   async updateEmail(
     @Arg("playerId") playerId: string,
     @Arg("email") email: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth, resolved }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
-    const player = await getPlayerFromId(playerId);
-    if (!player) throw new BadRequestError("Player not found");
-    const userHasPerms = userHasPermission(user, Permissions.Admin);
-    if (player.id !== user.id && !userHasPerms)
-      throw new ForbiddenError("You can't change other players' regions");
+    const player = resolved.player!;
+    auth = auth!;
     const validEmail = await validateEmail(email);
     if (!validEmail) throw new BadRequestError("Invalid email address");
-    return await updatePlayerEmail(player, email, user.id);
+    return await updatePlayerEmail(player, email, auth);
   }
 
   @Authorized()
   @Mutation((_returns) => Player)
+  @UseMiddleware(ScopeChecker(["player.discordInfo:write"]))
+  @UseMiddleware(ResolvePlayer("playerId", true))
   async refreshDiscordData(
     @Arg("playerId") playerId: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth, resolved }: Context
   ): Promise<VrplPlayer> {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
-    const player = await getPlayerFromId(playerId);
-    if (!player) throw new BadRequestError("Player not found");
-    const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
-    if (player.id !== user.id && !userHasPerms) throw new ForbiddenError();
+    const player = resolved.player!;
     return await refreshDiscordData(player);
   }
 
   @Authorized()
   @Mutation((_returns) => Player)
+  @UseMiddleware(ScopeChecker(["player.about:write"]))
+  @UseMiddleware(ResolvePlayer("playerId", true))
   async changePlayerAbout(
     @Arg("playerId") playerId: string,
     @Arg("about") about: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth, resolved }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
-    const player = await getPlayerFromId(playerId);
-    if (!player) throw new BadRequestError("Player not found");
-    const userHasPerms = userHasPermission(user, Permissions.ManagePlayers);
-    if (player.id !== user.id && !userHasPerms) throw new ForbiddenError();
-    else if (about.length > 1500)
+    const player = resolved.player!;
+    auth = auth!;
+    if (about.length > 1500)
       throw new BadRequestError(
         "About text can't be longer than 1500 characters"
       );
 
-    return await updatePlayerAbout(player, about, user.id);
+    return await updatePlayerAbout(player, about, auth);
   }
 
   @Authorized([Permissions.ManagePlayers])

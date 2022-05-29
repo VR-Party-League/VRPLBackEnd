@@ -8,19 +8,17 @@ import {
   Query,
   Resolver,
   Root,
+  UseMiddleware,
 } from "type-graphql";
-import { Permissions, userHasPermission } from "../utils/permissions";
+import { Permissions, ResolvePlayer } from "../utils/permissions";
 import Message, { MessageInput } from "../schemas/Message";
 import { vrplMessage } from "../db/models/vrplMessages";
 import { getPlayerFromId } from "../db/player";
 import { Context } from "..";
-import {
-  BadRequestError,
-  ForbiddenError,
-  UnauthorizedError,
-} from "../utils/errors";
+import { BadRequestError, UnauthorizedError } from "../utils/errors";
 import {
   createMessages,
+  getMessageFromId,
   getMessagesForPlayer,
   hideMessage,
   readMessagesOfPlayer,
@@ -49,21 +47,17 @@ export default class {
   @Authorized()
   @Query((_returns) => [Message])
   async getMessagesForPlayer(
-    @Ctx() ctx: Context,
+    @Ctx() { auth }: Context,
     @Arg("playerId") playerId: string,
     @Arg("limit", (_type) => Int, { nullable: true }) limit?: number,
     @Arg("skip", (_type) => Int, { nullable: true }) skip?: number,
     @Arg("showHidden", { nullable: true }) showHidden?: boolean
   ): Promise<vrplMessage[]> {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const player = await getPlayerFromId(playerId);
     if (!player) throw new Error("Player not found");
-    if (
-      user.id !== player.id &&
-      !userHasPermission(user, Permissions.ManageMessages)
-    )
-      throw new ForbiddenError();
+    if (auth.playerId !== player.id)
+      auth.assurePerm(Permissions.ManageMessages);
     if (!player) throw new Error("Player not found");
     else if (limit || 0 > 100) throw new BadRequestError("Limit too high");
 
@@ -96,17 +90,13 @@ export default class {
     @Arg("reverse", { nullable: true }) reverse: boolean,
     @Arg("messageIds", (_type) => [String], { nullable: true })
     messageIds: string[],
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const player = await getPlayerFromId(playerId);
     if (!player) throw new Error("Player not found");
-    if (
-      user.id !== player.id &&
-      !userHasPermission(user, Permissions.ManageMessages)
-    )
-      throw new ForbiddenError();
+    if (auth.playerId !== player.id)
+      auth.assurePerm(Permissions.ManageMessages);
     if (!player) throw new Error("Player not found");
     else if ((limit || 0) > 100) throw new BadRequestError("Limit too high");
     else if (messageIds && messageIds.length > 100)
@@ -123,22 +113,17 @@ export default class {
 
   @Authorized()
   @Mutation((_returns) => Message)
+  @UseMiddleware(
+    ResolvePlayer("playerId", true, { override: Permissions.ManageMessages })
+  )
   async hideMessage(
     @Arg("playerId") playerId: string,
     @Arg("messageId") messageId: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth, resolved }: Context
   ) {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
-    const player = await getPlayerFromId(playerId);
-    if (!player) throw new Error("Player not found");
-    else if (
-      user.id !== player.id &&
-      !userHasPermission(user, Permissions.ManageMessages)
-    )
-      throw new ForbiddenError();
-
-    const res = hideMessage(playerId, messageId);
+    const message = await getMessageFromId(messageId);
+    if (!message) throw new BadRequestError("Message not found");
+    const res = hideMessage(resolved.player!, message);
     return res;
   }
 }

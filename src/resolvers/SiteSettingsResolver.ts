@@ -1,16 +1,5 @@
-import {
-  Arg,
-  Authorized,
-  Ctx,
-  FieldResolver,
-  Int,
-  Mutation,
-  Query,
-  Resolver,
-  Root,
-} from "type-graphql";
+import { Arg, Authorized, Ctx, Mutation, Query, Resolver } from "type-graphql";
 import { Context } from "..";
-import {} from "../db/badge";
 import { VrplSiteSetting } from "../db/models/vrplSiteSettings";
 import {
   getSiteSettingFromKey,
@@ -30,16 +19,15 @@ export default class SiteSettingsResolver {
   @Query((_returns) => SiteSettings, { nullable: true })
   async getSettingFromKey(
     @Arg("key", (_type) => String) key: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ): Promise<VrplSiteSetting> {
     const setting = await getSiteSettingFromKey(key);
     if (!setting) throw new ForbiddenError();
     if (!setting.viewPerms || setting.viewPerms === 0) return setting;
     const perms = setting.viewPerms;
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const permsArray = findPositions(perms);
-    if (!permsArray.some((perm) => userHasPermission(user, 1 << perm)))
+    if (!permsArray.some((perm) => auth.hasPerm(1 << perm)))
       throw new ForbiddenError();
     return setting;
   }
@@ -49,25 +37,20 @@ export default class SiteSettingsResolver {
   async updateSettingValue(
     @Arg("key", (_type) => String) key: string,
     @Arg("value", (_type) => String) value: string,
-    @Ctx() ctx: Context
+    @Ctx() { auth }: Context
   ): Promise<VrplSiteSetting> {
-    const user = ctx.user;
-    if (!user) throw new UnauthorizedError();
+    if (!auth) throw new UnauthorizedError();
     const setting = await getSiteSettingFromKey(key);
     if (!setting) throw new ForbiddenError();
-    if (
-      (!setting.editPerms || setting.editPerms === 0) &&
-      !userHasPermission(user, Permissions.Admin)
-    )
-      throw new ForbiddenError();
+    if (!setting.editPerms || setting.editPerms === 0)
+      auth.assurePerm(Permissions.Admin);
     const perms = setting.editPerms || 0;
     const permsArray = findPositions(perms);
-    if (permsArray.some((perm) => !userHasPermission(user, perm)))
+    if (permsArray.some((perm) => !auth.hasPerm(perm)))
       throw new ForbiddenError();
 
     try {
-      const newSetting = await updateSiteSettingValue(key, value);
-      return newSetting;
+      return await updateSiteSettingValue(key, value);
     } catch (e) {
       throw new BadRequestError(`${e}`);
     }
