@@ -154,7 +154,7 @@ export async function createPlayerFromDiscordInfo(discordUser: APIUser) {
   const user = await createUser(player.id, 0, undefined, discordUser.id);
 
   await Promise.all([player.save(), recordPlayerCreate(player, user)]);
-  return player;
+  return {player, user}
 }
 
 function recordPlayerCreate(player: VrplPlayer, user: VrplUser) {
