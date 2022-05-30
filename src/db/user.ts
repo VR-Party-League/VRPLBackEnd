@@ -91,7 +91,8 @@ export async function getUserFromDiscordCode(code: string) {
     discordId: discordUser.id,
   }).exec();
   if (!user) {
-    createPlayerFromDiscordInfo(discordUser);
+    const userAndPlayer = await createPlayerFromDiscordInfo(discordUser);
+    return userAndPlayer.user;
   }
   return user;
 }
