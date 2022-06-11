@@ -8,6 +8,7 @@ import { storeAndBroadcastRecord, storeAndBroadcastRecords } from "../records";
 import { InternalServerError } from "../../utils/errors";
 import { recordType } from "../models/records";
 import { VrplAuth } from "../../index";
+import { Document } from "mongoose";
 
 export async function seedAllTeams(
   tournament: VrplTournament,
@@ -66,7 +67,8 @@ export async function seedAllTeams(
   }
 
   const [res] = await Promise.all([
-    VrplTeamDB.bulkWrite(bulkWrites),
+    // @ts-ignore
+    VrplTeamDB.bulkWrite(bulkWrites as AnyBulkWriteOperation<Document>[]),
     storeAndBroadcastRecords(records),
   ]);
   if (res.modifiedCount !== notSeededTeamsAmount)
@@ -117,6 +119,7 @@ export async function unSeedAllTeams(
   });
 
   const [res] = await Promise.all([
+    // @ts-ignore
     VrplTeamDB.bulkWrite(bulkWrites),
     storeAndBroadcastRecords(records),
   ]);
