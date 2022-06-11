@@ -4,9 +4,8 @@ import axios, { AxiosError } from "axios";
 import { frontEndUrl } from "../index";
 import { isRecordTeamRecord } from "./models/records/teamRecordTypes";
 import {
-  getAllTournaments,
   getTournamentFromId,
-  getTournamentNameFromIdFromCache,
+  getTournamentSlugFromIdFromCache,
   tournamentsFromIds,
 } from "./tournaments";
 import { isRecordMatchRecord } from "./models/records/matchRecords";
@@ -20,18 +19,18 @@ if (!revalidateSecret) throw new Error("No revalidate secret found");
 async function completeRecords(records: record[]): Promise<void> {
   for (const record of records) {
     if (isRecordTeamRecord(record) || isRecordMatchRecord(record)) {
-      let tournamentName = getTournamentNameFromIdFromCache(
+      let tournamentSlug = getTournamentSlugFromIdFromCache(
         record.tournamentId
       );
-      if (!tournamentName) {
+      if (!tournamentSlug) {
         const tournament = await getTournamentFromId(record.tournamentId);
         if (!tournament)
           throw new InternalServerError(
             `Could not get tournament from id ${record.tournamentId} when saving a record`
           );
-        tournamentName = tournament.name;
+        tournamentSlug = tournament.slug;
       }
-      record.tournamentName = tournamentName;
+      record.tournamentSlug = tournamentSlug;
     }
   }
 }
@@ -62,11 +61,17 @@ export async function storeRecord(record: record) {
   await dbEntry.save();
 }
 
+function getKeyByValue(value: string) {
+  const indexOfS = Object.values(recordType).indexOf(
+    value as unknown as recordType
+  );
+  return Object.keys(recordType)[indexOfS];
+}
+
 async function broadcastRecords(records: record[]) {
   let paths_to_revalidate: string[] = [];
   for (let record of records) {
-    const type = recordType[record.type].toString();
-    io.sockets.emit(type, record);
+    io.sockets.emit(getKeyByValue(record.type), record);
     if (
       record.type === recordType.playerUpdate ||
       record.type === recordType.playerDelete
@@ -76,37 +81,37 @@ async function broadcastRecords(records: record[]) {
       const tournamentIds: string[] = playerTeams.map(
         (team) => team.tournamentId
       );
-      let tournamentNames = tournamentIds.map((id) => ({
+      let tournamentSlugs = tournamentIds.map((id) => ({
         id: id,
-        name: getTournamentNameFromIdFromCache(id),
+        slug: getTournamentSlugFromIdFromCache(id),
       }));
-      if (tournamentNames.some((t) => !t.name)) {
+      if (tournamentSlugs.some((t) => !t.slug)) {
         const tournaments = await tournamentsFromIds(tournamentIds);
-        tournamentNames = tournaments.map((t) => ({ id: t.id, name: t.name }));
+        tournamentSlugs = tournaments.map((t) => ({ id: t.id, slug: t.slug }));
       }
 
       for (let team of playerTeams) {
-        const tournamentName = tournamentNames.find(
+        const tournamentSlug = tournamentSlugs.find(
           (t) => t.id === team.tournamentId
         );
-        if (!tournamentName) {
+        if (!tournamentSlug) {
           console.error(
-            `Could not find tournament name for ${team.tournamentId}`
+            `Could not find tournament slug for ${team.tournamentId}`
           );
           captureException(
             new InternalServerError(
-              "Could not find tournament name for " + team.tournamentId
+              "Could not find tournament slug for " + team.tournamentId
             )
           );
           continue;
         }
         paths_to_revalidate.push(
-          `/tournament/${tournamentName.name}/team/${team.id}`
+          `/tournament/${tournamentSlug.slug}/team/${team.id}`
         );
       }
     } else if (isRecordTeamRecord(record)) {
       paths_to_revalidate.push(
-        `/tournament/${record.tournamentName}/team/${record.teamId}`
+        `/tournament/${record.tournamentSlug}/team/${record.teamId}`
       );
       const { team } = record;
       const playerIds = [
@@ -121,7 +126,7 @@ async function broadcastRecords(records: record[]) {
       const teamIds = record.teamIds;
       for (let teamId of teamIds) {
         paths_to_revalidate.push(
-          `/tournament/${record.tournamentName}/team/${teamId}`
+          `/tournament/${record.tournamentSlug}/team/${teamId}`
         );
       }
     }

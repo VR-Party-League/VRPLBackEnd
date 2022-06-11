@@ -438,10 +438,10 @@ type Query {
   playerCooldownFromId(cooldownId: String!): PlayerCooldown
   playerFromDiscordId(discordId: String!): Player
   playerFromId(playerId: String!): Player
-  teamFromId(id: String!, tournamentId: String, tournamentName: String): Team
-  teamFromName(name: String!, tournamentId: String, tournamentName: String): Team
+  teamFromId(id: String!, tournamentId: String, tournamentSlug: String): Team
+  teamFromName(name: String!, tournamentId: String, tournamentSlug: String): Team
   tournamentFromId(id: String!): Tournament
-  tournamentFromName(name: String!): Tournament
+  tournamentFromSlug(slug: String!): Tournament
 }
 
 type SiteSettings {
@@ -605,7 +605,7 @@ type Tournament {
   """All the matches that the tournament had"""
   matches: [Match!]!
 
-  """The unique tournament name"""
+  """The tournament name"""
   name: String!
 
   """The allowed region"""
@@ -619,6 +619,9 @@ type Tournament {
 
   """The tournament rules, as markdown text"""
   rules: String!
+
+  """The unique tournament slug"""
+  slug: String!
 
   """The start date"""
   start: Timestamp!

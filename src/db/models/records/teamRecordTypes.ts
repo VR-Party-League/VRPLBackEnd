@@ -23,7 +23,7 @@ export function isRecordTeamRecord(record: record): record is teamRecords {
 interface baseTeamRecord extends baseRecord {
   tournamentId: string;
   teamId: string;
-  tournamentName?: string;
+  tournamentSlug?: string;
   team: VrplTeam;
 }
 

@@ -24,7 +24,7 @@ import { VrplGame } from "../db/models/vrplGame";
 import { VrplMatch } from "../db/models/vrplMatch";
 import { VrplTeam, VrplTeamPlayerRole } from "../db/models/vrplTeam";
 import { VrplTournament } from "../db/models/vrplTournaments";
-import { getPlayerFromId, updatePlayerEmail } from "../db/player";
+import { getPlayerFromId } from "../db/player";
 import {
   addPlayerToTeam,
   createTeam,
@@ -37,7 +37,7 @@ import {
   generateRoundRobinForTournament,
   getAllTournaments,
   getTournamentFromId,
-  getTournamentFromName,
+  getTournamentFromSlug,
 } from "../db/tournaments";
 import Team from "../schemas/Team";
 import Tournament from "../schemas/Tournament";
@@ -46,16 +46,9 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../utils/errors";
-import {
-  FetchArgs,
-  PermissionChecker,
-  Permissions,
-  ResolvePlayer,
-  ResolveTeam,
-} from "../utils/permissions";
+import { Permissions, ResolveTeam } from "../utils/permissions";
 import Match from "../schemas/Match";
 import { revalidateTournamentPage } from "../db/records";
-import Player from "../schemas/Player";
 
 @Resolver((_of) => Tournament)
 export default class {
@@ -66,8 +59,8 @@ export default class {
   }
 
   @Query((_returns) => Tournament, { nullable: true })
-  async tournamentFromName(@Arg("name") name: string) {
-    const rawTournament = await getTournamentFromName(name);
+  async tournamentFromSlug(@Arg("slug") slug: string) {
+    const rawTournament = await getTournamentFromSlug(slug);
     return rawTournament;
   }
 
@@ -256,3 +249,6 @@ class MatchRoundInput {
   @Field((_type) => Date)
   end: Date;
 }
+
+// TODO: tournament from slug
+// TODO: teamFromId tournametn name to slug
