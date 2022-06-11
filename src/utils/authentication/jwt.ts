@@ -82,15 +82,19 @@ export const AuthenticateSocketIO: (
   socket: Socket,
   next: (err?: ExtendedError) => void
 ) => void = async (socket, next) => {
-  const token = socket.handshake.headers["authorization"];
-  if (!token || !token.startsWith("Token "))
-    return next(new Error("No token provided"));
-  const ApiTokenString = token.substring("Token ".length);
-  const user = await getUserFromApiToken(ApiTokenString.trim());
-  if (!user) return next(new Error("Invalid token"));
-  else if (!userHasPermission(user, Permissions.Server))
-    return next(new Error("User does not have permission"));
-  return next();
+  try {
+    const token = socket.handshake.headers["authorization"];
+    if (!token || !token.startsWith("Token "))
+      return next(new Error("No token provided"));
+    const ApiTokenString = token.substring("Token ".length);
+    const user = await getUserFromApiToken(ApiTokenString.trim());
+    if (!user) return next(new Error("Invalid token"));
+    else if (!userHasPermission(user, Permissions.Server))
+      return next(new Error("User does not have permission"));
+    return next();
+  } catch (err) {
+    return next(err as Error);
+  }
 };
 export const refreshTokenExpireIn: string = "60d";
 

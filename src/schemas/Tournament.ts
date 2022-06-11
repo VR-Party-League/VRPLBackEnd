@@ -1,8 +1,6 @@
-import { Field, InputType, Int, ObjectType } from "type-graphql";
+import { Field, ObjectType } from "type-graphql";
 import Game from "./Game";
 import Match from "./Match";
-import Player from "./Player";
-import { Rule } from "./Rule";
 import Team from "./Team";
 
 @ObjectType()
@@ -13,7 +11,10 @@ export default class Tournament {
   @Field({ description: "The tournament type", nullable: false })
   type: string;
 
-  @Field({ description: "The unique tournament name", nullable: false })
+  @Field({ description: "The unique tournament slug", nullable: false })
+  slug: string;
+
+  @Field({ description: "The tournament name", nullable: false })
   name: string;
 
   @Field({ description: "The tournament description" })

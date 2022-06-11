@@ -51,7 +51,7 @@ export async function seedAllTeams(
     records.push({
       id: uuidv4(),
       tournamentId: team.tournamentId,
-      tournamentName: tournament.name,
+      tournamentSlug: tournament.slug,
       teamId: team.id,
       timestamp: new Date(),
       type: recordType.teamUpdate,
@@ -88,7 +88,7 @@ export async function unSeedAllTeams(
     records.push({
       id: uuidv4(),
       tournamentId: tournament.id,
-      tournamentName: tournament.name,
+      tournamentSlug: tournament.slug,
       teamId: team.id,
       timestamp: new Date(),
       type: recordType.teamUpdate,

@@ -6,48 +6,56 @@ import { BadRequestError, InternalServerError } from "../utils/errors";
 import { SeededVrplTeam } from "./models/vrplTeam";
 
 type tournamentId = string;
-type tournamentName = string;
-const tournamentNameCache = new Map<tournamentId, tournamentName>();
+type tournamentSlug = string;
+const tournamentSlugCache = new Map<tournamentId, tournamentSlug>();
 
-function updateTournamentNameCache(
+function updateTournamentSlugCache(
   tournaments: (VrplTournament | null)[],
   clear: boolean = false
 ) {
-  if (clear) tournamentNameCache.clear();
+  if (clear) tournamentSlugCache.clear();
   for (const tournament of tournaments) {
     if (!tournament) continue;
-    tournamentNameCache.set(tournament.id, tournament.name);
+    tournamentSlugCache.set(tournament.id, tournament.name);
   }
 }
 
-export function getTournamentNameFromIdFromCache(tournamentId: string) {
-  return tournamentNameCache.get(tournamentId);
+export function getTournamentSlugFromIdFromCache(id: string) {
+  return tournamentSlugCache.get(id);
 }
 
 export async function tournamentsFromIds(tournamentIds: string[]) {
   const tournaments = await VrplTournamentDB.find({
     id: { $in: tournamentIds },
   });
-  updateTournamentNameCache(tournaments);
+  updateTournamentSlugCache(tournaments);
   return tournaments;
 }
 
 export async function getAllTournaments() {
   const tournaments = await VrplTournamentDB.find({}).exec();
-  updateTournamentNameCache(tournaments, true);
+  updateTournamentSlugCache(tournaments, true);
   return tournaments;
 }
 
-export async function getTournamentFromName(tournamentName: string) {
+export async function getTournamentFromSlug(slug: string) {
+  // const tournament = await VrplTournamentDB.findOne({
+  //   $text: {
+  //     $caseSensitive: false,
+  //     $diacriticSensitive: false,
+  //     // $language: 'en',
+  //     $search: convertSiteInput(tournamentName),
+  //   },
+  // }).exec();
+  const sanitized = slug.replaceAll(
+    "[-.\\+*?\\[^\\]$(){}=!<>|:\\\\]",
+    "\\\\$0"
+  );
+
   const tournament = await VrplTournamentDB.findOne({
-    $text: {
-      $caseSensitive: false,
-      $diacriticSensitive: false,
-      // $language: 'en',
-      $search: convertSiteInput(tournamentName),
-    },
-  }).exec();
-  updateTournamentNameCache([tournament]);
+    slug: { $regex: new RegExp(sanitized, "i") },
+  });
+  updateTournamentSlugCache([tournament]);
   return tournament;
 }
 
@@ -55,7 +63,7 @@ export async function getTournamentFromId(tournamentId: string) {
   const tournament = await VrplTournamentDB.findOne({
     id: tournamentId,
   }).exec();
-  updateTournamentNameCache([tournament]);
+  updateTournamentSlugCache([tournament]);
   return tournament;
 }
 
@@ -63,7 +71,7 @@ export async function getTournamentsOfGame(gameId: string) {
   const tournaments = await VrplTournamentDB.find({
     gameId: gameId,
   }).exec();
-  updateTournamentNameCache(tournaments);
+  updateTournamentSlugCache(tournaments);
   return tournaments;
 }
 

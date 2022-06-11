@@ -43,7 +43,7 @@ import {
 import { Permissions, userHasPermission } from "../utils/permissions";
 import Team from "../schemas/Team";
 import { VrplTournament } from "../db/models/vrplTournaments";
-import { getTournamentFromId, getTournamentFromName } from "../db/tournaments";
+import { getTournamentFromId, getTournamentFromSlug } from "../db/tournaments";
 import { getAvatar } from "../utils/storage";
 import { getMatchesForTeam } from "../db/match";
 import Match from "../schemas/Match";
@@ -56,14 +56,14 @@ export default class {
   @Query((_returns) => Team, { nullable: true })
   async teamFromName(
     @Arg("name") name: string,
-    @Arg("tournamentName", { nullable: true }) tournamentName?: string,
+    @Arg("tournamentSlug", { nullable: true }) tournamentSlug?: string,
     @Arg("tournamentId", { nullable: true }) enteredTournamentId?: string
   ): Promise<VrplTeam | null> {
     if (enteredTournamentId) {
       return getTeamFromName(enteredTournamentId, name);
-    } else if (!tournamentName)
-      throw new BadRequestError("Must enter tournament name or id");
-    const tournament = await getTournamentFromName(tournamentName);
+    } else if (!tournamentSlug)
+      throw new BadRequestError("Must enter tournament slug or id");
+    const tournament = await getTournamentFromSlug(tournamentSlug);
     if (!tournament) throw new BadRequestError("Invalid tournament name");
     return getTeamFromName(tournament.id, name);
   }
@@ -71,14 +71,14 @@ export default class {
   @Query((_returns) => Team, { nullable: true })
   async teamFromId(
     @Arg("id") id: string,
-    @Arg("tournamentName", { nullable: true }) tournamentName?: string,
+    @Arg("tournamentSlug", { nullable: true }) tournamentSlug?: string,
     @Arg("tournamentId", { nullable: true }) enteredTournamentId?: string
   ): Promise<VrplTeam | null> {
     if (enteredTournamentId) {
       return getTeamFromId(enteredTournamentId, id);
-    } else if (!tournamentName)
-      throw new BadRequestError("Must enter tournament name or id");
-    const tournament = await getTournamentFromName(tournamentName);
+    } else if (!tournamentSlug)
+      throw new BadRequestError("Must enter tournament slug or id");
+    const tournament = await getTournamentFromSlug(tournamentSlug);
     if (!tournament) throw new BadRequestError("Invalid tournament name");
     return await getTeamFromId(tournament.id, id);
   }
