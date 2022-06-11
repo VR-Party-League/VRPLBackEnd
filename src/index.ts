@@ -36,6 +36,9 @@ import { Permissions } from "./utils/permissions";
 import { authenticate } from "./routes/api/oauth2";
 import { VrplTeam } from "./db/models/vrplTeam";
 import { VrplTournament } from "./db/models/vrplTournaments";
+import express, { NextFunction } from "express";
+import { CustomError } from "./utils/errors";
+import { captureException } from "@sentry/node";
 
 // import fs from "fs";
 // import https from "https";
@@ -149,6 +152,7 @@ async function bootstrap() {
   // The error handler must be before any other error middleware and after all controllers
   app.use(Sentry.Handlers.errorHandler());
 
+  app.use(errorHandler);
   io.listen(server);
   server.listen(PORT, () => {
     console.log(`Server is listening on http://localhost:${PORT}`);
@@ -158,5 +162,19 @@ async function bootstrap() {
   //   console.log(`Server is listening on https://localhost:${PORT}`);
   // });
 }
+
+const errorHandler = (
+  err: Error,
+  req: express.Request,
+  res: express.Response,
+  next: NextFunction
+) => {
+  if (err instanceof CustomError)
+    return res.status(err.code).send({ message: `${err}` });
+  captureException(err);
+  res.status(500).send({
+    message: "Something went wrong",
+  });
+};
 
 bootstrap();
