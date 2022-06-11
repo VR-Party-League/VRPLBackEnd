@@ -1,4 +1,4 @@
-import { Document, model, Schema } from "mongoose";
+import { Document, model, ObjectId, Schema } from "mongoose";
 
 export enum VrplTeamPlayerRole {
   Captain = 0,
@@ -59,7 +59,7 @@ export const supportedSocialPlatforms = [
 
 export type SocialPlatform = keyof VrplTeam["socials"];
 
-const TeamSchema = new Schema<VrplTeam & Document>(
+const TeamSchema = new Schema<VrplTeam>(
   {
     ownerId: String,
     id: { type: String, required: true },
@@ -100,5 +100,5 @@ const TeamSchema = new Schema<VrplTeam & Document>(
   { collection: "teams" }
 );
 
-const TeamModel = model<VrplTeam & Document>("teams", TeamSchema);
+const TeamModel = model<VrplTeam>("teams", TeamSchema);
 export { TeamModel as default };
