@@ -21,8 +21,10 @@ router.post("/user/:id", async (req, res) => {
       let auth = req.auth;
       // Check for the player is logged in
       if (!auth) return res.status(401).send({ message: "Unauthorized" });
+      auth.assureScope("player.avatar:write");
+
       // Check for multer errors
-      else if (err && err instanceof MulterError)
+      if (err && err instanceof MulterError)
         return res.status(400).send({ message: err.code });
       else if (err) throw err;
       let player = await getPlayerFromId(req.params.id);
@@ -78,8 +80,10 @@ router.post("/tournament/:tournamentID/team/:id", (req, res) => {
       const auth = req.auth;
       // Check for the player is logged in
       if (!auth) return res.status(401).send({ message: "Unauthorized" });
+      auth.assureScope("team.avatar:write");
+
       // Check for multer errors
-      else if (err && err instanceof MulterError)
+      if (err && err instanceof MulterError)
         return res.status(400).send({ message: err.code });
       else if (err) throw err;
       // Check if the team exists

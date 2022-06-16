@@ -26,6 +26,7 @@ const OauthWriteScopes = [
   "messages.hide",
   "messages.read",
   "team.name",
+  "team.avatar",
   "team.teamPlayers",
   "team.owner", // Also delete and create
   "team.socials",
