@@ -1,4 +1,11 @@
-import { Arg, Authorized, Ctx, Mutation, Query, Resolver } from "type-graphql";
+import {
+  Arg,
+  Ctx,
+  Mutation,
+  Query,
+  Resolver,
+  UseMiddleware,
+} from "type-graphql";
 import { Context } from "..";
 import { VrplSiteSetting } from "../db/models/vrplSiteSettings";
 import {
@@ -12,7 +19,7 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../utils/errors";
-import { Permissions, userHasPermission } from "../utils/permissions";
+import { Authenticate, Permissions } from "../utils/permissions";
 
 @Resolver((_of) => SiteSettings)
 export default class SiteSettingsResolver {
@@ -32,8 +39,8 @@ export default class SiteSettingsResolver {
     return setting;
   }
 
-  @Authorized()
   @Mutation((_returns) => SiteSettings)
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"]))
   async updateSettingValue(
     @Arg("key", (_type) => String) key: string,
     @Arg("value", (_type) => String) value: string,

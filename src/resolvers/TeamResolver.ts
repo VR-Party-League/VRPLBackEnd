@@ -1,6 +1,5 @@
 import {
   Arg,
-  Authorized,
   Ctx,
   Field,
   FieldResolver,
@@ -10,6 +9,7 @@ import {
   Query,
   Resolver,
   Root,
+  UseMiddleware,
 } from "type-graphql";
 import { Context } from "..";
 import { VrplPlayer } from "../db/models/vrplPlayer";
@@ -36,11 +36,10 @@ import {
 } from "../db/team";
 import {
   BadRequestError,
-  ForbiddenError,
   InternalServerError,
   UnauthorizedError,
 } from "../utils/errors";
-import { Permissions, userHasPermission } from "../utils/permissions";
+import { Authenticate, Permissions } from "../utils/permissions";
 import Team from "../schemas/Team";
 import { VrplTournament } from "../db/models/vrplTournaments";
 import { getTournamentFromId, getTournamentFromSlug } from "../db/tournaments";
@@ -116,8 +115,8 @@ export default class {
   }
 
   // TODO: Untested
-  @Authorized()
   @Mutation((_returns) => Team)
+  @UseMiddleware(Authenticate(["team.teamPlayers:write"]))
   async invitePlayersToTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -148,8 +147,8 @@ export default class {
   }
 
   // TODO: Untested
-  @Authorized()
   @Mutation((_returns) => Team)
+  @UseMiddleware(Authenticate(["team.teamPlayers:write"]))
   async changePlayerRole(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -181,8 +180,8 @@ export default class {
   }
 
   // TODO: Untested
-  @Authorized()
   @Mutation((_returns) => Team)
+  @UseMiddleware(Authenticate(["team.owner:write"]))
   async transferTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -207,8 +206,8 @@ export default class {
     return res;
   }
 
-  @Authorized()
   @Mutation((_returns) => Team)
+  @UseMiddleware(Authenticate(["team.name:write"]))
   async changeTeamName(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -227,8 +226,8 @@ export default class {
     return res;
   }
 
-  @Authorized()
   @Mutation((_returns) => Team)
+  @UseMiddleware(Authenticate(["team.teamPlayers:write"]))
   async removePlayersFromTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -255,8 +254,8 @@ export default class {
     return res;
   }
 
-  @Authorized()
   @Mutation((_returns) => Team)
+  @UseMiddleware(Authenticate(["team.owner:write"]))
   async deleteTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -282,8 +281,8 @@ export default class {
     return res;
   }
 
-  @Authorized()
   @Mutation((_returns) => Team)
+  @UseMiddleware(Authenticate(["team.socials:write"]))
   async setSocialAccountForTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -307,8 +306,8 @@ export default class {
     return res;
   }
 
-  @Authorized()
   @Mutation((_returns) => Team)
+  @UseMiddleware(Authenticate(["team.socials:write"]))
   async removeSocialAccountFromTeam(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -333,8 +332,10 @@ export default class {
     return res;
   }
 
-  @Authorized([Permissions.ManageTournaments])
   @Mutation((_returns) => Team)
+  @UseMiddleware(
+    Authenticate(["USE_PERMISSIONS"], [Permissions.ManageTournaments])
+  )
   async setTeamSeed(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -347,8 +348,10 @@ export default class {
     return setTeamSeed(team, seed, auth);
   }
 
-  @Authorized([Permissions.ManageTournaments])
   @Mutation((_returns) => Team)
+  @UseMiddleware(
+    Authenticate(["USE_PERMISSIONS"], [Permissions.ManageTournaments])
+  )
   async clearTeamSeed(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamId") teamId: string,
@@ -360,8 +363,8 @@ export default class {
     return clearTeamSeed(team, auth);
   }
 
-  @Authorized([Permissions.ManageTeams])
   @Mutation((_returns) => Boolean)
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.ManageTeams]))
   async revalidateTeamPage(
     @Arg("teams", (_type) => [TeamsInput]) teams: TeamsInput[]
   ) {

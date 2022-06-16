@@ -8,11 +8,9 @@ import {
   InternalServerError,
   PlayerNotFoundError,
   TeamNotFoundError,
-  TournamentNotFoundError,
   UnauthorizedError,
 } from "./errors";
 import { getTeamFromId } from "../db/team";
-import { getTournamentFromId } from "../db/tournaments";
 
 export enum Permissions {
   None = 0, // 0
@@ -73,143 +71,29 @@ export const authChecker: AuthChecker<Context> = (
   return false;
 };
 
-// export function Scoped(): MethodAndPropDecorator;
-// export function Scoped(scopes: AllOAuthScopes[]): MethodAndPropDecorator;
-// export function Scoped(
-//   scopes: AllOAuthScopes[]
-// ): MethodDecorator | PropertyDecorator {
-//   return (prototype, propertyKey, descriptor) => {
-//     if (typeof propertyKey === "symbol") {
-//       throw new SymbolKeysNotSupportedError();
-//     }
-//
-//     getMetadataStorage().collectAuthorizedFieldMetadata({
-//       target: prototype.constructor,
-//       fieldName: propertyKey,
-//       scopes,
-//     });
-//   };
-// }
-
-export function ScopeChecker(
-  requiredScope: AllOAuthScopes[]
+export function Authenticate(
+  requiredScope: AllOAuthScopes[],
+  requiredPermissions?: Permissions[]
 ): MiddlewareFn<Context> {
   return async ({ context }, next) => {
     const auth = context.auth;
     const scope = auth?.scope || [];
     if (!auth) throw new UnauthorizedError();
-    else if (requiredScope.some((s) => !scope.includes(s)))
+    else if (requiredPermissions) {
+      if (requiredPermissions.some((p) => !auth?.hasPerm(p)))
+        throw new ForbiddenError(
+          `Insufficient permissions. Required are: ${requiredPermissions
+            .map((p) => Permissions[p])
+            .join(", ")}`
+        );
+      auth.assureScope("USE_PERMISSIONS");
+    } else if (requiredScope.some((s) => !scope.includes(s)))
       throw new ForbiddenError(
         `Insufficient scope. Required are: ${requiredScope.join(", ")}`
       );
+
     return next();
     // hide values below minValue
-  };
-}
-
-export function PermissionChecker(
-  permissions: Permissions[]
-): MiddlewareFn<Context> {
-  return async (res, next) => {
-    console.log("resolver Data", res);
-    const auth = res.context.auth;
-    res.args;
-    if (!auth) throw new UnauthorizedError();
-    else if (
-      !userHasOneOfPermissions({ permissions: auth.permissions }, permissions)
-    )
-      throw new ForbiddenError();
-    return next();
-    // hide values below minValue
-  };
-}
-
-export function FetchArgs(opts: {
-  player?: {
-    playerIdArgName: string;
-    /*
-     * If not undefined, will check if the player fetched is the same as the logged in player,
-     * and you enter a permission which can override that
-     */
-    checkIfLoggedInAs?: Permissions;
-    optional?: boolean;
-  };
-  team?: {
-    teamIdArgName: string;
-    tournamentIdArgName: string;
-    checkIfOwnerOf?: Permissions;
-    checkIfPlayerOn?: Permissions;
-    optional?: boolean;
-  };
-  tournament?: {
-    tournamentIdArgName: string;
-    optional?: boolean;
-  };
-}): MiddlewareFn<Context> {
-  return async (res, next) => {
-    const resolved = res.context.resolved;
-    const auth = res.context.auth;
-    const args = res.args;
-    // if (!auth) throw new UnauthorizedError();
-    if (opts.player) {
-      const playerIdArgName = opts.player.playerIdArgName;
-      const playerId = args[playerIdArgName];
-      if (playerId) {
-        const player = await getPlayerFromId(playerId);
-        if (!player) throw new PlayerNotFoundError();
-        if (opts.player.checkIfLoggedInAs) {
-          if (!auth) throw new UnauthorizedError();
-          else if (auth.playerId !== playerId)
-            auth.assurePerm(opts.player.checkIfLoggedInAs);
-        }
-        resolved.player = player;
-      } else if (!opts.player.optional)
-        throw new InternalServerError(
-          `Could not find ${playerIdArgName} as an argument`
-        );
-    }
-    if (opts.team) {
-      const teamOpt = opts.team;
-      const teamId = args[teamOpt.teamIdArgName];
-      const tournamentId = args[teamOpt.tournamentIdArgName];
-      if (teamId && tournamentId) {
-        const team = await getTeamFromId(tournamentId, teamId);
-        if (!team) throw new TeamNotFoundError();
-        if (opts.team.checkIfOwnerOf) {
-          if (!auth) throw new UnauthorizedError();
-          else if (auth.playerId !== team.ownerId)
-            auth.assurePerm(opts.team.checkIfOwnerOf);
-        }
-        if (opts.team.checkIfPlayerOn) {
-          if (!auth) throw new UnauthorizedError();
-          else if (
-            !team.teamPlayers.some(({ playerId }) => playerId === auth.playerId)
-          )
-            auth.assurePerm(opts.team.checkIfPlayerOn);
-        }
-        resolved.team = team;
-      } else if ((teamId || tournamentId) && !opts.team.optional) {
-        throw new InternalServerError(
-          `Please enter both ${teamOpt.teamIdArgName} and ${
-            teamOpt.tournamentIdArgName
-          }${opts.team.optional ? " or none of them" : ""}.`
-        );
-      } else if (!opts.team.optional)
-        throw new InternalServerError(
-          `Could not find ${teamOpt.teamIdArgName} or ${teamOpt.tournamentIdArgName} as arguments`
-        );
-    }
-    if (opts.tournament) {
-      const tournamentId = args[opts.tournament.tournamentIdArgName];
-      if (tournamentId) {
-        const tournament = await getTournamentFromId(tournamentId);
-        if (!tournament) throw new TournamentNotFoundError();
-        resolved.tournament = tournament;
-      } else if (!opts.tournament.optional)
-        throw new InternalServerError(
-          `Could not find ${opts.tournament.tournamentIdArgName} as an argument`
-        );
-    }
   };
 }
 
@@ -244,8 +128,10 @@ export function ResolvePlayer(
       if (!player && !opts?.nullable) throw new PlayerNotFoundError();
       if (loggedInAs) {
         if (!auth) throw new UnauthorizedError();
-        else if (auth.playerId !== playerId)
+        else if (auth.playerId !== playerId) {
           auth.assurePerm(opts?.override ?? Permissions.ManagePlayers);
+          auth.assureScope("USE_PERMISSIONS");
+        }
       }
       resolved.player = player;
     } else if (!opts?.optional)

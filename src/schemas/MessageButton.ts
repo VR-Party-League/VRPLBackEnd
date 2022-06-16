@@ -1,6 +1,6 @@
-import { Authorized, Field, InputType, ObjectType } from "type-graphql";
+import { Field, InputType, ObjectType, UseMiddleware } from "type-graphql";
 import { VrplTeamPlayerRole } from "../db/models/vrplTeam";
-import { Permissions } from "../utils/permissions";
+import { Authenticate, Permissions } from "../utils/permissions";
 
 @ObjectType()
 export default class MessageButton {
@@ -10,7 +10,7 @@ export default class MessageButton {
   @Field({ description: "The button text", nullable: false })
   text: string;
 
-  @Authorized([Permissions.Admin])
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.Admin]))
   @Field({
     description:
       "The button action, only for debug purposes, and a JSON string bc i dont know how to have like an 'any' type",

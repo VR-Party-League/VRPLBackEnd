@@ -4,10 +4,11 @@ import sharp from "sharp";
 import {
   addCooldownToPlayer,
   addCooldownToTeam,
-  doesHaveCooldown,
+  getPlayerCooldownExpiresAt,
+  getTeamCooldownExpiresAt,
 } from "../../../db/cooldown";
 import { getTeamFromId } from "../../../db/team";
-import { Permissions, userHasPermission } from "../../../utils/permissions";
+import { Permissions } from "../../../utils/permissions";
 import { uploadAvatar } from "../../../utils/storage";
 import { getPlayerFromId } from "../../../db/player";
 
@@ -27,17 +28,17 @@ router.post("/user/:id", async (req, res) => {
       let player = await getPlayerFromId(req.params.id);
       // Check if the player is permitted to perform this action
       if (!player) return res.status(404).send({ message: "Player not found" });
-      else if (
-        player.id !== auth.playerId &&
-        !userHasPermission(auth, Permissions.ManagePlayers)
-      )
-        return res.status(403).send({ message: "Forbidden" });
+      else if (player.id !== auth.playerId)
+        auth.assurePerm(Permissions.ManagePlayers);
       // Check if the player is on cooldown
-      else if (
-        !userHasPermission(auth, Permissions.ManagePlayers) &&
-        (await doesHaveCooldown("player", player.id, "changeAvatar"))
-      ) {
-        return res.status(429).send({ message: "You are on a cooldown" });
+      const cooldown = await getPlayerCooldownExpiresAt(
+        player.id,
+        "changeAvatar"
+      );
+      if (cooldown && !auth.hasPerm(Permissions.ManagePlayers)) {
+        return res.status(429).send({
+          message: `You are on a cooldown until ${cooldown.toString()}`,
+        });
       }
       // Verify file properties
       const file = req.file;
@@ -56,7 +57,7 @@ router.post("/user/:id", async (req, res) => {
         return res.status(400).send({ message: "Invalid image" });
       }
       // Add cooldown
-      await addCooldownToPlayer(player.id, "changeAvatar");
+      if (!cooldown) await addCooldownToPlayer(player.id, "changeAvatar");
       // Upload it to the blob storage
       const uploadRes = await uploadAvatar(player, resizedBuffer, auth);
       if (uploadRes && uploadRes.errorCode) {
@@ -85,17 +86,18 @@ router.post("/tournament/:tournamentID/team/:id", (req, res) => {
       const team = await getTeamFromId(req.params.tournamentID, req.params.id);
       if (!team) return res.status(400).send({ message: "Invalid team" });
       // Check if the player is permitted to perform this action
-      else if (
-        team.ownerId !== auth.playerId &&
-        !userHasPermission(auth, Permissions.ManageTeams)
-      )
-        return res.status(403).send({ message: "Forbidden" });
+      else if (team.ownerId !== auth.playerId)
+        auth.assurePerm(Permissions.ManageTeams);
       // Check if the player is on cooldown
-      else if (
-        !userHasPermission(auth, Permissions.ManageTeams) &&
-        (await doesHaveCooldown("team", team.id, "changeAvatar"))
-      )
-        return res.status(429).send({ message: "This team is on a cooldown" });
+      const cooldown = await getTeamCooldownExpiresAt(
+        team.id,
+        team.tournamentId,
+        "changeAvatar"
+      );
+      if (cooldown && !auth.hasPerm(Permissions.ManageTeams))
+        return res.status(429).send({
+          message: `This team is on a cooldown until ${cooldown.toString()}`,
+        });
 
       // Verify file properties
       const file = req.file;
@@ -114,7 +116,8 @@ router.post("/tournament/:tournamentID/team/:id", (req, res) => {
         return res.status(400).send({ message: "Invalid image" });
       }
       // Add cooldown
-      await addCooldownToTeam(team.id, team.tournamentId, "changeAvatar");
+      if (!cooldown)
+        await addCooldownToTeam(team.id, team.tournamentId, "changeAvatar");
       // Upload it to the blob storage
       const uploadRes = await uploadAvatar(team, resizedBuffer, auth);
       if (uploadRes && uploadRes.errorCode) {

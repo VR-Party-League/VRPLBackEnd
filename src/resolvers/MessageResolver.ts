@@ -1,6 +1,5 @@
 import {
   Arg,
-  Authorized,
   Ctx,
   FieldResolver,
   Int,
@@ -10,7 +9,7 @@ import {
   Root,
   UseMiddleware,
 } from "type-graphql";
-import { Permissions, ResolvePlayer } from "../utils/permissions";
+import { Authenticate, Permissions, ResolvePlayer } from "../utils/permissions";
 import Message, { MessageInput } from "../schemas/Message";
 import { vrplMessage } from "../db/models/vrplMessages";
 import { getPlayerFromId } from "../db/player";
@@ -44,8 +43,11 @@ export default class {
 
   //   if (type === "team" || type === "player") getAvatar(type, id);
   // }
-  @Authorized()
   @Query((_returns) => [Message])
+  @UseMiddleware(Authenticate(["messages:read"]))
+  @UseMiddleware(
+    ResolvePlayer("playerId", true, { override: Permissions.ManageMessages })
+  )
   async getMessagesForPlayer(
     @Ctx() { auth }: Context,
     @Arg("playerId") playerId: string,
@@ -70,8 +72,10 @@ export default class {
     return messages;
   }
 
-  @Authorized([Permissions.ManageMessages])
   @Mutation((_returns) => [Message])
+  @UseMiddleware(
+    Authenticate(["USE_PERMISSIONS"], [Permissions.ManageMessages])
+  )
   async createMessages(
     @Arg("message") messageArgs: MessageInput,
     @Arg("recipientIds", (_type) => [String]) recipientIds: string[]
@@ -82,8 +86,8 @@ export default class {
     return res;
   }
 
-  @Authorized()
   @Mutation((_returns) => Int)
+  @UseMiddleware(Authenticate(["messages.read:write"]))
   async readAllUnreadMessages(
     @Arg("playerId") playerId: string,
     @Arg("limit", { nullable: true }) limit: number,
@@ -111,11 +115,11 @@ export default class {
     return res?.modifiedCount;
   }
 
-  @Authorized()
   @Mutation((_returns) => Message)
   @UseMiddleware(
     ResolvePlayer("playerId", true, { override: Permissions.ManageMessages })
   )
+  @UseMiddleware(Authenticate(["messages.hide:write"]))
   async hideMessage(
     @Arg("playerId") playerId: string,
     @Arg("messageId") messageId: string,

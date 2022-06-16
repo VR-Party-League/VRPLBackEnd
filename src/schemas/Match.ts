@@ -1,8 +1,6 @@
 import { Field, InputType, Int, ObjectType } from "type-graphql";
 import Team from "./Team";
 import Tournament from "./Tournament";
-import teamSeeds from "../db/models/vrplMatch";
-import winnerId from "../db/models/vrplMatch";
 
 @ObjectType()
 export default class Match {

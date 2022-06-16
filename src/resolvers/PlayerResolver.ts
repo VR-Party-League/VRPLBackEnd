@@ -1,6 +1,5 @@
 import {
   Arg,
-  Authorized,
   Ctx,
   FieldResolver,
   Int,
@@ -19,7 +18,7 @@ import {
 } from "../db/badge";
 import {
   addCooldownToPlayer,
-  doesHaveCooldown,
+  getPlayerCooldownExpiresAt,
   getPlayerCooldowns,
 } from "../db/cooldown";
 import { VrplPlayerCooldown } from "../db/models/cooldowns";
@@ -47,12 +46,11 @@ import {
   BadRequestError,
   ForbiddenError,
   InternalServerError,
-  InvalidScopeError,
 } from "../utils/errors";
 import {
+  Authenticate,
   Permissions,
   ResolvePlayer,
-  ScopeChecker,
   userHasOneOfPermissions,
 } from "../utils/permissions";
 import { getAvatar } from "../utils/storage";
@@ -69,8 +67,8 @@ export default class {
     return resolved.player!;
   }
 
-  @Authorized([Permissions.Server])
   @Query((_returns) => [String])
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.Server]))
   async allPlayerIds(): Promise<string[]> {
     return await getAllPlayerIds();
   }
@@ -112,9 +110,8 @@ export default class {
     return await getAvatar("player", id, avatarHash);
   }
 
-  @Authorized()
   @FieldResolver()
-  @UseMiddleware(ScopeChecker(["player.discordId:read"]))
+  @UseMiddleware(Authenticate(["player.discordId:read"]))
   discordId(@Root() vrplPlayer: VrplPlayer, @Ctx() { auth }: Context) {
     if (!auth) throw new UnauthorizedError();
     else if (
@@ -128,8 +125,8 @@ export default class {
     return vrplPlayer.discordId;
   }
 
-  @Authorized()
   @Query((_returns) => Player, { nullable: true })
+  @UseMiddleware(Authenticate([]))
   async findPlayer(
     @Arg("search") search: string,
     @Ctx() { auth }: Context
@@ -139,9 +136,8 @@ export default class {
     return await findPlayerBroadly(search);
   }
 
-  @Authorized()
   @FieldResolver()
-  @UseMiddleware(ScopeChecker(["player.email:read"]))
+  @UseMiddleware(Authenticate(["player.email:read"]))
   email(
     @Root() vrplPlayer: VrplPlayer,
     @Ctx() { auth }: Context
@@ -152,8 +148,8 @@ export default class {
     return vrplPlayer.email;
   }
 
-  @Authorized([Permissions.ManageBadges])
   @Mutation((_returns) => Player)
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.ManageBadges]))
   async addBadgeToPlayer(
     @Arg("playerId") playerId: string,
     @Arg("bitPosition", (_type) => Int) bitPosition: number,
@@ -169,8 +165,8 @@ export default class {
     return await updatePlayerBadges(vrplPlayer, newBadgeBitField, auth);
   }
 
-  @Authorized([Permissions.ManageBadges])
   @Mutation((_returns) => Player)
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.ManageBadges]))
   async removeBadgeFromPlayer(
     @Arg("playerId") playerId: string,
     @Arg("bitPosition", (_type) => Int) bitPosition: number,
@@ -188,8 +184,8 @@ export default class {
     return await updatePlayerBadges(vrplPlayer, newBadgeBitField, auth);
   }
 
-  @Authorized([Permissions.ManageBadges])
   @Mutation((_returns) => Player)
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.ManageBadges]))
   async setBadgesOfPlayer(
     @Arg("playerId") playerId: string,
     @Arg("bitField", (_type) => Int) bitField: number,
@@ -210,9 +206,8 @@ export default class {
     return await updatePlayerBadges(vrplPlayer, bitField, auth);
   }
 
-  @Authorized()
   @Mutation((_returns) => Player)
-  @UseMiddleware(ScopeChecker(["player.nickname:write"]))
+  @UseMiddleware(Authenticate(["player.nickname:write"]))
   @UseMiddleware(ResolvePlayer("playerId", true))
   async changePlayerName(
     @Arg("playerId") playerId: string,
@@ -227,12 +222,14 @@ export default class {
     if (vrplPlayer.id !== auth.playerId)
       auth.assurePerm(Permissions.ManagePlayers);
     else {
-      const hasCooldown = await doesHaveCooldown(
-        "player",
+      const hasCooldown = await getPlayerCooldownExpiresAt(
         vrplPlayer.id,
         "changeNickname"
       );
-      if (hasCooldown) throw new ForbiddenError("You are on a cooldown!");
+      if (hasCooldown)
+        throw new ForbiddenError(
+          `You are on a cooldown until ${hasCooldown.toString()}`
+        );
     }
     const newPlayer = await updatePlayerName(vrplPlayer, newName, auth);
     if (!auth.hasPerm(Permissions.ManagePlayers))
@@ -240,9 +237,8 @@ export default class {
     return newPlayer;
   }
 
-  @Authorized()
   @Mutation((_returns) => Player)
-  @UseMiddleware(ScopeChecker(["player.region:write"]))
+  @UseMiddleware(Authenticate(["player.region:write"]))
   @UseMiddleware(ResolvePlayer("playerId", true))
   async setPlayerRegion(
     @Arg("playerId") playerId: string,
@@ -258,9 +254,8 @@ export default class {
     return await setPlayerRegion(player, region as VrplRegion, auth);
   }
 
-  @Authorized()
   @Mutation((_returns) => Player)
-  @UseMiddleware(ScopeChecker(["player.email:write"]))
+  @UseMiddleware(Authenticate(["player.email:write"]))
   @UseMiddleware(ResolvePlayer("playerId", true))
   async updateEmail(
     @Arg("playerId") playerId: string,
@@ -274,9 +269,8 @@ export default class {
     return await updatePlayerEmail(player, email, auth);
   }
 
-  @Authorized()
   @Mutation((_returns) => Player)
-  @UseMiddleware(ScopeChecker(["player.discordInfo:write"]))
+  @UseMiddleware(Authenticate(["player.discordInfo:write"]))
   @UseMiddleware(ResolvePlayer("playerId", true))
   async refreshDiscordData(
     @Arg("playerId") playerId: string,
@@ -286,9 +280,8 @@ export default class {
     return await refreshDiscordData(player);
   }
 
-  @Authorized()
   @Mutation((_returns) => Player)
-  @UseMiddleware(ScopeChecker(["player.about:write"]))
+  @UseMiddleware(Authenticate(["player.about:write"]))
   @UseMiddleware(ResolvePlayer("playerId", true))
   async changePlayerAbout(
     @Arg("playerId") playerId: string,
@@ -305,8 +298,8 @@ export default class {
     return await updatePlayerAbout(player, about, auth);
   }
 
-  @Authorized([Permissions.ManagePlayers])
   @Mutation((_returns) => Boolean)
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.ManagePlayers]))
   async revalidatePlayerPages(
     @Arg("playerIds", (_type) => [String]) playerIds: [string]
   ) {

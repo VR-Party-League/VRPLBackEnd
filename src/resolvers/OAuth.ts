@@ -1,12 +1,12 @@
 import {
   Arg,
-  Authorized,
   Ctx,
   FieldResolver,
   Mutation,
   Query,
   Resolver,
   Root,
+  UseMiddleware,
 } from "type-graphql";
 import { OAuth2Client } from "../schemas/OAuth";
 import Player from "../schemas/Player";
@@ -23,7 +23,7 @@ import {
   UnauthorizedError,
 } from "../utils/errors";
 import { Context } from "../index";
-import { Permissions } from "../utils/permissions";
+import { Authenticate, Permissions } from "../utils/permissions";
 import { getUserFromPlayerId } from "../db/user";
 
 @Resolver((_of) => OAuth2Client)
@@ -46,8 +46,8 @@ export class OAuth2ClientResolver {
     return getOauthClientsOfUser(user._id);
   }
 
-  @Authorized()
   @Mutation((_returns) => OAuth2Client)
+  @UseMiddleware(Authenticate(["oauth2.client:write"]))
   async createOAuth2Client(
     @Arg("clientName") clientName: string,
     @Arg("redirectUris", (_type) => [String]) redirectUris: string[],

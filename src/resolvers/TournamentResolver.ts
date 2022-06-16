@@ -1,6 +1,5 @@
 import {
   Arg,
-  Authorized,
   Ctx,
   Field,
   FieldResolver,
@@ -46,7 +45,7 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "../utils/errors";
-import { Permissions, ResolveTeam } from "../utils/permissions";
+import { Authenticate, Permissions, ResolveTeam } from "../utils/permissions";
 import Match from "../schemas/Match";
 import { revalidateTournamentPage } from "../db/records";
 
@@ -92,8 +91,8 @@ export default class {
     return game;
   }
 
-  @Authorized()
   @Mutation((_returns) => Team)
+  @UseMiddleware(Authenticate(["team.owner:write"]))
   async createTeamForTournament(
     @Arg("tournamentId") tournamentId: string,
     @Arg("teamName") teamName: string,
@@ -136,8 +135,10 @@ export default class {
     return createdTeamRes;
   }
 
-  @Authorized([Permissions.ManageTournaments])
   @Query((_returns) => draftRoundRobin, { nullable: false })
+  @UseMiddleware(
+    Authenticate(["USE_PERMISSIONS"], [Permissions.ManageTournaments])
+  )
   async getDraftRoundRobin(
     @Arg("tournamentId") tournamentId: string,
     @Arg("rounds", (_type) => Int) rounds: number,
@@ -153,8 +154,10 @@ export default class {
     return draft;
   }
 
-  @Authorized([Permissions.ManageTournaments])
   @Mutation((_returns) => [Match])
+  @UseMiddleware(
+    Authenticate(["USE_PERMISSIONS"], [Permissions.ManageTournaments])
+  )
   async addMatchesToTournament(
     @Arg("tournamentId") tournamentId: string,
     @Arg("rounds", (_type) => [MatchRoundInput]) rounds: MatchRoundInput[],
@@ -167,8 +170,10 @@ export default class {
     return res;
   }
 
-  @Authorized([Permissions.ManageTournaments])
   @Mutation((_returns) => [Team])
+  @UseMiddleware(
+    Authenticate(["USE_PERMISSIONS"], [Permissions.ManageTournaments])
+  )
   async seedsTeamsForTournament(
     @Arg("tournamentId") tournamentId: string,
     @Ctx() { auth }: Context
@@ -180,8 +185,10 @@ export default class {
     return teams;
   }
 
-  @Authorized([Permissions.ManageTournaments])
   @Mutation((_returns) => [Team])
+  @UseMiddleware(
+    Authenticate(["USE_PERMISSIONS"], [Permissions.ManageTournaments])
+  )
   async unSeedTeamsForTournament(
     @Arg("tournamentId") tournamentId: string,
     @Ctx() { auth }: Context
@@ -193,8 +200,10 @@ export default class {
     return teams;
   }
 
-  @Authorized([Permissions.ManageTournaments])
   @Mutation((_returns) => Tournament)
+  @UseMiddleware(
+    Authenticate(["USE_PERMISSIONS"], [Permissions.ManageTournaments])
+  )
   async revalidateTournamentPage(@Arg("tournamentId") tournamentId: string) {
     const tournament = await getTournamentFromId(tournamentId);
     if (!tournament) throw new BadRequestError("Tournament not found");
@@ -203,24 +212,24 @@ export default class {
   }
 
   // @UseMiddleware(ResolvePlayer("playerId", true, Permissions.ManagePlayers))
-  @UseMiddleware(
-    ResolveTeam(
-      "teamId",
-      "tournamentId",
-      { ownerOf: true },
-      Permissions.ManageTeams
-    )
-  )
-  @Mutation((_returns) => Boolean)
-  testTEST(
-    @Arg("teamId") _: string,
-    @Arg("tournamentId") __: string,
-    @Ctx() { resolved: { team }, auth }: Context
-  ) {
-    console.log("[testTEST] team", team);
-    console.log("[testTEST] auth", auth);
-    return true;
-  }
+  // @UseMiddleware(
+  //   ResolveTeam(
+  //     "teamId",
+  //     "tournamentId",
+  //     { ownerOf: true },
+  //     Permissions.ManageTeams
+  //   )
+  // )
+  // @Mutation((_returns) => Boolean)
+  // testTEST(
+  //   @Arg("teamId") _: string,
+  //   @Arg("tournamentId") __: string,
+  //   @Ctx() { resolved: { team }, auth }: Context
+  // ) {
+  //   console.log("[testTEST] team", team);
+  //   console.log("[testTEST] auth", auth);
+  //   return true;
+  // }
 }
 
 @ObjectType()

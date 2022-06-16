@@ -76,11 +76,26 @@ export const authenticate: (
             throw new InternalServerError("User does not have a linked player");
           return player;
         },
-        hasPerm: (perm: Permissions) => {
-          return userHasPermission(user, perm);
+        hasPerm: function (perm: Permissions) {
+          const has = userHasPermission(user, perm);
+          if (has) {
+            if (!this) throw new UnauthorizedError();
+            this.assureScope("USE_PERMISSIONS");
+          }
+          return has;
         },
-        assurePerm: (perm: Permissions) => {
+        assurePerm: function (perm: Permissions) {
           if (!userHasPermission(user, perm)) throw new ForbiddenError();
+          else if (!this?.scope?.includes("USE_PERMISSIONS"))
+            throw new ForbiddenError(
+              "Insufficient scope. Missing: USE_PERMISSIONS"
+            );
+          // TODO: make @authorized go away
+          // TODO: let everythin need USE_PERMISSIONS if it uses permissions, easy way is to make check here
+        },
+        assureScope: function (scope: AllOAuthScopes) {
+          if (!this?.scope?.includes(scope))
+            throw new ForbiddenError(`Insufficient scope. Missing: ${scope}`);
         },
       };
     } catch (e) {
@@ -112,11 +127,25 @@ export const authenticate: (
             throw new InternalServerError("User does not have a linked player");
           return player;
         },
-        hasPerm: (perm: Permissions) => {
-          return userHasPermission(user, perm);
+        hasPerm: function (perm: Permissions) {
+          const has = userHasPermission(user, perm);
+          if (has) {
+            this.assureScope("USE_PERMISSIONS");
+          }
+          return has;
         },
-        assurePerm: (perm: Permissions) => {
+        assurePerm: function (perm: Permissions) {
           if (!userHasPermission(user, perm)) throw new ForbiddenError();
+          else if (!this.scope?.includes("USE_PERMISSIONS"))
+            throw new ForbiddenError(
+              "Insufficient scope. Missing: USE_PERMISSIONS"
+            );
+          // TODO: make @authorized go away
+          // TODO: let everythin need USE_PERMISSIONS if it uses permissions, easy way is to make check here
+        },
+        assureScope: function (scope: AllOAuthScopes) {
+          if (!this?.scope?.includes(scope))
+            throw new ForbiddenError(`Insufficient scope. Missing: ${scope}`);
         },
         client: {
           clientId: client.clientId,
@@ -136,6 +165,7 @@ export const authenticate: (
     }
   }
 };
+
 router.post("/authorize", authenticate, (req, res, next) => {
   oauth
     .authorize(new Request(req), new Response(res))

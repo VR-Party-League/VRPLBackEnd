@@ -1,4 +1,4 @@
-import { Field, Int, ObjectType } from "type-graphql";
+import { Field, ObjectType } from "type-graphql";
 import Tournament from "./Tournament";
 
 @ObjectType()

@@ -1,6 +1,5 @@
 import {
   Arg,
-  Authorized,
   Ctx,
   FieldResolver,
   Int,
@@ -8,6 +7,7 @@ import {
   Query,
   Resolver,
   Root,
+  UseMiddleware,
 } from "type-graphql";
 import { Context } from "..";
 import {
@@ -22,7 +22,7 @@ import {
 import { VrplBadge } from "../db/models/vrplBadge";
 import Badge from "../schemas/Badge";
 import { BadRequestError } from "../utils/errors";
-import { Permissions } from "../utils/permissions";
+import { Authenticate, Permissions } from "../utils/permissions";
 
 @Resolver((_of) => Badge)
 export default class BadgeResolver {
@@ -57,9 +57,8 @@ export default class BadgeResolver {
     return 1 << badge.bitPosition;
   }
 
-  // Tested!
-  @Authorized([Permissions.ManageBadges])
   @Mutation((_returns) => Badge)
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.ManageBadges]))
   async createBadge(
     @Ctx() { auth }: Context,
     @Arg("name") name: string,
@@ -88,8 +87,8 @@ export default class BadgeResolver {
     return res;
   }
 
-  @Authorized([Permissions.ManageBadges])
   @Mutation((_returns) => [Badge])
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.ManageBadges]))
   async refreshBadgeCache(): Promise<VrplBadge[]> {
     return refreshBadgesCache();
   }
