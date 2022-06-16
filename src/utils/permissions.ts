@@ -110,7 +110,7 @@ export function ResolvePlayer(
     const resolved = res.context.resolved;
     const auth = res.context.auth;
     let playerId: string = res.args[argName];
-    if (playerId === "@me") {
+    if (playerId.trim() === "@me") {
       if (!auth) throw new UnauthorizedError();
       else if (!auth.scope?.includes("player:read"))
         throw new UnauthorizedError(

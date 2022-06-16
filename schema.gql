@@ -350,10 +350,7 @@ type Player {
   """The player's cooldowns"""
   cooldowns: [PlayerCooldown!]!
 
-  """The player's discord avatar hash"""
-  discordAvatar: String
-
-  """The player's discord ID, only accessible to admins and mods"""
+  """The player's discord ID"""
   discordId: String!
 
   """The player's discord Tag"""
