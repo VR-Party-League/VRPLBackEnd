@@ -17,7 +17,7 @@
     "@types/morgan": "^1.9.3",
     "@types/multer": "^1.4.7",
     "@types/oauth2-server": "^3.0.13",
-    "@types/sharp": "^0.30.2",
+    "@types/sharp": "^0.30.4",
     "apollo-server": "^3.8.2",
     "axios": "^0.27.2",
     "body-parser": "^1.19.2",
