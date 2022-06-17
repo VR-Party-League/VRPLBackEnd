@@ -1,4 +1,4 @@
-import { Authorized, Field, InputType, Int, ObjectType } from "type-graphql";
+import { Field, InputType, ObjectType } from "type-graphql";
 import MessageButton, { MessageButtonInput } from "./MessageButton";
 import Player from "./Player";
 

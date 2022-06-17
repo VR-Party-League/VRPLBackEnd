@@ -1,6 +1,5 @@
 import {
   Arg,
-  Authorized,
   Ctx,
   FieldResolver,
   Mutation,
@@ -10,7 +9,7 @@ import {
   UseMiddleware,
 } from "type-graphql";
 import ApiToken from "../schemas/ApiToken";
-import { Permissions, ResolvePlayer } from "../utils/permissions";
+import { Authenticate, Permissions, ResolvePlayer } from "../utils/permissions";
 import { Context } from "../index";
 import {
   createApiToken,
@@ -30,6 +29,7 @@ export default class ApiTokenResolver {
   @UseMiddleware(
     ResolvePlayer("playerId", true, { override: Permissions.Admin })
   )
+  @UseMiddleware(Authenticate(["oauth2.apiToken:read"]))
   async getApiTokenOfPlayer(
     @Arg("playerId") playerId: string,
     @Ctx() { resolved }: Context
@@ -42,7 +42,7 @@ export default class ApiTokenResolver {
   @UseMiddleware(
     ResolvePlayer("playerId", true, { override: Permissions.Admin })
   )
-  @Authorized()
+  @UseMiddleware(Authenticate(["oauth2.apiToken:write"]))
   async createApiToken(
     @Arg("playerId") playerId: string,
     @Ctx() { resolved, auth }: Context
@@ -60,7 +60,7 @@ export default class ApiTokenResolver {
   @UseMiddleware(
     ResolvePlayer("playerId", true, { override: Permissions.Admin })
   )
-  @Authorized()
+  @UseMiddleware(Authenticate(["oauth2.apiToken:write"]))
   async revokeApiToken(
     @Arg("playerId") playerId: string,
     @Ctx() { resolved, auth }: Context

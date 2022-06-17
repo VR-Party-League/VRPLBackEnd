@@ -1,7 +1,8 @@
-import { Authorized, Field, Int, ObjectType } from "type-graphql";
+import { Field, Int, ObjectType, UseMiddleware } from "type-graphql";
 import Badge from "./Badge";
 import { PlayerCooldown } from "./Cooldown";
 import Team from "./Team";
+import { Authenticate } from "../utils/permissions";
 
 @ObjectType()
 export class PlayerNicknameHistoryItem {
@@ -22,7 +23,7 @@ export default class Player {
   })
   nickname: string;
 
-  @Authorized()
+  @UseMiddleware(Authenticate(["player.email:read"]))
   @Field({ description: "The player's email", nullable: false })
   email: string;
 
@@ -48,9 +49,8 @@ export default class Player {
   })
   region: string;
 
-  @Authorized()
   @Field({
-    description: "The player's discord ID, only accessible to admins and mods",
+    description: "The player's discord ID",
     nullable: false,
   })
   discordId: string;
@@ -61,12 +61,11 @@ export default class Player {
   })
   discordTag: string;
 
-  @Authorized()
-  @Field({
-    description: "The player's discord avatar hash",
-    nullable: true,
-  })
-  discordAvatar: string;
+  // @Field({
+  //   description: "The player's discord avatar hash",
+  //   nullable: true,
+  // })
+  // discordAvatar: string;
 
   @Field((_type) => [PlayerCooldown], {
     description: "The player's cooldowns",

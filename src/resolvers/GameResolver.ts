@@ -1,21 +1,20 @@
 import {
   Arg,
-  Authorized,
   FieldResolver,
   Mutation,
   Query,
   Resolver,
   Root,
+  UseMiddleware,
 } from "type-graphql";
 import { getGameById, getGameFromName, getGamesArray } from "../db/game";
 import { VrplGame } from "../db/models/vrplGame";
 import { VrplTournament } from "../db/models/vrplTournaments";
-import { getTournamentFromId, getTournamentsOfGame } from "../db/tournaments";
+import { getTournamentsOfGame } from "../db/tournaments";
 import Game from "../schemas/Game";
-import { Permissions } from "../utils/permissions";
-import Tournament from "../schemas/Tournament";
+import { Authenticate, Permissions } from "../utils/permissions";
 import { BadRequestError } from "../utils/errors";
-import { revalidateGamePage, revalidateTournamentPage } from "../db/records";
+import { revalidateGamePage } from "../db/records";
 
 @Resolver((_of) => Game)
 export default class GameResolver {
@@ -39,7 +38,7 @@ export default class GameResolver {
     return getTournamentsOfGame(vrplGame.id);
   }
 
-  @Authorized([Permissions.Admin])
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.Admin]))
   @Mutation((_returns) => Game)
   async revalidateGamePage(@Arg("gameId") gameId: string) {
     const game = await getGameById(gameId);

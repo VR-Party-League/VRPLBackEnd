@@ -16,7 +16,7 @@ function updateTournamentSlugCache(
   if (clear) tournamentSlugCache.clear();
   for (const tournament of tournaments) {
     if (!tournament) continue;
-    tournamentSlugCache.set(tournament.id, tournament.name);
+    tournamentSlugCache.set(tournament.id, tournament.slug);
   }
 }
 

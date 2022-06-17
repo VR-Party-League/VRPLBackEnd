@@ -7,7 +7,14 @@ import { VrplUser } from "./vrplUser";
  * OAuth Tokens
  */
 
-const OAuthReadScopes = ["player.email", "player.discordId", "player"] as const;
+const OAuthReadScopes = [
+  "player.email",
+  "player.discordId",
+  "messages",
+  "oauth2.client.clientSecret",
+  "oauth2.apiToken",
+  "player",
+] as const;
 const OauthWriteScopes = [
   "player.email",
   "player.region",
@@ -15,13 +22,28 @@ const OauthWriteScopes = [
   "player.about",
   "player.discordInfo",
   "player.avatar", // TODO: Implement
+  "messages.actions",
+  "messages.hide",
+  "messages.read",
+  "team.name",
+  "team.avatar",
+  "team.teamPlayers",
+  "team.owner", // Also delete and create
+  "team.socials",
+  "oauth2.client",
+  "oauth2.apiToken",
+  "match",
 ] as const;
 type AllOAuthWriteScopes = `${typeof OauthWriteScopes[number]}:write`;
 type AllOAuthReadScopes = `${typeof OAuthReadScopes[number]}:read`;
-export type AllOAuthScopes = AllOAuthReadScopes | AllOAuthWriteScopes;
+export type AllOAuthScopes =
+  | AllOAuthReadScopes
+  | AllOAuthWriteScopes
+  | "USE_PERMISSIONS";
 export const OAuthScopes = [
   ...OAuthReadScopes.map((s) => `${s}:read`),
   ...OauthWriteScopes.map((s) => `${s}:write`),
+  "USE_PERMISSIONS",
 ] as AllOAuthScopes[];
 
 export interface OauthToken extends Token {

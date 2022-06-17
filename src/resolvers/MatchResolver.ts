@@ -1,6 +1,5 @@
 import {
   Arg,
-  Authorized,
   Ctx,
   FieldResolver,
   Mutation,
@@ -8,6 +7,7 @@ import {
   Resolver,
   Root,
   UnauthorizedError,
+  UseMiddleware,
 } from "type-graphql";
 import {
   areScoresInvalid as areScoresInvalid,
@@ -22,7 +22,7 @@ import {
   SubmittedVrplMatch,
   VrplMatch,
 } from "../db/models/vrplMatch";
-import { isSeededVrplTeam, VrplTeam } from "../db/models/vrplTeam";
+import { VrplTeam } from "../db/models/vrplTeam";
 import { VrplTournament } from "../db/models/vrplTournaments";
 import {
   getTeamFromId,
@@ -36,7 +36,7 @@ import {
   ForbiddenError,
   InternalServerError,
 } from "../utils/errors";
-import { Permissions, userHasPermission } from "../utils/permissions";
+import { Authenticate, Permissions } from "../utils/permissions";
 import Match, { MatchScoreInput } from "../schemas/Match";
 import { Context } from "..";
 import ms from "ms";
@@ -123,8 +123,8 @@ export default class {
     return getTeamsFromIds(vrplMatch.tournamentId, vrplMatch.tiedIds);
   }
 
-  @Authorized()
   @Mutation((_returns) => Match)
+  @UseMiddleware(Authenticate(["match:write"]))
   async confirmMatch(
     @Arg("tournamentId") tournamentId: string,
     @Arg("matchId") matchId: string,
@@ -148,13 +148,10 @@ export default class {
     else if (!isSubmitted(match))
       throw new BadRequestError("Match has not been submitted");
 
-    const isAdmin = userHasPermission(auth, Permissions.ManageMatches);
-
     const isUserOnTeam =
       team.teamPlayers.some((member) => member.playerId === auth.playerId) ||
       team.ownerId === auth.playerId;
-    if (!isAdmin && !isUserOnTeam)
-      throw new ForbiddenError("You are not on this team");
+    if (!isUserOnTeam) auth.assurePerm(Permissions.ManageMatches);
     const isTeamPlayingInMatch = match.teamSeeds.includes(team.seed);
     const isTeamSubmitterTeam = match.submitterSeed === team.seed;
     const hasTeamConfirmedAlready = match.seedsConfirmed.includes(team.seed);
@@ -174,9 +171,8 @@ export default class {
     return res;
   }
 
-  // TODO: Check if this works when resubmitting a match
-  @Authorized()
   @Mutation((_returns) => Match)
+  @UseMiddleware(Authenticate(["match:write"]))
   async submitMatch(
     @Arg("tournamentId") tournamentId: string,
     @Arg("matchId") matchId: string,
@@ -199,15 +195,11 @@ export default class {
     else if (tournament.id !== team.tournamentId)
       throw new BadRequestError("This team is not in this tournament");
 
-    const isAdmin = userHasPermission(auth, Permissions.ManageMatches);
     const isUserOnTeam =
       team.teamPlayers.some((member) => member.playerId === auth.playerId) ||
       team.ownerId === auth.playerId;
-    if (!isUserOnTeam && !isAdmin)
-      throw new ForbiddenError("You are not on this team");
-
-    if (!match.teamSeeds.includes(team.seed) && !isAdmin)
-      throw new ForbiddenError();
+    if (!isUserOnTeam) auth.assurePerm(Permissions.ManageMatches);
+    if (!match.teamSeeds.includes(team.seed)) throw new ForbiddenError();
     else if (match.timeDeadline.getTime() < Date.now())
       throw new BadRequestError("Match expired");
     else if (match.timeStart.getTime() > Date.now())

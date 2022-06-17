@@ -309,7 +309,6 @@ type Mutation {
   setSocialAccountForTeam(code: String!, platform: String!, teamId: String!, tournamentId: String!): Team!
   setTeamSeed(seed: Int!, teamId: String!, tournamentId: String!): Team!
   submitMatch(force: Boolean, matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
-  testTEST(teamId: String!, tournamentId: String!): Boolean!
   transferTeam(makeOldOwnerPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
   unSeedTeamsForTournament(tournamentId: String!): [Team!]!
   updateEmail(email: String!, playerId: String!): Player!
@@ -351,10 +350,7 @@ type Player {
   """The player's cooldowns"""
   cooldowns: [PlayerCooldown!]!
 
-  """The player's discord avatar hash"""
-  discordAvatar: String
-
-  """The player's discord ID, only accessible to admins and mods"""
+  """The player's discord ID"""
   discordId: String!
 
   """The player's discord Tag"""

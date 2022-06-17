@@ -1,5 +1,5 @@
-import { Authorized, Field, FieldResolver, ObjectType } from "type-graphql";
-import { Permissions } from "../utils/permissions";
+import { Field, ObjectType, UseMiddleware } from "type-graphql";
+import { Authenticate, Permissions } from "../utils/permissions";
 import { VrplUser } from "../db/models/vrplUser";
 import Player from "./Player";
 
@@ -30,7 +30,7 @@ export default class ApiToken {
   })
   player: VrplUser;
 
-  @Authorized([Permissions.Admin])
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.Admin]))
   @Field({
     description: "The user id",
   })

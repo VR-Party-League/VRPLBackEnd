@@ -1,5 +1,5 @@
-import { Authorized, Field, ObjectType } from "type-graphql";
-import { Permissions } from "../utils/permissions";
+import { Field, ObjectType, UseMiddleware } from "type-graphql";
+import { Authenticate, Permissions } from "../utils/permissions";
 import Player from "./Player";
 
 @ObjectType()
@@ -8,7 +8,7 @@ export class OAuth2Client {
   id: string;
   @Field()
   clientId: string;
-  @Authorized([Permissions.Admin])
+  @UseMiddleware(Authenticate(["oauth2.client.clientSecret:read"]))
   @Field()
   clientSecret: string;
   @Field()
@@ -23,7 +23,7 @@ export class OAuth2Client {
   refreshTokenLifetime: number;
   @Field()
   createdAt: Date;
-  @Authorized([Permissions.Admin])
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.Admin]))
   @Field()
   userId: string;
   @Field()

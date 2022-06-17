@@ -65,10 +65,11 @@ export interface VrplAuth {
   userId: ObjectId;
   playerId?: string;
   permissions: number;
-  scope?: AllOAuthScopes[];
+  scope: AllOAuthScopes[];
   getPlayer: () => Promise<VrplPlayer>;
   hasPerm: (perm: Permissions) => boolean;
   assurePerm: (perm: Permissions) => void;
+  assureScope: (scope: AllOAuthScopes) => void;
   client?: Pick<
     OAuthClient,
     "clientId" | "clientName" | "verified" | "createdAt" | "userId"
@@ -170,7 +171,9 @@ const errorHandler = (
   next: NextFunction
 ) => {
   if (err instanceof CustomError)
-    return res.status(err.code).send({ message: `${err}` });
+    return res
+      .status(err.code)
+      .send({ message: `${err.message}`, statusCode: err.code });
   captureException(err);
   res.status(500).send({
     message: "Something went wrong",

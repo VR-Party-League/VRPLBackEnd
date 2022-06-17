@@ -1,7 +1,6 @@
 import MessageButton from "../schemas/MessageButton";
 import {
   Arg,
-  Authorized,
   Ctx,
   Field,
   FieldResolver,
@@ -9,9 +8,10 @@ import {
   ObjectType,
   Resolver,
   Root,
+  UseMiddleware,
 } from "type-graphql";
 import { vrplMessage, vrplMessageButton } from "../db/models/vrplMessages";
-import { Permissions } from "../utils/permissions";
+import { Authenticate, Permissions } from "../utils/permissions";
 import {
   BadRequestError,
   InternalServerError,
@@ -24,14 +24,14 @@ import { Context } from "../index";
 
 @Resolver((_of) => MessageButton)
 export default class {
-  @Authorized([Permissions.Admin])
+  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.Admin]))
   @FieldResolver()
   action(@Root() messageButton: vrplMessageButton) {
     return JSON.stringify(messageButton.action);
   }
 
-  @Authorized()
   @Mutation((_returns) => PerformMessageButtonActionResponse)
+  @UseMiddleware(Authenticate(["messages:read"]))
   async performMessageButtonAction(
     @Arg("playerId") playerId: string,
     @Arg("buttonId") buttonId: string,

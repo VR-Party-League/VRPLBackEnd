@@ -4,7 +4,7 @@ import Player from "./Player";
 import { TeamPlayer } from "./TeamPlayer";
 import Tournament from "./Tournament";
 import { VrplTeam } from "../db/models/vrplTeam";
-import { PlayerCooldown, TeamCooldown } from "./Cooldown";
+import { TeamCooldown } from "./Cooldown";
 
 @ObjectType("Team")
 export default class Team {

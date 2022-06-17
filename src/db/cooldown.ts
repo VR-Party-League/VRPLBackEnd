@@ -61,42 +61,32 @@ export async function getTeamCooldowns(
   return cooldowns;
 }
 
-export async function doesHaveCooldown(
-  forWho: "player",
-  forId: string,
+export async function getPlayerCooldownExpiresAt(
+  playerId: string,
   type: VrplPlayerCooldownType
-): Promise<boolean>;
-export async function doesHaveCooldown(
-  forWho: "team",
-  forId: string,
+): Promise<Date | null> {
+  const cooldown = await CooldownDB.findOne({
+    playerId: playerId,
+    for: "player",
+    type: type,
+  }).exec();
+  if (cooldown?.expiresAt) return cooldown.expiresAt;
+  return null;
+}
+
+export async function getTeamCooldownExpiresAt(
+  teamId: string,
+  tournamentId: string,
   type: VrplTeamCooldownType
-): Promise<boolean>;
-export async function doesHaveCooldown(
-  forWho: "player" | "team",
-  forId: string,
-  type: VrplPlayerCooldownType | VrplTeamCooldownType
-): Promise<boolean> {
-  let res;
-  if (forWho === "player") {
-    if (!isVrplPlayerCooldownType(type))
-      throw new Error("Cooldown type not for player");
-
-    res = await CooldownDB.exists({
-      playerId: forId,
-      for: forWho,
-      type: type,
-    });
-  } else {
-    if (!isVrplTeamCooldownType(type))
-      throw new Error("Cooldown type not for team");
-    res = await CooldownDB.exists({
-      teamId: forId,
-      for: forWho,
-      type: type,
-    });
-  }
-
-  return !!res;
+): Promise<Date | null> {
+  const cooldown = await CooldownDB.findOne({
+    teamId,
+    tournamentId,
+    for: "team",
+    type: type,
+  }).exec();
+  if (cooldown?.expiresAt) return cooldown.expiresAt;
+  return null;
 }
 
 export async function addCooldownToPlayer(

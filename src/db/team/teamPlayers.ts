@@ -13,11 +13,9 @@ import VrplTeamDB, {
 } from "../models/vrplTeam";
 import { storeAndBroadcastRecord, storeAndBroadcastRecords } from "../records";
 import { createMessages } from "../messages";
-import { VrplPlayer } from "../models/vrplPlayer";
 import { MessageButtonActionTypes } from "../models/vrplMessages";
 import { recordType } from "../models/records";
 import { VrplAuth } from "../../index";
-import { SYSTEM_PLAYER_ID } from "../../utils/permissions";
 
 export async function invitePlayersToTeam(
   team: VrplTeam,
@@ -31,46 +29,52 @@ export async function invitePlayersToTeam(
   else if (!newPlayerRole) throw new BadRequestError("No role provided");
   else if (newPlayerRole == VrplTeamPlayerRole.Pending)
     throw new BadRequestError("Pending is not a valid role");
-  const teamPlayers: VrplTeamPlayer[] = playerIds.map((playerId) => ({
-    playerId: playerId,
-    role: VrplTeamPlayerRole.Pending,
-    since: new Date(),
-  }));
-  playerIds.push(auth.playerId);
-  const players = await getPlayersFromIds(playerIds);
-  const inviterIndex = players.findIndex(
-    (player) => player.id == auth.playerId
-  );
-  if (inviterIndex === -1)
-    throw new InternalServerError("Player not fetched from db");
-  const inviter = players[inviterIndex];
-  console.log("inviter", inviter);
-  players.splice(inviterIndex, 1);
-  console.log("players", players);
-  if (!players) throw new InternalServerError("Could not get players");
-  else if (players.length + 1 != playerIds.length)
-    throw new InternalServerError("Could not get all players");
+  const inviter = await auth.getPlayer();
+  if (!inviter)
+    throw new BadRequestError("This request can only be sent by a player");
+  // const teamPlayers: VrplTeamPlayer[] = playerIds.map((playerId) => ({
+  //   playerId: playerId,
+  //   role: VrplTeamPlayerRole.Pending,
+  //   since: new Date(),
+  // }));
+  // const newPlayerIds = [...playerIds, auth.playerId];
+  // const players = await getPlayersFromIds(newPlayerIds);
+  // const inviterIndex = players.findIndex(
+  //   (player) => player.id == auth.playerId
+  // );
+  // if (inviterIndex === -1)
+  //   throw new InternalServerError("Player not fetched from db");
+  // const inviter = players[inviterIndex];
+  // console.log("inviter", inviter);
+  // if (!playerIds.includes(inviter.id)) players.splice(inviterIndex, 1);
+  // console.log("players", players);
+  // if (!players) throw new InternalServerError("Could not get players");
+  // else if (players.length + 1 != playerIds)
+  //   throw new InternalServerError("Could not get all players");
+  const enteredPlayers = await getPlayersFromIds(playerIds);
+  if (enteredPlayers.length !== playerIds.length)
+    throw new InternalServerError("Could not get all entered players");
+
   const records: teamPlayerCreateRecord[] = [];
-  for (const teamPlayer of teamPlayers) {
-    const player = players.find((p) => p.id == teamPlayer.playerId);
+  for (const player of enteredPlayers) {
     const oldTeamPlayer = team.teamPlayers.find(
-      (tp) => tp.playerId == teamPlayer.playerId
+      (tp) => tp.playerId == player.id
     );
-    if (!player)
-      throw new InternalServerError(
-        `Could not get player ${teamPlayer.playerId}`
-      );
-    else if (oldTeamPlayer) {
+    if (oldTeamPlayer) {
       if (oldTeamPlayer.role == VrplTeamPlayerRole.Pending)
         throw new BadRequestError(
-          `Player ${player.nickname} already invited to this team`
+          `Player ${player.nickname} is already invited to this team`
         );
       else
         throw new BadRequestError(
-          `Player ${player.nickname} already a member of this team`
+          `Player ${player.nickname} is already a member of this team`
         );
     }
-    team.teamPlayers.push(teamPlayer);
+    team.teamPlayers.push({
+      playerId: player.id,
+      role: VrplTeamPlayerRole.Pending,
+      since: new Date(),
+    });
     const record: teamPlayerCreateRecord = {
       v: 1,
       id: uuidv4(),
@@ -79,9 +83,9 @@ export async function invitePlayersToTeam(
       performedByPlayerId: auth.playerId,
       performedByUserId: auth.userId,
       teamId: team.id,
-      playerId: teamPlayer.playerId,
+      playerId: player.id,
       timestamp: new Date(),
-      role: teamPlayer.role,
+      role: VrplTeamPlayerRole.Pending,
       team: team,
     };
     records.push(record);
@@ -120,7 +124,7 @@ export async function invitePlayersToTeam(
           },
         ],
       },
-      players.map((player) => player.id)
+      playerIds
     ),
   ]);
   return team;
