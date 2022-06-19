@@ -30,13 +30,18 @@ export async function getAllPlayerIds() {
   return data.map((player) => player.id);
 }
 
-export async function getPlayerFromNickname(nickname: string) {
+export async function getPlayerFromNickname(nickname: string, notId?: string) {
   return await VrplPlayerDB.findOne({
     $text: {
       $search: nickname,
       $caseSensitive: false,
       $diacriticSensitive: false,
     },
+    id: notId
+      ? {
+          $ne: notId,
+        }
+      : undefined,
   }).exec();
 }
 
@@ -154,7 +159,7 @@ export async function createPlayerFromDiscordInfo(discordUser: APIUser) {
   const user = await createUser(player.id, 0, undefined, discordUser.id);
 
   await Promise.all([player.save(), recordPlayerCreate(player, user)]);
-  return {player, user}
+  return { player, user };
 }
 
 function recordPlayerCreate(player: VrplPlayer, user: VrplUser) {

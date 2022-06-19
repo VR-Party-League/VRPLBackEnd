@@ -43,7 +43,7 @@ export async function createApolloServer() {
   return new ApolloServer({
     schema: schema,
     introspection: true,
-    persistedQueries: false,
+    cache: "bounded",
     plugins: [
       ApolloServerPluginLandingPageGraphQLPlayground(),
       // process.env.NODE_ENV === "production"

@@ -216,7 +216,12 @@ export default class {
   ) {
     const vrplPlayer = resolved.player!;
     auth = auth!;
-    const foundPlayer = await getPlayerFromNickname(newName.trim());
+    if (vrplPlayer.nickname.trim() === newName.trim())
+      throw new BadRequestError("New nickname the same as the old one!");
+    const foundPlayer = await getPlayerFromNickname(
+      newName.trim(),
+      vrplPlayer.id
+    );
     if (foundPlayer)
       throw new BadRequestError("A player with that name already exists.");
     if (vrplPlayer.id !== auth.playerId)
