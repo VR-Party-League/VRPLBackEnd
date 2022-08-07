@@ -122,6 +122,7 @@ async function broadcastRecords(records: record[]) {
       for (let playerId of playerIds) {
         paths_to_revalidate.push(`/player/${playerId}`);
       }
+      paths_to_revalidate.push(`/tournament/${record.tournamentSlug}`);
     } else if (isRecordMatchRecord(record)) {
       const teamIds = record.teamIds;
       for (let teamId of teamIds) {
