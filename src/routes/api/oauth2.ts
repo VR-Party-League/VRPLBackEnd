@@ -1,8 +1,9 @@
 import express, { Router } from "express";
 import oauth from "../../utils/servers/createOAuthServer";
 import { Request, Response } from "oauth2-server";
-import { getPlayerFromUserId } from "../../db/player";
+import { getPlayerFromId, getPlayerFromUserId } from "../../db/player";
 import {
+  BadRequestError,
   ForbiddenError,
   InternalServerError,
   UnauthorizedError,
@@ -71,9 +72,13 @@ export const authenticate: (
         permissions: user.permissions,
         scope: [...OAuthScopes],
         getPlayer: async () => {
-          const player = await getPlayerFromUserId(user._id);
+          if (!user.playerId)
+            throw new BadRequestError("User does not have a linked player");
+          const player = await getPlayerFromId(user.playerId);
           if (!player)
-            throw new InternalServerError("User does not have a linked player");
+            throw new InternalServerError(
+              "!!!!!!!!User does not have a linked player!!!!!!!!!"
+            );
           return player;
         },
         hasPerm: function (perm: Permissions) {
@@ -122,7 +127,9 @@ export const authenticate: (
           ? scope.split(" ")
           : scope) as AllOAuthScopes[],
         getPlayer: async () => {
-          const player = await getPlayerFromUserId(user._id);
+          if (!user.playerId)
+            throw new BadRequestError("User does not have a linked player");
+          const player = await getPlayerFromId(user.playerId);
           if (!player)
             throw new InternalServerError("User does not have a linked player");
           return player;

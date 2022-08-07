@@ -12,7 +12,7 @@ import { cleanNameFromInput, isValidEmailRegex } from "../utils/regex/player";
 import { PlayerNicknameHistoryItem } from "../schemas/Player";
 import { BadRequestError, InternalServerError } from "../utils/errors";
 import discord from "../utils/discord";
-import { createUser } from "./user";
+import { createUser, getPlayerIdFromUserId } from "./user";
 import { VrplAuth } from "../index";
 import { VrplUser } from "./models/vrplUser";
 import { ObjectId } from "mongoose";
@@ -46,7 +46,9 @@ export async function getPlayerFromNickname(nickname: string, notId?: string) {
 }
 
 export async function getPlayerFromUserId(userId: ObjectId) {
-  return await VrplPlayerDB.findOne({ userId }).exec();
+  const playerId = await getPlayerIdFromUserId(userId);
+  if (!playerId) return null;
+  await VrplPlayerDB.findOne({ id: playerId }).exec();
 }
 
 export async function getPlayerFromDiscordTag(discordTag: string) {

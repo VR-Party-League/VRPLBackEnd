@@ -7,6 +7,7 @@ import {
   getDiscordUserFromOAuthData,
 } from "../utils/authentication/discord";
 import { createPlayerFromDiscordInfo } from "./player";
+import { ObjectId } from "mongoose";
 
 export async function getUserFromUsername(username: string) {
   return await VrplUserModel.findOne({ "password.username": username }).exec();
@@ -107,4 +108,15 @@ export async function getUserFromPlayerId(
   playerId: string
 ): Promise<VrplUser | null> {
   return await VrplUserModel.findOne({ playerId: playerId }).exec();
+}
+
+export async function getPlayerIdFromUserId(
+  userId: ObjectId
+): Promise<string | null | undefined> {
+  const user = await VrplUserModel.findOne(
+    { _id: userId },
+    { playerId: 1 }
+  ).exec();
+  if (!user) return null;
+  return user.playerId;
 }
