@@ -9,8 +9,11 @@ export async function getTeamsOfTournament(tournamentId: string) {
   return VrplTeamDB.find({ tournamentId: tournamentId }).exec();
 }
 
-export async function getTeamFromId(tournamentId: string, teamId: string) {
-  return VrplTeamDB.findOne({
+export async function getTeamFromId(
+  tournamentId: string,
+  teamId: string
+): Promise<VrplTeam | null> {
+  return await VrplTeamDB.findOne({
     tournamentId: tournamentId,
     id: teamId,
   }).exec();

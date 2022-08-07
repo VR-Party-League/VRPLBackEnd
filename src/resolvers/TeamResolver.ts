@@ -276,7 +276,7 @@ export default class {
       throw new BadRequestError("Cannot delete team before registration start");
     else if (!force && tournament.registrationEnd < new Date())
       throw new BadRequestError("Cannot delete team after registration end");
-    const res = await deleteTeam(tournament, team.id, auth);
+    const res = await deleteTeam(tournament, team, auth);
     if (!res) throw new InternalServerError("Failed to remove team");
     return res;
   }
