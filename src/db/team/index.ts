@@ -40,7 +40,7 @@ export async function deleteTeam(
       id: team.id,
       tournamentId: tournament.id,
     }).exec();
-    team = await deleteTeamAvatar(team, auth, true);
+    if (team.avatarHash) team = await deleteTeamAvatar(team, auth, true);
     if (!deleted?.ownerId) throw new InternalServerError("Did not delete team");
     await storeAndBroadcastRecord({
       v: 1,
