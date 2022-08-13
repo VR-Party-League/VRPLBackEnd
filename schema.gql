@@ -83,6 +83,9 @@ type GameField {
 }
 
 type Match {
+  """The handicaps of the teams that will be playing in this match"""
+  handicaps: [Int!]
+
   """The unique match id"""
   id: String!
 
@@ -154,7 +157,9 @@ input MatchRoundInput {
 }
 
 input MatchRoundInputMatch {
+  team1Handicap: Int!
   team1Seed: Int!
+  team2Handicap: Int!
   team2Seed: Int!
 }
 
@@ -281,6 +286,7 @@ type Mutation {
   changePlayerName(newName: String!, playerId: String!): Player!
   changePlayerRole(playerId: String!, role: Float!, teamId: String!, tournamentId: String!): Team!
   changeTeamName(newName: String!, teamId: String!, tournamentId: String!): Team!
+  changeTeamPlayerRole(playerId: String!, roleId: Int!, teamId: String!, tournamentId: String!): TeamPlayer!
   clearTeamSeed(teamId: String!, tournamentId: String!): Team!
   confirmMatch(force: Boolean, matchId: String!, teamId: String!, tournamentId: String!): Match!
   createApiToken(playerId: String!): ApiToken!
