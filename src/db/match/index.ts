@@ -109,7 +109,12 @@ export function areScoresInvalid(
 // TODO: generate matches
 // TODO: calculate mmr
 
-type seed_match = { team1Seed: number; team2Seed: number };
+type seed_match = {
+  team1Seed: number;
+  team2Seed: number;
+  team1Handicap: number;
+  team2Handicap: number;
+};
 type seed_round = {
   matches: seed_match[];
   start: Date;
@@ -141,7 +146,15 @@ export async function createMatches(
       else if (!team2)
         throw new InternalServerError(`Team 2 not found for match ${match}`);
       matches.push(
-        createMatch(tournament.id, team1, team2, round.start, round.end)
+        createMatch(
+          tournament.id,
+          team1,
+          team2,
+          match.team1Handicap,
+          match.team2Handicap,
+          round.start,
+          round.end
+        )
       );
     }
   }
@@ -157,6 +170,8 @@ function createMatch(
   tournamentId: string,
   team1: SeededVrplTeam,
   team2: SeededVrplTeam,
+  team1Handicap: number,
+  team2Handicap: number,
   start: Date,
   end: Date
 ) {
@@ -164,6 +179,7 @@ function createMatch(
     id: uuidv4(),
     tournamentId: tournamentId,
     teamSeeds: [team1.seed, team2.seed],
+    handicaps: [team1Handicap, team2Handicap],
     timeStart: start,
     timeDeadline: end,
   };

@@ -247,6 +247,10 @@ class MatchRoundInputMatch {
   team1Seed: number;
   @Field((_type) => Int)
   team2Seed: number;
+  @Field((_type) => Int)
+  team1Handicap: number;
+  @Field((_type) => Int)
+  team2Handicap: number;
 }
 
 @InputType("MatchRoundInput")

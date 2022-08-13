@@ -19,6 +19,13 @@ export default class Match {
   })
   teamSeeds: number[];
 
+  @Field((_type) => [Int], {
+    description:
+      "The handicaps of the teams that will be playing in this match",
+    nullable: true,
+  })
+  handicaps?: number[];
+
   @Field((_type) => [Team], { description: "The teams playing the match" })
   teams: [Team];
 
