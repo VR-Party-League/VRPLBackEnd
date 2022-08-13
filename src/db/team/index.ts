@@ -241,9 +241,9 @@ export async function validateTeamName(
     .trim();
   if (!/^[\w-_\s]+$/.test(TeamName))
     throw new invalidTeamNameError("Invalid name: " + TeamName);
-  else if (TeamName.length < 5)
+  else if (TeamName.length < 4)
     throw new invalidTeamNameError(
-      "TeamName must at least be 5 characters long: " + TeamName
+      "TeamName must at least be 4 characters long: " + TeamName
     );
   else if (TeamName.length > 25)
     throw new invalidTeamNameError(
