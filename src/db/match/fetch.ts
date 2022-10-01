@@ -13,25 +13,27 @@ export async function getMatchFromId(
 
 export async function getMatchesForTeam(
   tournamentId: string,
-  teamSeed: number,
-  recentOnly: boolean = true
+  teamSeed: number
+  // recentOnly: boolean = true
 ) {
-  const aWeekLater = new Date();
-  aWeekLater.setDate(aWeekLater.getDate() + 7);
-  const aWeekAgo = new Date();
-  aWeekAgo.setDate(aWeekAgo.getDate() - 7);
+  // const aWeekLater = new Date();
+  // aWeekLater.setDate(aWeekLater.getDate() + 7);
+  // const aWeekAgo = new Date();
+  // aWeekAgo.setDate(aWeekAgo.getDate() - 7);
   return VrplMatchDB.find({
     tournamentId: tournamentId,
     teamSeeds: teamSeed,
-    $and: [
-      { timeStart: recentOnly ? { $lt: aWeekLater } : undefined },
-      { timeDeadline: recentOnly ? { $gt: aWeekAgo } : undefined },
-    ],
+    // $and: [
+    // { timeStart: recentOnly ? { $lt: aWeekLater } : undefined },
+    // { timeDeadline: recentOnly ? { $gt: aWeekAgo } : undefined },
+    // ],
   });
 }
 
 export async function getMatchesOfTournament(tournamentId: string) {
-  return VrplMatchDB.find({ tournamentId: tournamentId });
+  return VrplMatchDB.find({ tournamentId: tournamentId }).sort({
+    round: -1,
+  });
 }
 
 export async function getCurrentMatchesOfTournament(tournamentId: string) {

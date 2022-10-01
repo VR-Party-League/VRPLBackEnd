@@ -98,6 +98,9 @@ type Match {
   """The teams that lost"""
   losers: [Team!]
 
+  """The round number"""
+  round: Int!
+
   """The submitted scores"""
   scores: [[Int!]!]
 
@@ -153,6 +156,7 @@ type Match {
 input MatchRoundInput {
   end: Timestamp!
   matches: [MatchRoundInputMatch!]!
+  round: Int!
   start: Timestamp!
 }
 

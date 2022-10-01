@@ -106,7 +106,7 @@ export default class {
   @FieldResolver((_returns) => [Match])
   async matches(@Root() vrplTeam: VrplTeam) {
     if (vrplTeam.seed === undefined) return [];
-    return await getMatchesForTeam(vrplTeam.tournamentId, vrplTeam.seed, true);
+    return await getMatchesForTeam(vrplTeam.tournamentId, vrplTeam.seed);
   }
 
   @FieldResolver()

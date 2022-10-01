@@ -7,6 +7,7 @@ export type VrplMatch =
 
 export interface PlainVrplMatch {
   id: string;
+  round: number;
   tournamentId: string;
   teamSeeds: number[];
   handicaps?: number[];
@@ -55,6 +56,7 @@ const MatchSchema = new Schema<VrplMatch & Document>(
     id: { type: String, required: true, unique: true },
     tournamentId: String,
     teamSeeds: [Number],
+    round: { type: Number, required: true, default: 0 },
     handicaps: { type: [Number], required: false },
     timeStart: Date,
     timeDeadline: Date,

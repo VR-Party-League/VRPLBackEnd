@@ -257,6 +257,8 @@ class MatchRoundInputMatch {
 class MatchRoundInput {
   @Field((_type) => [MatchRoundInputMatch])
   matches: MatchRoundInputMatch[];
+  @Field((_type) => Int)
+  round: number;
   @Field((_type) => Date)
   start: Date;
   @Field((_type) => Date)

@@ -155,6 +155,7 @@ export async function completeMatch(
 
   const completedMatch: CompletedVrplMatch = {
     id: match.id,
+    round: match.round,
     submitterSeed: match.submitterSeed,
     winnerId: match.winnerId,
     tiedIds: match.tiedIds,

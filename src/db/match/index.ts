@@ -117,6 +117,7 @@ type seed_match = {
 };
 type seed_round = {
   matches: seed_match[];
+  round: number;
   start: Date;
   end: Date;
 };
@@ -152,6 +153,7 @@ export async function createMatches(
           team2,
           match.team1Handicap,
           match.team2Handicap,
+          round.round,
           round.start,
           round.end
         )
@@ -172,6 +174,7 @@ function createMatch(
   team2: SeededVrplTeam,
   team1Handicap: number,
   team2Handicap: number,
+  round: number,
   start: Date,
   end: Date
 ) {
@@ -180,6 +183,7 @@ function createMatch(
     tournamentId: tournamentId,
     teamSeeds: [team1.seed, team2.seed],
     handicaps: [team1Handicap, team2Handicap],
+    round: round,
     timeStart: start,
     timeDeadline: end,
   };

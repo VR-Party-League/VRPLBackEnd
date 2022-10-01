@@ -68,7 +68,7 @@ export default class {
   }
 
   @Query((_returns) => [String])
-  @UseMiddleware(Authenticate(["USE_PERMISSIONS"], [Permissions.Server]))
+  @UseMiddleware(Authenticate([], [Permissions.Server]))
   async allPlayerIds(): Promise<string[]> {
     return await getAllPlayerIds();
   }

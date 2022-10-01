@@ -14,6 +14,9 @@ export default class Match {
   @Field({ description: "The tournament id", nullable: false })
   tournamentId: string;
 
+  @Field(() => Int, { description: "The round number", nullable: false })
+  round: number;
+
   @Field((_type) => [Int], {
     description: "The seeds of the teams that will be playing in this match",
   })
