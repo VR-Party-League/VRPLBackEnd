@@ -177,7 +177,8 @@ export default class {
     @Arg("tournamentId") tournamentId: string,
     @Arg("matchId") matchId: string,
     @Arg("teamId") teamId: string,
-    @Arg("scores", (_type) => MatchScoreInput) scores: MatchScoreInput,
+    @Arg("scores", (_type) => MatchScoreInput)
+    scores: MatchScoreInput,
     @Arg("force", { nullable: true }) force: boolean,
     @Ctx() { auth }: Context
   ): Promise<SubmittedVrplMatch> {
@@ -200,9 +201,9 @@ export default class {
       team.ownerId === auth.playerId;
     if (!isUserOnTeam) auth.assurePerm(Permissions.ManageMatches);
     if (!match.teamSeeds.includes(team.seed)) throw new ForbiddenError();
-    else if (match.timeDeadline.getTime() < Date.now())
+    else if (match.timeDeadline.getTime() < Date.now() && !force)
       throw new BadRequestError("Match expired");
-    else if (match.timeStart.getTime() > Date.now())
+    else if (match.timeStart.getTime() > Date.now() && !force)
       throw new BadRequestError("Match not yet started");
     else if (isCompleted(match))
       throw new BadRequestError("Match already been completed");
