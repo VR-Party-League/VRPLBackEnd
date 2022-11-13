@@ -180,10 +180,12 @@ export default class {
     @Arg("scores", (_type) => MatchScoreInput)
     scores: MatchScoreInput,
     @Arg("force", { nullable: true }) force: boolean,
+    @Arg("isForfeit", { nullable: true }) isForfeit: boolean,
     @Ctx() { auth }: Context
   ): Promise<SubmittedVrplMatch> {
     if (!auth) throw new UnauthorizedError();
     else if (force) auth.assurePerm(Permissions.Admin);
+    else if (isForfeit) auth.assurePerm(Permissions.ManageMatches);
     const [tournament, match] = await Promise.all([
       getTournamentFromId(tournamentId),
       getMatchFromId(tournamentId, matchId),
@@ -218,6 +220,7 @@ export default class {
       teams,
       scores.rounds,
       auth,
+      isForfeit,
       force
     );
     if (!res || !res?.id)
