@@ -217,7 +217,8 @@ export default class {
       team,
       teams,
       scores.rounds,
-      auth
+      auth,
+      force
     );
     if (!res || !res?.id)
       throw new InternalServerError(
