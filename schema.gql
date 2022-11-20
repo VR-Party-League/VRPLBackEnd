@@ -318,7 +318,7 @@ type Mutation {
   setPlayerRegion(playerId: String!, region: String!): Player!
   setSocialAccountForTeam(code: String!, platform: String!, teamId: String!, tournamentId: String!): Team!
   setTeamSeed(seed: Int!, teamId: String!, tournamentId: String!): Team!
-  submitMatch(force: Boolean, matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
+  submitMatch(force: Boolean, isForfeit: Boolean, matchId: String!, scores: MatchScoreInput!, teamId: String!, tournamentId: String!): Match!
   transferTeam(makeOldOwnerPlayer: Boolean, playerId: String!, teamId: String!, tournamentId: String!): Team!
   unSeedTeamsForTournament(tournamentId: String!): [Team!]!
   updateEmail(email: String!, playerId: String!): Player!
