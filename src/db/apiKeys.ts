@@ -79,6 +79,9 @@ export async function revokeApiToken(
 
 export async function getUserFromApiToken(token: string) {
   const apiToken = await ApiTokenModel.findOne({ apiToken: token }).exec();
+  console.log("apiToken", apiToken);
+  let all = await ApiTokenModel.find({}).exec();
+  console.log("all", all);
   if (!apiToken) throw new UnauthorizedError("Invalid API token");
   return apiToken.user;
 }

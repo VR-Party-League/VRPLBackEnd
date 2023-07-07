@@ -298,6 +298,7 @@ type Mutation {
   createMessages(message: MessageInput!, recipientIds: [String!]!): [Message!]!
   createOAuth2Client(clientName: String!, grants: [String!]!, playerId: String!, redirectUris: [String!]!): OAuth2Client!
   createTeamForTournament(makeCaptain: Boolean, ownerId: String!, teamName: String!, tournamentId: String!): Team!
+  createTournament(tournament: TournamentInput!): Tournament!
   deleteTeam(force: Boolean, teamId: String!, tournamentId: String!): Team!
   hideMessage(messageId: String!, playerId: String!): Message!
   invitePlayersToTeam(playerIds: [String!]!, teamId: String!, tournamentId: String!): Team!
@@ -640,6 +641,23 @@ type Tournament {
 
   """The tournament type"""
   type: String!
+}
+
+input TournamentInput {
+  banner: String!
+  description: String!
+  end: Timestamp!
+  gameId: String!
+  icon: String!
+  matchMaxScore: Int!
+  matchRounds: Int!
+  name: String!
+  registrationEnd: Timestamp!
+  registrationStart: Timestamp!
+  rules: String!
+  slug: String!
+  start: Timestamp!
+  summary: String!
 }
 
 type draftRoundRobin {

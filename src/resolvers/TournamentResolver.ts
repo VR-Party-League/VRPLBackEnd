@@ -33,6 +33,7 @@ import {
   unSeedAllTeams,
 } from "../db/team";
 import {
+  createTournament,
   generateRoundRobinForTournament,
   getAllTournaments,
   getTournamentFromId,
@@ -48,6 +49,43 @@ import {
 import { Authenticate, Permissions, ResolveTeam } from "../utils/permissions";
 import Match from "../schemas/Match";
 import { revalidateTournamentPage } from "../db/records";
+
+@InputType("TournamentInput")
+class TournamentInput {
+  @Field((_type) => String)
+  gameId: string;
+
+  @Field((_type) => String)
+  name: string;
+  @Field((_type) => String)
+  slug: string;
+  @Field((_type) => String)
+  description: string;
+  @Field((_type) => String)
+  summary: string;
+
+  @Field((_type) => String)
+  banner: string;
+  @Field((_type) => String)
+  icon: string;
+
+  @Field((_type) => Int)
+  matchRounds: number;
+  @Field((_type) => Int)
+  matchMaxScore: number;
+
+  @Field((_type) => String)
+  rules: string;
+
+  @Field((_type) => Date)
+  registrationStart: Date;
+  @Field((_type) => Date)
+  registrationEnd: Date;
+  @Field((_type) => Date)
+  start: Date;
+  @Field((_type) => Date)
+  end: Date;
+}
 
 @Resolver((_of) => Tournament)
 export default class {
@@ -211,6 +249,18 @@ export default class {
     return tournament;
   }
 
+  @Mutation((_returns) => Tournament, { nullable: false })
+  @UseMiddleware(
+    Authenticate(["USE_PERMISSIONS"], [Permissions.ManageTournaments])
+  )
+  async createTournament(
+    @Ctx() { auth }: Context,
+    @Arg("tournament", (_type) => TournamentInput) tournament: TournamentInput
+  ) {
+    if (!auth) throw new Error("Not authorized!?!?");
+    const createdTournament = await createTournament(tournament, auth);
+    return createdTournament;
+  }
   // @UseMiddleware(ResolvePlayer("playerId", true, Permissions.ManagePlayers))
   // @UseMiddleware(
   //   ResolveTeam(

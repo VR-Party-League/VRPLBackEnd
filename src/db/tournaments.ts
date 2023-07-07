@@ -1,9 +1,18 @@
 import { convertSiteInput } from "../utils/regex/general";
-import VrplTournamentDB, { VrplTournament } from "./models/vrplTournaments";
+import VrplTournamentDB, {
+  VrplTournament,
+  VrplTournamentType,
+} from "./models/vrplTournaments";
 import { getAllSeededTeams } from "./team";
 import { range } from "lodash";
 import { BadRequestError, InternalServerError } from "../utils/errors";
 import { SeededVrplTeam } from "./models/vrplTeam";
+import { getGameById } from "./game";
+import { v4 as uuidv4 } from "uuid";
+import { tournamentCreateRecord } from "./models/records/tournamentRecords";
+import { VrplAuth } from "..";
+import { recordType } from "./models/records";
+import { storeAndBroadcastRecord } from "./records";
 
 type tournamentId = string;
 type tournamentSlug = string;
@@ -160,4 +169,65 @@ function assignTeamsToMatches(
     newMatches.push(newRound);
   }
   return newMatches;
+}
+
+export async function createTournament(
+  tournament: {
+    gameId: string;
+
+    name: string;
+    slug: string;
+    description: string;
+    summary: string;
+
+    banner: string;
+    icon: string;
+
+    matchRounds: number;
+    matchMaxScore: number;
+
+    rules: string;
+
+    registrationStart: Date;
+    registrationEnd: Date;
+    start: Date;
+    end: Date;
+  },
+  auth: VrplAuth
+) {
+  const game = await getGameById(tournament.gameId);
+  if (!game) throw new BadRequestError("Game does not exist");
+  const newTournament = new VrplTournamentDB({
+    id: uuidv4(),
+    type: VrplTournamentType.RoundRobin,
+    name: tournament.name,
+    slug: tournament.slug,
+    summary: tournament.summary,
+    description: tournament.description,
+    banner: tournament.banner,
+    icon: tournament.icon,
+    rules: tournament.rules,
+    gameId: tournament.gameId,
+    matchRounds: tournament.matchRounds,
+    matchMaxScore: tournament.matchMaxScore,
+
+    start: tournament.start,
+    end: tournament.end,
+    registrationStart: tournament.registrationStart,
+    registrationEnd: tournament.registrationEnd,
+  });
+  await newTournament.save();
+  const record: tournamentCreateRecord = {
+    v: 1,
+    id: uuidv4(),
+    performedByUserId: auth.userId,
+    performedByPlayerId: auth.playerId,
+    type: recordType.tournamentCreate,
+    timestamp: new Date(),
+
+    tournamentId: newTournament.id,
+    tournament: newTournament,
+  };
+  await storeAndBroadcastRecord(record);
+  return newTournament;
 }
