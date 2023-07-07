@@ -64,8 +64,10 @@ export const authenticate: (
   else if (req.headers.authorization.startsWith("Token ")) {
     try {
       const token = req.headers.authorization.slice("Token ".length);
+      console.log("token", token);
       const user = await getUserFromApiToken(token);
-      if (!user) return next(new UnauthorizedError("Invalid API token"));
+      console.log("user", user);
+      if (!user) return next(new UnauthorizedError("Invalid API token."));
       req.auth = {
         userId: user._id,
         playerId: user.playerId,
@@ -105,7 +107,8 @@ export const authenticate: (
       };
     } catch (e) {
       captureException(e);
-      return next(new UnauthorizedError("Invalid API token"));
+      console.log(e);
+      return next(new UnauthorizedError("Invalid API token.."));
     } finally {
       return next();
     }

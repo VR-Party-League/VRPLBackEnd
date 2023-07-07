@@ -5,6 +5,7 @@ import { matchRecords } from "./matchRecords";
 import { playerRecords } from "./playerRecords";
 import { teamRecords } from "./teamRecordTypes";
 import { OAuthClientRecord } from "./oauthRecords";
+import { tournamentRecords } from "./tournamentRecords";
 
 export enum recordType {
   apiTokenCreate = "0",
@@ -31,6 +32,10 @@ export enum recordType {
   badgeUpdate = "41",
   badgeDelete = "42",
 
+  tournamentCreate = "50",
+  tournamentUpdate = "51",
+  tournamentDelete = "52",
+
   OAuthClientCreate = "100",
   OAuthClientUpdate = "101",
   OAuthClientDelete = "102",
@@ -51,7 +56,8 @@ export type record =
   | matchRecords
   | authenticationRecords
   | badgeRecords
-  | OAuthClientRecord;
+  | OAuthClientRecord
+  | tournamentRecords;
 
 const logSchema = new Schema<record & Document>(
   {
