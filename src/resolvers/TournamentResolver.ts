@@ -38,6 +38,7 @@ import {
   getAllTournaments,
   getTournamentFromId,
   getTournamentFromSlug,
+  updateTournament,
 } from "../db/tournaments";
 import Team from "../schemas/Team";
 import Tournament from "../schemas/Tournament";
@@ -260,6 +261,22 @@ export default class {
     if (!auth) throw new Error("Not authorized!?!?");
     const createdTournament = await createTournament(tournament, auth);
     return createdTournament;
+  }
+
+  @Mutation((_returns) => Tournament, { nullable: false })
+  @UseMiddleware(
+    Authenticate(["USE_PERMISSIONS"], [Permissions.ManageTournaments])
+  )
+  async updateTournament(
+    @Ctx() { auth }: Context,
+    @Arg("tournamentId") tournamentId: string,
+    @Arg("field") field: string,
+    @Arg("value") value: string
+  ) {
+    if (!auth) throw new Error("Not authorized!?!?");
+    const tournament = await getTournamentFromId(tournamentId);
+    if (!tournament) throw new BadRequestError("Tournament not found");
+    return await updateTournament(tournament, field, value, auth);
   }
   // @UseMiddleware(ResolvePlayer("playerId", true, Permissions.ManagePlayers))
   // @UseMiddleware(

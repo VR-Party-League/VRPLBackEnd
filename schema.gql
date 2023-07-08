@@ -324,6 +324,7 @@ type Mutation {
   unSeedTeamsForTournament(tournamentId: String!): [Team!]!
   updateEmail(email: String!, playerId: String!): Player!
   updateSettingValue(key: String!, value: String!): SiteSettings!
+  updateTournament(field: String!, tournamentId: String!, value: String!): Tournament!
 }
 
 type OAuth2Client {

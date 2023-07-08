@@ -12,7 +12,9 @@ export interface tournamentUpdateRecord extends baseRecord {
   v: 1;
   type: recordType.tournamentUpdate;
   tournamentId: string;
-  tournament: VrplTournament;
+  valueChanged: keyof VrplTournament;
+  old: any;
+  new: any;
 }
 
 export interface tournamentDeleteRecord extends baseRecord {
