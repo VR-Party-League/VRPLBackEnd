@@ -9,7 +9,10 @@ import { BadRequestError, InternalServerError } from "../utils/errors";
 import { SeededVrplTeam } from "./models/vrplTeam";
 import { getGameById } from "./game";
 import { v4 as uuidv4 } from "uuid";
-import { tournamentCreateRecord } from "./models/records/tournamentRecords";
+import {
+  tournamentCreateRecord,
+  tournamentUpdateRecord,
+} from "./models/records/tournamentRecords";
 import { VrplAuth } from "..";
 import { recordType } from "./models/records";
 import { storeAndBroadcastRecord } from "./records";
@@ -230,4 +233,86 @@ export async function createTournament(
   };
   await storeAndBroadcastRecord(record);
   return newTournament;
+}
+
+export async function updateTournament(
+  tournament: VrplTournament,
+  field_string: string,
+  value: string,
+  auth: VrplAuth
+) {
+  const string_fields = [
+    "name",
+    "slug",
+    "summary",
+    "description",
+    "banner",
+    "icon",
+    "rules",
+  ];
+  const date_fields = ["start", "end", "registrationStart", "registrationEnd"];
+  const number_fields = ["matchRounds", "matchMaxScore"];
+  const field_type = string_fields.includes(field_string)
+    ? "string"
+    : date_fields.includes(field_string)
+    ? "date"
+    : number_fields.includes(field_string)
+    ? "number"
+    : undefined;
+  if (field_type === undefined)
+    throw new BadRequestError("Invalid field to update");
+  else if (typeof value !== "string")
+    throw new BadRequestError("Invalid value for field");
+
+  let field = field_string as keyof VrplTournament;
+  let data: any;
+
+  if (field_type === "string") {
+    data = value;
+  } else if (field_type === "date") {
+    const date = new Date(value);
+    if (
+      isNaN(date.getTime()) ||
+      date.getTime() < 0 ||
+      date.toString() === "Invalid Date"
+    )
+      throw new BadRequestError("Invalid date value for field");
+    data = date;
+  } else if (field_type === "number") {
+    const number = parseInt(value);
+    if (isNaN(number) || number < 0)
+      throw new BadRequestError("Invalid number value for field");
+    data = number;
+  }
+  const old_value = tournament[field];
+  if (old_value === undefined)
+    throw new BadRequestError("Invalid field to update, field does not exist");
+  let res = await VrplTournamentDB.updateOne(
+    { id: tournament.id },
+    {
+      $set: {
+        [field]: data,
+      },
+    }
+  );
+  if (res.matchedCount === 0)
+    throw new BadRequestError("Failed to find tournament");
+  else if (res.modifiedCount === 0)
+    throw new InternalServerError("Failed to update tournament");
+
+  const record: tournamentUpdateRecord = {
+    v: 1,
+    id: uuidv4(),
+    performedByUserId: auth.userId,
+    performedByPlayerId: auth.playerId,
+    type: recordType.tournamentUpdate,
+    timestamp: new Date(),
+
+    tournamentId: tournament.id,
+    valueChanged: field_string as keyof VrplTournament,
+    old: old_value,
+    new: data,
+  };
+  await storeAndBroadcastRecord(record);
+  return await getTournamentFromId(tournament.id);
 }

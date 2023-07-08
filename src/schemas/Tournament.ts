@@ -40,6 +40,7 @@ export default class Tournament {
 
   @Field({
     description: "The maximum score allowed to enter by players for a match",
+    nullable: true,
   })
   matchMaxScore: number;
 

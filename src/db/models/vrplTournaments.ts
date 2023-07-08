@@ -64,7 +64,7 @@ const TournamentSchema = new Schema<VrplTournament & Document>(
     rules: String,
     gameId: String,
     matchRounds: Number,
-    matchMaxScore: Number,
+    matchMaxScore: { type: Number, required: false },
 
     eligibilityCheck: { type: String, required: false },
     region: { type: String, required: false },
