@@ -605,7 +605,7 @@ type Tournament {
   id: String!
 
   """The maximum score allowed to enter by players for a match"""
-  matchMaxScore: Float!
+  matchMaxScore: Float
 
   """The amount of rounds a match has in this tournament"""
   matchRounds: Float!
