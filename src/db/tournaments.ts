@@ -229,6 +229,7 @@ export async function createTournament(
     timestamp: new Date(),
 
     tournamentId: newTournament.id,
+    tournamentSlug: newTournament.slug,
     tournament: newTournament,
   };
   await storeAndBroadcastRecord(record);
@@ -309,6 +310,7 @@ export async function updateTournament(
     timestamp: new Date(),
 
     tournamentId: tournament.id,
+    tournamentSlug: tournament.slug,
     valueChanged: field_string as keyof VrplTournament,
     old: old_value,
     new: data,

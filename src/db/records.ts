@@ -130,6 +130,8 @@ async function broadcastRecords(records: record[]) {
           `/tournament/${record.tournamentSlug}/team/${teamId}`
         );
       }
+    } else if (record.type === recordType.tournamentUpdate) {
+      paths_to_revalidate.push(`/tournament/${record.tournamentSlug}`);
     }
   }
   if (paths_to_revalidate.length === 0) return;
